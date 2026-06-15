@@ -2,628 +2,692 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Halftone Dots</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #f0ede8; --panel: #e8e4de; --border: #ccc8c0;
-    --text: #1a1a1a; --text-muted: #666;
-    --font: 'Courier New', Courier, monospace;
+    --text: #1a1a1a; --muted: #888;
+    --font: 'Courier New', monospace;
+    --panel-h: 340px;
   }
-  body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
-  .sidebar { width: 280px; min-width: 280px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
-  .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
-  .sidebar-header a { font-size: 11px; text-decoration: none; color: var(--text-muted); }
-  .sidebar-header h1 { font-size: 13px; font-weight: normal; margin-top: 4px; }
-  .upload-area { margin: 12px; border: 1px dashed var(--border); padding: 12px; text-align: center; cursor: pointer; position: relative; }
-  .upload-area:hover { background: rgba(0,0,0,0.04); }
-  .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-  .upload-label { font-size: 12px; font-weight: bold; letter-spacing: 0.05em; }
-  .upload-hint { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
-  .shortcut { font-size: 10px; color: var(--text-muted); background: rgba(0,0,0,0.08); padding: 2px 5px; border-radius: 2px; }
-  .controls { padding: 0 12px 12px; flex: 1; }
-  .control-row { margin-top: 10px; }
-  .control-label { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
-  .control-label span { color: var(--text-muted); }
-  input[type="range"] { width: 100%; height: 2px; -webkit-appearance: none; background: var(--border); outline: none; cursor: pointer; }
-  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: var(--text); border-radius: 50%; cursor: pointer; }
-  .section-title { font-size: 10px; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; cursor: pointer; user-select: none; }
-  .collapsible { overflow: hidden; transition: max-height 0.2s ease; }
-  .collapsible.collapsed { max-height: 0 !important; }
-  .switcher { display: flex; gap: 4px; margin-top: 10px; align-items: center; }
-  .switcher label { font-size: 11px; min-width: 80px; flex-shrink: 0; }
-  .switcher-btns { display: flex; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
-  .switcher-btns button { font-family: var(--font); font-size: 12px; padding: 3px 9px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); }
-  .switcher-btns button.active { background: var(--text); color: var(--bg); }
-  .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 11px; cursor: pointer; user-select: none; }
-  .toggle-indicator { width: 10px; height: 10px; border: 1px solid var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 8px; }
-  .sidebar-footer { padding: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-  .btn-export { font-family: var(--font); font-size: 12px; background: var(--text); color: var(--bg); border: none; padding: 10px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-radius: 2px; width: 100%; }
-  .btn-export:hover { opacity: 0.85; }
-  .canvas-area { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-  #canvas { display: block; image-rendering: pixelated; }
-  .drop-hint { position: absolute; text-align: center; pointer-events: none; }
-  .drop-hint p { font-size: 13px; color: var(--text-muted); }
-  .sidebar::-webkit-scrollbar { width: 4px; }
-  .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
-  .color-palette { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
-  .color-swatch { width: 22px; height: 22px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; }
-  .color-swatch.active { border-color: var(--text); }
-  .color-row { margin-top: 10px; }
-  .color-row > label { font-size: 11px; display: block; margin-bottom: 6px; }
+  html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
+
+  /* ---- CANVAS AREA ---- */
+  .canvas-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+  }
+  #canvas { max-width: 100%; max-height: 100%; display: block; touch-action: none; }
+  .hint { position: absolute; font-size: 12px; color: var(--muted); text-align: center; pointer-events: none; }
+
+  /* ---- BOTTOM PANEL ---- */
+  .panel {
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    height: var(--panel-h);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* Drag handle */
+  .handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 8px auto 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1;
+    font-family: var(--font);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 6px 4px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.1s;
+  }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); }
+
+  /* Tab content */
+  .tab-content { display: none; flex: 1; overflow-y: auto; padding: 10px 14px 20px; }
+  .tab-content.active { display: block; }
+  .tab-content::-webkit-scrollbar { display: none; }
+
+  /* Controls */
+  .row { margin-bottom: 12px; }
+  .row-label { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+  .row-label span { color: var(--muted); }
+  input[type="range"] {
+    width: 100%; height: 28px; -webkit-appearance: none;
+    background: transparent; outline: none; cursor: pointer;
+    padding: 0;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px; background: var(--border); border-radius: 1px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    background: var(--text); border-radius: 50%;
+    margin-top: -8px; cursor: pointer;
+  }
+
+  /* Upload button */
+  .upload-btn {
+    width: 100%;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    padding: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .upload-btn input {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  /* Toggles */
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 12px; }
+  .tog { width: 12px; height: 12px; border: 1.5px solid var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+
+  /* Switchers */
+  .sw-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .sw-label { font-size: 11px; min-width: 68px; flex-shrink: 0; }
+  .sw-btns { display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+  .sw-btn { font-family: var(--font); font-size: 12px; padding: 5px 10px; background: transparent; border: none; cursor: pointer; color: var(--muted); white-space: nowrap; }
+  .sw-btn.active { background: var(--text); color: var(--bg); }
+
+  /* Color palette */
+  .palette { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .swatch { width: 26px; height: 26px; border-radius: 4px; border: 2px solid transparent; cursor: pointer; }
+  .swatch.active { border-color: var(--text); }
+
+  /* Export */
+  .export-btn {
+    width: 100%;
+    font-family: var(--font);
+    font-size: 12px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    padding: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+
+  /* Loading indicator */
+  .spinner {
+    display: none;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 11px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .spinner.visible { display: block; }
+
+  /* Desktop layout override */
+  @media (min-width: 700px) {
+    body { flex-direction: row; }
+    .canvas-wrap { flex: 1; }
+    .panel {
+      width: 260px;
+      height: 100%;
+      border-top: none;
+      border-left: 1px solid var(--border);
+      --panel-h: 100%;
+    }
+    .handle { display: none; }
+  }
 </style>
 </head>
 <body>
 
-<aside class="sidebar">
-  <div class="sidebar-header">
-    <a href="#">/effects</a>
-    <h1>[ dots ]</h1>
+<!-- CANVAS -->
+<div class="canvas-wrap">
+  <canvas id="canvas"></canvas>
+  <div class="hint" id="hint">Tap to upload an image</div>
+  <div class="spinner" id="spinner">rendering…</div>
+</div>
+
+<!-- BOTTOM PANEL -->
+<div class="panel" id="panel">
+  <div class="handle" id="handle"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="upload">Upload</button>
+    <button class="tab" data-tab="effect">Effect</button>
+    <button class="tab" data-tab="shape">Shape</button>
+    <button class="tab" data-tab="export">Export</button>
   </div>
 
-  <div class="upload-area">
-    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
-    <div class="upload-label">Upload media <span class="shortcut">cmd + O</span></div>
-    <div class="upload-hint">[.jpg, .png, .webp]</div>
-  </div>
-
-  <div class="controls">
-    <div class="control-row">
-      <div class="control-label">Canvas Size <span id="val-canvas-size">800</span></div>
-      <input type="range" id="canvas-size" min="200" max="2000" step="50" value="800">
+  <!-- TAB: UPLOAD -->
+  <div class="tab-content active" id="tab-upload">
+    <button class="upload-btn">
+      📁 Upload image
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+    </button>
+    <div class="row">
+      <div class="row-label">Canvas Size <span id="val-canvas-size">800</span></div>
+      <input type="range" id="canvas-size" min="200" max="1600" step="100" value="800">
     </div>
-
-    <div class="section-title" id="toggle-preprocess">Image Preprocessing <span class="toggle-icon">−</span></div>
-    <div class="collapsible" id="section-preprocess" style="max-height:500px">
-      <div class="control-row">
-        <div class="control-label">Blur <span id="val-blur">0</span></div>
-        <input type="range" id="blur" min="0" max="10" step="1" value="0">
-      </div>
-      <div class="control-row">
-        <div class="control-label">Contrast <span id="val-contrast">1</span></div>
-        <input type="range" id="contrast" min="0.5" max="3" step="0.1" value="1">
-      </div>
-      <div class="control-row">
-        <div class="control-label">Brightness <span id="val-brightness">1</span></div>
-        <input type="range" id="brightness" min="0.2" max="2" step="0.1" value="1">
-      </div>
-      <div class="control-row">
-        <div class="control-label">Gamma <span id="val-gamma">1</span></div>
-        <input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1">
-      </div>
+    <div class="row">
+      <div class="row-label">Blur <span id="val-blur">0</span></div>
+      <input type="range" id="blur" min="0" max="8" step="1" value="0">
     </div>
-
-    <!-- Toggles -->
-    <div class="toggle-row" id="toggle-effect">
-      <div style="display:flex;align-items:center;gap:2px;font-size:11px;color:var(--text-muted)">
-        <span>[</span><span class="toggle-indicator" id="effect-indicator">✓</span><span>]</span>
-      </div>
-      <label>Show Effect</label>
+    <div class="row">
+      <div class="row-label">Contrast <span id="val-contrast">1</span></div>
+      <input type="range" id="contrast" min="0.5" max="3" step="0.1" value="1">
+    </div>
+    <div class="row">
+      <div class="row-label">Brightness <span id="val-brightness">1</span></div>
+      <input type="range" id="brightness" min="0.2" max="2" step="0.1" value="1">
+    </div>
+    <div class="row">
+      <div class="row-label">Gamma <span id="val-gamma">1</span></div>
+      <input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1">
     </div>
     <div class="toggle-row" id="toggle-invert">
-      <div style="display:flex;align-items:center;gap:2px;font-size:11px;color:var(--text-muted)">
-        <span>[</span><span class="toggle-indicator" id="invert-indicator">&nbsp;</span><span>]</span>
-      </div>
-      <label>Invert</label>
+      <div class="tog" id="invert-ind">&nbsp;</div> Invert colors
     </div>
+  </div>
 
-    <!-- Dithering -->
-    <div class="switcher">
-      <label>Dithering</label>
-      <div class="switcher-btns" id="dither-switcher">
-        <button data-val="none">None</button>
-        <button class="active" data-val="floyd">Floyd</button>
-        <button data-val="ordered">Ordered</button>
+  <!-- TAB: EFFECT -->
+  <div class="tab-content" id="tab-effect">
+    <div class="toggle-row" id="toggle-effect">
+      <div class="tog" id="effect-ind">✓</div> Show Effect
+    </div>
+    <div class="sw-row">
+      <span class="sw-label">Dithering</span>
+      <div class="sw-btns" id="sw-dither">
+        <button class="sw-btn" data-val="none">None</button>
+        <button class="sw-btn active" data-val="floyd">Floyd</button>
+        <button class="sw-btn" data-val="ordered">Bayer</button>
       </div>
     </div>
-
-    <div class="control-row">
-      <div class="control-label">Threshold <span id="val-threshold">128</span></div>
+    <div class="row">
+      <div class="row-label">Threshold <span id="val-threshold">128</span></div>
       <input type="range" id="threshold" min="0" max="255" step="1" value="128">
     </div>
-
-    <!-- Shape -->
-    <div class="switcher">
-      <label>Shape</label>
-      <div class="switcher-btns" id="shape-switcher">
-        <button class="active" data-val="square" title="Square">■</button>
-        <button data-val="circle" title="Circle">●</button>
-        <button data-val="arrow" title="Arrow">◀</button>
-        <button data-val="mix" title="Mix">✦</button>
+    <div class="sw-row">
+      <span class="sw-label">Grid Type</span>
+      <div class="sw-btns" id="sw-grid">
+        <button class="sw-btn active" data-val="regular">Regular</button>
+        <button class="sw-btn" data-val="benday">Benday</button>
       </div>
     </div>
-
-    <div id="mix-pattern-row" class="switcher" style="display:none">
-      <label>Pattern</label>
-      <div class="switcher-btns" id="mix-pattern-switcher">
-        <button class="active" data-val="ordered">Ordered</button>
-        <button data-val="random">Random</button>
-      </div>
-    </div>
-
-    <!-- Color -->
-    <div class="switcher">
-      <label>Color</label>
-      <div class="switcher-btns" id="color-mode-switcher">
-        <button class="active" data-val="mono">Mono</button>
-        <button data-val="multi">Multi</button>
-      </div>
-    </div>
-
-    <div id="palette-row" class="color-row" style="display:none">
-      <label>Palette</label>
-      <div class="color-palette" id="color-palette"></div>
-    </div>
-
-    <!-- Grid -->
-    <div class="switcher">
-      <label>Grid Type</label>
-      <div class="switcher-btns" id="grid-type-switcher">
-        <button class="active" data-val="regular">Regular</button>
-        <button data-val="benday">Benday</button>
-      </div>
-    </div>
-
-    <div class="control-row">
-      <div class="control-label">Shape Size <span id="val-shape-size">5</span></div>
-      <input type="range" id="shape-size" min="1" max="30" step="1" value="5">
-    </div>
-    <div class="control-row">
-      <div class="control-label">Step Size <span id="val-step-size">8</span></div>
+    <div class="row">
+      <div class="row-label">Step Size <span id="val-step-size">8</span></div>
       <input type="range" id="step-size" min="2" max="40" step="1" value="8">
     </div>
-    <div class="control-row">
-      <div class="control-label">Corner Radius <span id="val-corner-radius">1</span></div>
-      <input type="range" id="corner-radius" min="0" max="20" step="1" value="1">
-    </div>
-    <div class="control-row">
-      <div class="control-label">Grid Angle <span id="val-grid-angle">0</span></div>
+    <div class="row">
+      <div class="row-label">Grid Angle <span id="val-grid-angle">0</span></div>
       <input type="range" id="grid-angle" min="-45" max="45" step="1" value="0">
     </div>
-    <div class="control-row">
-      <div class="control-label">Noise <span id="val-noise">0</span></div>
-      <input type="range" id="noise" min="0" max="10" step="1" value="0">
-    </div>
   </div>
 
-  <div class="sidebar-footer">
-    <div class="switcher" style="margin-top:0">
-      <label style="font-size:11px">Format</label>
-      <div class="switcher-btns" id="format-switcher">
-        <button class="active" data-val="png">PNG</button>
-        <button data-val="svg">SVG</button>
+  <!-- TAB: SHAPE -->
+  <div class="tab-content" id="tab-shape">
+    <div class="sw-row">
+      <span class="sw-label">Shape</span>
+      <div class="sw-btns" id="sw-shape">
+        <button class="sw-btn active" data-val="square">■</button>
+        <button class="sw-btn" data-val="circle">●</button>
+        <button class="sw-btn" data-val="arrow">◀</button>
+        <button class="sw-btn" data-val="mix">✦</button>
       </div>
     </div>
-    <button class="btn-export" id="btn-export">Export canvas <span class="shortcut">cmd + S</span></button>
+    <div class="sw-row" id="mix-row" style="display:none">
+      <span class="sw-label">Pattern</span>
+      <div class="sw-btns" id="sw-mix">
+        <button class="sw-btn active" data-val="ordered">Ordered</button>
+        <button class="sw-btn" data-val="random">Random</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-label">Shape Size <span id="val-shape-size">5</span></div>
+      <input type="range" id="shape-size" min="1" max="30" step="1" value="5">
+    </div>
+    <div class="row">
+      <div class="row-label">Corner Radius <span id="val-corner-radius">1</span></div>
+      <input type="range" id="corner-radius" min="0" max="20" step="1" value="1">
+    </div>
+    <div class="row">
+      <div class="row-label">Noise <span id="val-noise">0</span></div>
+      <input type="range" id="noise" min="0" max="10" step="1" value="0">
+    </div>
+    <div class="sw-row">
+      <span class="sw-label">Color</span>
+      <div class="sw-btns" id="sw-color">
+        <button class="sw-btn active" data-val="mono">Mono</button>
+        <button class="sw-btn" data-val="multi">Multi</button>
+      </div>
+    </div>
+    <div id="palette-wrap" style="display:none">
+      <div style="font-size:11px;margin-bottom:6px">Palette</div>
+      <div class="palette" id="palette"></div>
+    </div>
   </div>
-</aside>
 
-<main class="canvas-area" id="canvasArea">
-  <div class="drop-hint" id="dropHint"><p>Upload an image to get started</p></div>
-  <canvas id="canvas"></canvas>
-</main>
+  <!-- TAB: EXPORT -->
+  <div class="tab-content" id="tab-export">
+    <div class="sw-row">
+      <span class="sw-label">Format</span>
+      <div class="sw-btns" id="sw-format">
+        <button class="sw-btn active" data-val="png">PNG</button>
+        <button class="sw-btn" data-val="svg">SVG</button>
+      </div>
+    </div>
+    <button class="export-btn" id="btn-export">Export canvas</button>
+  </div>
+</div>
 
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d', { willReadFrequently: true });
-const offscreen = document.createElement('canvas');
-const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
-
-let sourceImg = null;
-let showEffect = true;
-let invertColors = false;
-let gridType = 'regular';
-let shapeType = 'square';
-let mixPattern = 'ordered';
-let colorMode = 'mono';
-let ditherMode = 'floyd';
-let outputFormat = 'png';
-let renderTimeout = null;
-
-// Reference palette (muted, like the inspiration)
-const PALETTE_COLORS = [
-  '#2e5fa3', '#c95f2a', '#2a6b3a', '#d4a0b0', '#7a3b2e', '#c8b040', '#6b4a8a'
-];
-let activeColors = [...PALETTE_COLORS];
-
-const MIX_SHAPES = ['square', 'circle', 'arrow'];
-
-function getShapeForCell(col, row) {
-  if (shapeType !== 'mix') return shapeType;
-  if (mixPattern === 'random') {
-    const seed = ((col * 2654435761) ^ (row * 2246822519)) >>> 0;
-    return MIX_SHAPES[seed % MIX_SHAPES.length];
-  }
-  return MIX_SHAPES[(col + row) % MIX_SHAPES.length];
-}
-
-function getColorForCell(col, row) {
-  if (colorMode === 'mono') return '#1a1a1a';
-  if (activeColors.length === 0) return '#1a1a1a';
-  return activeColors[col % activeColors.length];
-}
-
-function buildPalette() {
-  const container = document.getElementById('color-palette');
-  container.innerHTML = '';
-  PALETTE_COLORS.forEach(color => {
-    const sw = document.createElement('div');
-    sw.className = 'color-swatch active';
-    sw.style.background = color;
-    sw.dataset.color = color;
-    sw.addEventListener('click', () => {
-      sw.classList.toggle('active');
-      activeColors = [...container.querySelectorAll('.color-swatch.active')].map(s => s.dataset.color);
-      if (activeColors.length === 0) { sw.classList.add('active'); activeColors = [color]; }
-      scheduleRender();
-    });
-    container.appendChild(sw);
-  });
-}
-buildPalette();
-
-const state = {
+// ---- STATE ----
+const S = {
   canvasSize: 800, blur: 0, contrast: 1, brightness: 1, gamma: 1,
-  threshold: 128, shapeSize: 5, stepSize: 8, cornerRadius: 1,
-  gridAngle: 0, noise: 0
+  threshold: 128, stepSize: 8, shapeSize: 5, cornerRadius: 1,
+  gridAngle: 0, noise: 0,
+  dither: 'floyd', grid: 'regular', shape: 'square',
+  mix: 'ordered', color: 'mono', format: 'png',
+  showEffect: true, invert: false
 };
 
+const PALETTE = ['#2e5fa3','#c95f2a','#2a6b3a','#d4a0b0','#7a3b2e','#c8b040','#6b4a8a'];
+let activeColors = [...PALETTE];
+let sourceImg = null;
+let renderJob = null;
+let lastRenderTime = 0;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const off = document.createElement('canvas');
+const offCtx = off.getContext('2d', { willReadFrequently: true });
+const spinner = document.getElementById('spinner');
+
+// ---- SLIDERS ----
 [
-  ['canvas-size','canvasSize'], ['blur','blur'], ['contrast','contrast'],
-  ['brightness','brightness'], ['gamma','gamma'], ['threshold','threshold'],
-  ['shape-size','shapeSize'], ['step-size','stepSize'],
-  ['corner-radius','cornerRadius'], ['grid-angle','gridAngle'], ['noise','noise']
+  ['canvas-size','canvasSize'],['blur','blur'],['contrast','contrast'],
+  ['brightness','brightness'],['gamma','gamma'],['threshold','threshold'],
+  ['step-size','stepSize'],['shape-size','shapeSize'],
+  ['corner-radius','cornerRadius'],['grid-angle','gridAngle'],['noise','noise']
 ].forEach(([id, key]) => {
   const el = document.getElementById(id);
-  const vl = document.getElementById('val-' + id);
+  const vl = document.getElementById('val-'+id);
   el.addEventListener('input', () => {
-    state[key] = parseFloat(el.value);
-    if (vl) vl.textContent = el.value;
+    S[key] = parseFloat(el.value);
+    if (vl) vl.textContent = parseFloat(el.value);
     scheduleRender();
   });
 });
 
-document.getElementById('toggle-preprocess').addEventListener('click', function() {
-  const sec = document.getElementById('section-preprocess');
-  const icon = this.querySelector('.toggle-icon');
-  sec.classList.toggle('collapsed');
-  icon.textContent = sec.classList.contains('collapsed') ? '+' : '−';
-  if (!sec.classList.contains('collapsed')) sec.style.maxHeight = '500px';
-});
-
-document.getElementById('toggle-effect').addEventListener('click', () => {
-  showEffect = !showEffect;
-  document.getElementById('effect-indicator').textContent = showEffect ? '✓' : ' ';
-  scheduleRender();
-});
-document.getElementById('toggle-invert').addEventListener('click', () => {
-  invertColors = !invertColors;
-  document.getElementById('invert-indicator').textContent = invertColors ? '✓' : ' ';
-  scheduleRender();
-});
-
-document.querySelectorAll('.switcher-btns').forEach(group => {
-  group.querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      group.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const val = btn.dataset.val;
-      if (group.id === 'dither-switcher') ditherMode = val;
-      if (group.id === 'grid-type-switcher') gridType = val;
-      if (group.id === 'format-switcher') outputFormat = val;
-      if (group.id === 'shape-switcher') {
-        shapeType = val;
-        document.getElementById('mix-pattern-row').style.display = val === 'mix' ? 'flex' : 'none';
-      }
-      if (group.id === 'mix-pattern-switcher') mixPattern = val;
-      if (group.id === 'color-mode-switcher') {
-        colorMode = val;
-        document.getElementById('palette-row').style.display = val === 'multi' ? 'block' : 'none';
-      }
-      scheduleRender();
-    });
+// ---- TABS ----
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
   });
 });
 
+// ---- PANEL DRAG (mobile) ----
+const panel = document.getElementById('panel');
+let panelOpen = true;
+let dragStart = null, panelStartH = null;
+const PANEL_MIN = 52, PANEL_MAX = window.innerHeight * 0.85;
+
+document.getElementById('handle').addEventListener('touchstart', e => {
+  dragStart = e.touches[0].clientY;
+  panelStartH = panel.offsetHeight;
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (dragStart === null) return;
+  const dy = dragStart - e.touches[0].clientY;
+  const newH = Math.min(PANEL_MAX, Math.max(PANEL_MIN, panelStartH + dy));
+  panel.style.height = newH + 'px';
+}, { passive: true });
+document.addEventListener('touchend', () => { dragStart = null; });
+
+// ---- SWITCHERS ----
+function makeSwitcher(id, key, extra) {
+  document.getElementById(id).querySelectorAll('.sw-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(id).querySelectorAll('.sw-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      S[key] = btn.dataset.val;
+      if (extra) extra(btn.dataset.val);
+      scheduleRender();
+    });
+  });
+}
+makeSwitcher('sw-dither', 'dither');
+makeSwitcher('sw-grid', 'grid');
+makeSwitcher('sw-format', 'format');
+makeSwitcher('sw-shape', 'shape', val => {
+  document.getElementById('mix-row').style.display = val === 'mix' ? 'flex' : 'none';
+});
+makeSwitcher('sw-mix', 'mix');
+makeSwitcher('sw-color', 'color', val => {
+  document.getElementById('palette-wrap').style.display = val === 'multi' ? 'block' : 'none';
+});
+
+// ---- TOGGLES ----
+document.getElementById('toggle-effect').addEventListener('click', () => {
+  S.showEffect = !S.showEffect;
+  document.getElementById('effect-ind').textContent = S.showEffect ? '✓' : ' ';
+  scheduleRender();
+});
+document.getElementById('toggle-invert').addEventListener('click', () => {
+  S.invert = !S.invert;
+  document.getElementById('invert-ind').textContent = S.invert ? '✓' : ' ';
+  scheduleRender();
+});
+
+// ---- PALETTE ----
+function buildPalette() {
+  const c = document.getElementById('palette');
+  PALETTE.forEach(color => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch active';
+    sw.style.background = color;
+    sw.dataset.color = color;
+    sw.addEventListener('click', () => {
+      sw.classList.toggle('active');
+      activeColors = [...c.querySelectorAll('.swatch.active')].map(s => s.dataset.color);
+      if (!activeColors.length) { sw.classList.add('active'); activeColors = [color]; }
+      scheduleRender();
+    });
+    c.appendChild(sw);
+  });
+}
+buildPalette();
+
+// ---- FILE INPUT ----
 document.getElementById('fileInput').addEventListener('change', e => {
   if (e.target.files[0]) loadFile(e.target.files[0]);
 });
+document.querySelector('.canvas-wrap').addEventListener('click', () => {
+  if (!sourceImg) document.getElementById('fileInput').click();
+});
 ['dragover','drop'].forEach(ev => {
-  document.getElementById('canvasArea').addEventListener(ev, e => {
+  document.querySelector('.canvas-wrap').addEventListener(ev, e => {
     e.preventDefault();
     if (ev === 'drop' && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
   });
 });
 function loadFile(file) {
-  const reader = new FileReader();
-  reader.onload = ev => {
+  const r = new FileReader();
+  r.onload = ev => {
     const img = new Image();
     img.onload = () => {
       sourceImg = img;
-      document.getElementById('dropHint').style.display = 'none';
+      document.getElementById('hint').style.display = 'none';
       scheduleRender();
     };
     img.src = ev.target.result;
   };
-  reader.readAsDataURL(file);
+  r.readAsDataURL(file);
 }
 
+// ---- KEYBOARD ----
 document.addEventListener('keydown', e => {
   const mod = e.metaKey || e.ctrlKey;
-  if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); document.getElementById('fileInput').click(); }
-  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); doExport(); }
+  if (mod && e.key === 'o') { e.preventDefault(); document.getElementById('fileInput').click(); }
+  if (mod && e.key === 's') { e.preventDefault(); doExport(); }
 });
 
+// ---- RENDER SCHEDULING (throttled) ----
 function scheduleRender() {
-  clearTimeout(renderTimeout);
-  renderTimeout = setTimeout(render, 60);
+  clearTimeout(renderJob);
+  const delay = Date.now() - lastRenderTime < 200 ? 150 : 60;
+  renderJob = setTimeout(doRender, delay);
 }
 
-// ---- STEP 1: Prepare grayscale image at grid resolution ----
-function prepareGrayscale(gridW, gridH) {
-  // Draw image into offscreen at grid resolution
-  offscreen.width = gridW;
-  offscreen.height = gridH;
-  offCtx.fillStyle = '#ffffff';
-  offCtx.fillRect(0, 0, gridW, gridH);
-
-  if (state.blur > 0) offCtx.filter = `blur(${state.blur}px)`;
-  // Use CSS filters for contrast/brightness
-  offCtx.filter = `blur(${state.blur}px) contrast(${state.contrast}) brightness(${state.brightness})`;
-  const scale = Math.max(gridW / sourceImg.width, gridH / sourceImg.height);
-  const sw = sourceImg.width * scale, sh = sourceImg.height * scale;
-  offCtx.drawImage(sourceImg, (gridW - sw) / 2, (gridH - sh) / 2, sw, sh);
+// ---- GRAYSCALE PREPARE ----
+function prepareGray(gw, gh) {
+  off.width = gw; off.height = gh;
+  offCtx.fillStyle = '#fff';
+  offCtx.fillRect(0, 0, gw, gh);
+  offCtx.filter = `blur(${S.blur}px) contrast(${S.contrast}) brightness(${S.brightness})`;
+  const sc = Math.max(gw / sourceImg.width, gh / sourceImg.height);
+  const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
+  offCtx.drawImage(sourceImg, (gw-sw)/2, (gh-sh)/2, sw, sh);
   offCtx.filter = 'none';
 
-  const d = offCtx.getImageData(0, 0, gridW, gridH);
-  const gray = new Float32Array(gridW * gridH);
-
+  const d = offCtx.getImageData(0, 0, gw, gh).data;
+  const gray = new Float32Array(gw * gh);
   for (let i = 0; i < gray.length; i++) {
-    const p = i * 4;
-    let lum = d.data[p] * 0.299 + d.data[p+1] * 0.587 + d.data[p+2] * 0.114;
-    // Gamma
-    if (state.gamma !== 1) lum = 255 * Math.pow(lum / 255, state.gamma);
-    if (invertColors) lum = 255 - lum;
-    gray[i] = lum;
+    const p = i*4;
+    let l = d[p]*.299 + d[p+1]*.587 + d[p+2]*.114;
+    if (S.gamma !== 1) l = 255 * Math.pow(l/255, S.gamma);
+    gray[i] = S.invert ? 255-l : l;
   }
-  return { gray, w: gridW, h: gridH };
+  return gray;
 }
 
-// ---- STEP 2: Dithering ----
-function applyDithering(gray, w, h) {
-  const out = new Uint8Array(w * h); // 0=black (draw shape), 255=white (skip)
-  const buf = new Float32Array(gray); // copy
+// ---- DITHERING ----
+function dither(gray, gw, gh) {
+  const out = new Uint8Array(gw * gh);
+  const buf = new Float32Array(gray);
+  const t = S.threshold;
 
-  if (ditherMode === 'none') {
-    const t = state.threshold;
-    for (let i = 0; i < buf.length; i++) out[i] = buf[i] < t ? 0 : 255;
+  if (S.dither === 'none') {
+    for (let i = 0; i < buf.length; i++) out[i] = buf[i] < t ? 1 : 0;
     return out;
   }
-
-  if (ditherMode === 'ordered') {
-    // 4x4 Bayer matrix
-    const bayer = [
-       0, 128,  32, 160,
-     192,  64, 224,  96,
-      48, 176,  16, 144,
-     240, 112, 208,  80
-    ];
-    const t = state.threshold;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * w + x;
-        const b = bayer[(y % 4) * 4 + (x % 4)];
-        out[i] = (buf[i] + b * 0.5 - 64) < t ? 0 : 255;
+  if (S.dither === 'ordered') {
+    const bayer = [0,128,32,160,192,64,224,96,48,176,16,144,240,112,208,80];
+    for (let y = 0; y < gh; y++)
+      for (let x = 0; x < gw; x++) {
+        const i = y*gw+x;
+        out[i] = (buf[i] + bayer[(y%4)*4+(x%4)]*.5-64) < t ? 1 : 0;
       }
-    }
     return out;
   }
-
   // Floyd-Steinberg
-  const t = state.threshold;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      const old = buf[i];
-      const nw = old < t ? 0 : 255;
-      out[i] = nw;
-      const err = old - nw;
-
-      if (x + 1 < w)           buf[i + 1]     += err * 7 / 16;
-      if (y + 1 < h) {
-        if (x > 0)             buf[i + w - 1] += err * 3 / 16;
-                               buf[i + w]     += err * 5 / 16;
-        if (x + 1 < w)        buf[i + w + 1] += err * 1 / 16;
+  for (let y = 0; y < gh; y++) {
+    for (let x = 0; x < gw; x++) {
+      const i = y*gw+x;
+      const nw = buf[i] < t ? 0 : 255;
+      out[i] = nw === 0 ? 1 : 0;
+      const err = buf[i] - nw;
+      if (x+1 < gw)              buf[i+1]    += err*7/16;
+      if (y+1 < gh) {
+        if (x > 0)               buf[i+gw-1] += err*3/16;
+                                  buf[i+gw]   += err*5/16;
+        if (x+1 < gw)            buf[i+gw+1] += err/16;
       }
     }
   }
   return out;
 }
 
-// ---- DRAW SHAPE ----
+// ---- SHAPE ----
+const MIX = ['square','circle','arrow'];
+function shapeFor(col, row) {
+  if (S.shape !== 'mix') return S.shape;
+  if (S.mix === 'random') {
+    const s = ((col*2654435761)^(row*2246822519))>>>0;
+    return MIX[s%3];
+  }
+  return MIX[(col+row)%3];
+}
+function colorFor(col) {
+  if (S.color === 'mono' || !activeColors.length) return '#1a1a1a';
+  return activeColors[col % activeColors.length];
+}
+
 function drawShape(ctx, shape, cx, cy, r, cr) {
-  switch (shape) {
+  switch(shape) {
     case 'circle':
-      ctx.moveTo(cx + r, cy);
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      break;
+      ctx.moveTo(cx+r,cy); ctx.arc(cx,cy,r,0,Math.PI*2); break;
     case 'square': {
-      const rx = Math.min(cr, r);
-      const x = cx - r, y = cy - r, w = r * 2;
-      if (rx <= 0) { ctx.rect(x, y, w, w); break; }
-      ctx.moveTo(x + rx, y);
-      ctx.lineTo(x+w-rx, y); ctx.arcTo(x+w,y,x+w,y+rx,rx);
+      const rx = Math.min(cr,r), x=cx-r, y=cy-r, w=r*2;
+      if (!rx) { ctx.rect(x,y,w,w); break; }
+      ctx.moveTo(x+rx,y);
+      ctx.lineTo(x+w-rx,y); ctx.arcTo(x+w,y,x+w,y+rx,rx);
       ctx.lineTo(x+w,y+w-rx); ctx.arcTo(x+w,y+w,x+w-rx,y+w,rx);
       ctx.lineTo(x+rx,y+w); ctx.arcTo(x,y+w,x,y+w-rx,rx);
       ctx.lineTo(x,y+rx); ctx.arcTo(x,y,x+rx,y,rx);
-      ctx.closePath();
-      break;
+      ctx.closePath(); break;
     }
-    case 'arrow': {
-      ctx.moveTo(cx - r, cy);
-      ctx.lineTo(cx + r * 0.6, cy - r * 0.9);
-      ctx.lineTo(cx + r * 0.6, cy + r * 0.9);
-      ctx.closePath();
-      break;
-    }
+    case 'arrow':
+      ctx.moveTo(cx-r,cy);
+      ctx.lineTo(cx+r*.6,cy-r*.9);
+      ctx.lineTo(cx+r*.6,cy+r*.9);
+      ctx.closePath(); break;
   }
 }
 
+// ---- COLLECT CELLS (shared between render & SVG export) ----
+function collectCells(mask, gw, gh, size) {
+  const step = S.stepSize, angleRad = S.gridAngle * Math.PI/180;
+  const cx = size/2, cy = size/2;
+  const diag = Math.ceil(Math.sqrt(2)*size) + step*4;
+  const startX = cx - diag/2, startY = cy - diag/2;
+  const cols = Math.ceil(diag/step)+1, rows = Math.ceil(diag/step)+1;
+  const cells = [];
+
+  for (let row = 0; row <= rows; row++) {
+    for (let col = 0; col <= cols; col++) {
+      // Map draw grid cell → sample grid cell
+      const gc = Math.round((col/cols) * (gw-1));
+      const gr = Math.round((row/rows) * (gh-1));
+      if (!mask[gr*gw+gc]) continue;
+
+      let lx = startX + col*step;
+      let ly = startY + row*step;
+      if (S.grid === 'benday' && row%2===1) lx += step/2;
+      const dx=lx-cx, dy=ly-cy;
+      const a=angleRad;
+      const drawX = cx + dx*Math.cos(a) - dy*Math.sin(a);
+      const drawY = cy + dx*Math.sin(a) + dy*Math.cos(a);
+      const n = S.noise;
+      cells.push({
+        col, row,
+        x: n ? drawX+(Math.random()-.5)*n : drawX,
+        y: n ? drawY+(Math.random()-.5)*n : drawY,
+        shape: shapeFor(col,row),
+        color: colorFor(col)
+      });
+    }
+  }
+  return cells;
+}
+
 // ---- MAIN RENDER ----
-function render() {
+function doRender() {
   if (!sourceImg) return;
+  lastRenderTime = Date.now();
+  spinner.classList.add('visible');
 
-  const canvasSize = state.canvasSize;
-  const step = state.stepSize;
-  const shapeR = state.shapeSize;
-  const cr = state.cornerRadius;
-  const noise = state.noise;
-  const angleRad = state.gridAngle * Math.PI / 180;
+  // Use requestAnimationFrame to not block UI
+  requestAnimationFrame(() => {
+    const size = S.canvasSize;
+    const step = S.stepSize;
+    const diag = Math.ceil(Math.sqrt(2)*size)+step*4;
+    const gw = Math.ceil(diag/step)+2;
+    const gh = Math.ceil(diag/step)+2;
 
-  canvas.width = canvasSize;
-  canvas.height = canvasSize;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvasSize, canvasSize);
+    canvas.width = size; canvas.height = size;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,size,size);
 
-  if (!showEffect) {
-    // Show original image
-    offscreen.width = canvasSize;
-    offscreen.height = canvasSize;
-    offCtx.fillStyle = '#fff';
-    offCtx.fillRect(0, 0, canvasSize, canvasSize);
-    const scale = Math.max(canvasSize / sourceImg.width, canvasSize / sourceImg.height);
-    const sw = sourceImg.width * scale, sh = sourceImg.height * scale;
-    offCtx.drawImage(sourceImg, (canvasSize-sw)/2, (canvasSize-sh)/2, sw, sh);
-    ctx.drawImage(offscreen, 0, 0);
-    return;
-  }
-
-  // Grid dimensions — sample at 1 cell per step
-  const cx = canvasSize / 2, cy = canvasSize / 2;
-  const diag = Math.ceil(Math.sqrt(2) * canvasSize) + step * 4;
-  const gridW = Math.ceil(diag / step) + 2;
-  const gridH = Math.ceil(diag / step) + 2;
-  const startX = cx - diag / 2;
-  const startY = cy - diag / 2;
-
-  // Prepare grayscale at grid resolution
-  const { gray, w, h } = prepareGrayscale(gridW, gridH);
-  const dithered = applyDithering(gray, w, h);
-
-  // Render shapes
-  if (colorMode === 'mono') {
-    ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath();
-    for (let row = 0; row < gridH; row++) {
-      for (let col = 0; col < gridW; col++) {
-        if (dithered[row * gridW + col] !== 0) continue; // white = skip
-
-        let lx = startX + col * step;
-        let ly = startY + row * step;
-        if (gridType === 'benday' && row % 2 === 1) lx += step / 2;
-
-        const dx = lx - cx, dy = ly - cy;
-        const drawX = cx + dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
-        const drawY = cy + dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
-
-        const nx = noise > 0 ? drawX + (Math.random()-.5)*noise : drawX;
-        const ny = noise > 0 ? drawY + (Math.random()-.5)*noise : drawY;
-
-        drawShape(ctx, getShapeForCell(col, row), nx, ny, shapeR, cr);
-      }
+    if (!S.showEffect) {
+      off.width=size; off.height=size;
+      offCtx.fillStyle='#fff'; offCtx.fillRect(0,0,size,size);
+      const sc=Math.max(size/sourceImg.width,size/sourceImg.height);
+      const sw=sourceImg.width*sc, sh=sourceImg.height*sc;
+      offCtx.drawImage(sourceImg,(size-sw)/2,(size-sh)/2,sw,sh);
+      ctx.drawImage(off,0,0);
+      spinner.classList.remove('visible');
+      return;
     }
-    ctx.fill();
-  } else {
-    // Multi-color: group by color
-    const byColor = {};
-    for (let row = 0; row < gridH; row++) {
-      for (let col = 0; col < gridW; col++) {
-        if (dithered[row * gridW + col] !== 0) continue;
-        let lx = startX + col * step;
-        let ly = startY + row * step;
-        if (gridType === 'benday' && row % 2 === 1) lx += step / 2;
-        const dx = lx - cx, dy = ly - cy;
-        const drawX = cx + dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
-        const drawY = cy + dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
-        const nx = noise > 0 ? drawX + (Math.random()-.5)*noise : drawX;
-        const ny = noise > 0 ? drawY + (Math.random()-.5)*noise : drawY;
-        const color = getColorForCell(col, row);
-        if (!byColor[color]) byColor[color] = [];
-        byColor[color].push({ nx, ny, shape: getShapeForCell(col, row) });
-      }
-    }
-    Object.entries(byColor).forEach(([color, cells]) => {
-      ctx.fillStyle = color;
+
+    const gray = prepareGray(gw, gh);
+    const mask = dither(gray, gw, gh);
+    const cells = collectCells(mask, gw, gh, size);
+    const r = S.shapeSize, cr = S.cornerRadius;
+
+    if (S.color === 'mono') {
+      ctx.fillStyle = '#1a1a1a';
       ctx.beginPath();
-      cells.forEach(({ nx, ny, shape }) => drawShape(ctx, shape, nx, ny, shapeR, cr));
+      cells.forEach(c => drawShape(ctx, c.shape, c.x, c.y, r, cr));
       ctx.fill();
-    });
-  }
+    } else {
+      const byColor = {};
+      cells.forEach(c => { (byColor[c.color]=byColor[c.color]||[]).push(c); });
+      Object.entries(byColor).forEach(([col, group]) => {
+        ctx.fillStyle = col; ctx.beginPath();
+        group.forEach(c => drawShape(ctx, c.shape, c.x, c.y, r, cr));
+        ctx.fill();
+      });
+    }
+
+    spinner.classList.remove('visible');
+  });
 }
 
 // ---- EXPORT ----
 document.getElementById('btn-export').addEventListener('click', doExport);
 function doExport() {
   if (!sourceImg) return;
-  if (outputFormat === 'png') {
-    const link = document.createElement('a');
-    link.download = 'halftone.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  } else exportSVG();
-}
-
-function exportSVG() {
-  // Re-run the same logic but output SVG
-  const canvasSize = state.canvasSize;
-  const step = state.stepSize;
-  const shapeR = state.shapeSize;
-  const cr = state.cornerRadius;
-  const noise = state.noise;
-  const angleRad = state.gridAngle * Math.PI / 180;
-  const cx = canvasSize / 2, cy = canvasSize / 2;
-  const diag = Math.ceil(Math.sqrt(2) * canvasSize) + step * 4;
-  const gridW = Math.ceil(diag / step) + 2;
-  const gridH = Math.ceil(diag / step) + 2;
-  const startX = cx - diag / 2, startY = cy - diag / 2;
-
-  const { gray, w, h } = prepareGrayscale(gridW, gridH);
-  const dithered = applyDithering(gray, w, h);
-
-  let shapes = '';
-  for (let row = 0; row < gridH; row++) {
-    for (let col = 0; col < gridW; col++) {
-      if (dithered[row * gridW + col] !== 0) continue;
-      let lx = startX + col * step;
-      let ly = startY + row * step;
-      if (gridType === 'benday' && row % 2 === 1) lx += step / 2;
-      const dx = lx - cx, dy = ly - cy;
-      const drawX = cx + dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
-      const drawY = cy + dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
-      const nx = noise > 0 ? drawX + (Math.random()-.5)*noise : drawX;
-      const ny = noise > 0 ? drawY + (Math.random()-.5)*noise : drawY;
-      const shape = getShapeForCell(col, row);
-      const fill = colorMode === 'mono' ? '#1a1a1a' : getColorForCell(col, row);
-      const r = shapeR;
-      const rx = Math.min(cr, r);
-
-      if (shape === 'circle') {
-        shapes += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="${r}" fill="${fill}"/>`;
-      } else if (shape === 'square') {
-        shapes += `<rect x="${(nx-r).toFixed(1)}" y="${(ny-r).toFixed(1)}" width="${r*2}" height="${r*2}" rx="${rx}" fill="${fill}"/>`;
-      } else {
-        shapes += `<polygon points="${(nx-r).toFixed(1)},${ny.toFixed(1)} ${(nx+r*.6).toFixed(1)},${(ny-r*.9).toFixed(1)} ${(nx+r*.6).toFixed(1)},${(ny+r*.9).toFixed(1)}" fill="${fill}"/>`;
-      }
-    }
+  if (S.format === 'png') {
+    const a = document.createElement('a');
+    a.download = 'halftone.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  } else {
+    const size = S.canvasSize, step = S.stepSize;
+    const diag = Math.ceil(Math.sqrt(2)*size)+step*4;
+    const gw = Math.ceil(diag/step)+2, gh = Math.ceil(diag/step)+2;
+    const gray = prepareGray(gw,gh);
+    const mask = dither(gray,gw,gh);
+    const cells = collectCells(mask,gw,gh,size);
+    const r = S.shapeSize, cr = S.cornerRadius;
+    let s = '';
+    cells.forEach(({shape,x,y,color}) => {
+      const fill = S.color==='mono'?'#1a1a1a':color;
+      const rx=Math.min(cr,r);
+      if (shape==='circle') s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${fill}"/>`;
+      else if (shape==='square') s+=`<rect x="${(x-r).toFixed(1)}" y="${(y-r).toFixed(1)}" width="${r*2}" height="${r*2}" rx="${rx}" fill="${fill}"/>`;
+      else s+=`<polygon points="${(x-r).toFixed(1)},${y.toFixed(1)} ${(x+r*.6).toFixed(1)},${(y-r*.9).toFixed(1)} ${(x+r*.6).toFixed(1)},${(y+r*.9).toFixed(1)}" fill="${fill}"/>`;
+    });
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="white"/><g>${s}</g></svg>`;
+    const a=document.createElement('a');
+    a.download='halftone.svg';
+    a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+    a.click();
   }
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvasSize}" height="${canvasSize}"><rect width="${canvasSize}" height="${canvasSize}" fill="white"/><g>${shapes}</g></svg>`;
-  const blob = new Blob([svg], {type:'image/svg+xml'});
-  const link = document.createElement('a');
-  link.download = 'halftone.svg';
-  link.href = URL.createObjectURL(blob);
-  link.click();
 }
 </script>
 </body>
