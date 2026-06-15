@@ -4,467 +4,155 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GiocoGeometry</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◆</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg: #f0ede8;
-    --fg: #1a1a1a;
-    --sidebar-bg: #e8e4df;
-    --border: #c8c4bf;
-    --accent: #1a1a1a;
-    --muted: #888480;
-    --hover: #dedad5;
-    --active-bg: #1a1a1a;
-    --active-fg: #f0ede8;
-    --font: 'Share Tech Mono', monospace;
-    --sidebar-w: 220px;
+    --bg: #f0ede8; --panel: #e8e4de; --border: #ccc8c0;
+    --text: #1a1a1a; --muted: #888;
+    --font: 'Share Tech Mono', 'Courier New', monospace;
+    --sidebar-w: 200px;
   }
+  html, body { height: 100%; overflow: hidden; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 12px; }
 
-  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 12px; }
-
-  /* ── LAYOUT ── */
+  /* ── APP SHELL ── */
   #app { display: flex; height: 100vh; }
 
   /* ── SIDEBAR ── */
   #sidebar {
     width: var(--sidebar-w);
     min-width: var(--sidebar-w);
-    background: var(--sidebar-bg);
+    background: var(--panel);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     z-index: 10;
   }
-
   #logo {
-    padding: 16px 14px 12px;
+    padding: 14px 14px 10px;
     border-bottom: 1px solid var(--border);
-    line-height: 1.2;
   }
-  #logo .name { font-size: 13px; letter-spacing: 0.05em; }
-  #logo .tagline { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  #logo .name { font-size: 13px; letter-spacing: 0.04em; }
+  #logo .sub  { font-size: 9px; color: var(--muted); margin-top: 2px; letter-spacing: 0.06em; }
 
-  .sidebar-section {
+  .sb-section {
     padding: 10px 14px 4px;
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: 9px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.12em;
   }
+  #effect-list { flex: 1; overflow-y: auto; scrollbar-width: none; }
+  #effect-list::-webkit-scrollbar { display: none; }
 
-  #effect-list {
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-  #effect-list::-webkit-scrollbar { width: 4px; }
-  #effect-list::-webkit-scrollbar-thumb { background: var(--border); }
-
-  .effect-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 14px;
+  .ef-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 14px;
     cursor: pointer;
-    transition: background 0.1s;
     border-left: 2px solid transparent;
     user-select: none;
+    transition: background 0.1s;
   }
-  .effect-item:hover { background: var(--hover); }
-  .effect-item.active {
-    background: var(--active-bg);
-    color: var(--active-fg);
-    border-left-color: var(--active-fg);
-  }
-  .effect-item.coming-soon { opacity: 0.4; cursor: default; }
-  .effect-item.coming-soon:hover { background: transparent; }
+  .ef-item:hover { background: rgba(0,0,0,0.04); }
+  .ef-item.active { background: var(--text); color: var(--bg); border-left-color: var(--bg); }
+  .ef-item.soon   { opacity: 0.38; cursor: default; }
+  .ef-item.soon:hover { background: transparent; }
 
-  .effect-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--muted);
-    flex-shrink: 0;
-  }
-  .effect-item.active .effect-dot { background: var(--active-fg); }
-  .effect-item.live .effect-dot { background: #2d8a4e; }
-  .effect-item.active.live .effect-dot { background: #7effa8; }
+  .ef-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .ef-item.live .ef-dot   { background: #3a9a5c; }
+  .ef-item.active .ef-dot { background: #7effa8; }
+  .ef-name { font-size: 10px; flex: 1; letter-spacing: 0.03em; }
+  .ef-tag  { font-size: 8px; color: var(--muted); }
+  .ef-item.active .ef-tag { color: rgba(255,255,255,0.5); }
 
-  .effect-name { font-size: 11px; flex: 1; }
-  .effect-tag { font-size: 9px; color: var(--muted); }
-  .effect-item.active .effect-tag { color: #888; }
-
-  #sidebar-footer {
+  #sb-footer {
     border-top: 1px solid var(--border);
     padding: 10px 14px;
-    font-size: 10px;
-    color: var(--muted);
-    line-height: 1.6;
+    font-size: 9px; color: var(--muted); line-height: 1.7;
   }
-  #sidebar-footer a { color: var(--muted); text-decoration: none; }
-  #sidebar-footer a:hover { color: var(--fg); }
+  #sb-footer a { color: var(--muted); text-decoration: none; }
+  #sb-footer a:hover { color: var(--text); }
 
   /* ── MAIN ── */
-  #main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-  }
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
   /* ── TOPBAR ── */
   #topbar {
-    height: 36px;
+    height: 34px; flex-shrink: 0;
     border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    gap: 8px;
-    flex-shrink: 0;
+    display: flex; align-items: center;
+    padding: 0 14px; gap: 8px;
     background: var(--bg);
   }
-  #breadcrumb { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-  #breadcrumb .sep { color: var(--border); }
-  #breadcrumb .current { color: var(--fg); }
-  #topbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-
+  .bc { font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+  .bc .cur { color: var(--text); }
+  .bc-sep { color: var(--border); }
+  #topbar-right { margin-left: auto; }
   .tb-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--fg);
-    font-family: var(--font);
-    font-size: 10px;
-    padding: 3px 10px;
-    cursor: pointer;
-    transition: all 0.1s;
+    background: none; border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font); font-size: 9px;
+    padding: 3px 9px; cursor: pointer; transition: all 0.1s;
+    letter-spacing: 0.04em;
   }
-  .tb-btn:hover { background: var(--fg); color: var(--bg); }
+  .tb-btn:hover { background: var(--text); color: var(--bg); border-color: var(--text); }
 
-  /* ── CONTENT ── */
+  /* ── CONTENT AREA ── */
   #content { flex: 1; overflow: hidden; position: relative; }
 
-  /* HOME VIEW */
-  #home-view {
-    height: 100%;
-    overflow-y: auto;
-    padding: 40px;
-  }
+  /* HOME */
+  #home-view { height: 100%; overflow-y: auto; padding: 36px 40px; }
+  .home-title { font-size: 26px; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 6px; }
+  .home-sub   { font-size: 10px; color: var(--muted); max-width: 360px; line-height: 1.7; margin-bottom: 36px; }
 
-  .home-header { margin-bottom: 40px; }
-  .home-title { font-size: 28px; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 8px; }
-  .home-sub { font-size: 11px; color: var(--muted); max-width: 400px; line-height: 1.6; }
-
-  .effects-grid {
+  .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1px;
-    border: 1px solid var(--border);
-    background: var(--border);
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1px; border: 1px solid var(--border); background: var(--border);
   }
-
-  .effect-card {
-    background: var(--bg);
-    padding: 20px 16px 16px;
-    cursor: pointer;
-    transition: background 0.1s;
-    position: relative;
-    min-height: 120px;
-    display: flex;
-    flex-direction: column;
+  .card {
+    background: var(--bg); padding: 0; cursor: pointer;
+    transition: background 0.1s; position: relative;
+    display: flex; flex-direction: column;
   }
-  .effect-card:hover { background: var(--hover); }
-  .effect-card.coming-soon { cursor: default; opacity: 0.5; }
-  .effect-card.coming-soon:hover { background: var(--bg); }
+  .card:hover { background: #e8e4de; }
+  .card.soon   { opacity: 0.45; cursor: default; }
+  .card.soon:hover { background: var(--bg); }
 
-  .card-canvas-wrap {
-    width: 100%;
-    height: 70px;
-    overflow: hidden;
-    margin-bottom: 12px;
-    background: var(--sidebar-bg);
-    position: relative;
+  .card-preview {
+    width: 100%; height: 80px;
+    background: var(--panel); overflow: hidden; flex-shrink: 0;
   }
-  .card-canvas-wrap canvas { width: 100%; height: 100%; display: block; }
+  .card-preview canvas { width: 100%; height: 100%; display: block; }
 
-  .card-name { font-size: 12px; letter-spacing: 0.05em; }
-  .card-desc { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.4; flex: 1; }
+  .card-body { padding: 12px 14px 14px; flex: 1; }
+  .card-name { font-size: 11px; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .card-desc { font-size: 9px; color: var(--muted); line-height: 1.5; }
   .card-badge {
-    position: absolute;
-    top: 10px; right: 10px;
-    font-size: 9px;
-    padding: 2px 6px;
-    background: var(--fg);
-    color: var(--bg);
-    letter-spacing: 0.05em;
+    position: absolute; top: 8px; right: 8px;
+    font-size: 8px; padding: 2px 5px;
+    background: var(--text); color: var(--bg);
+    letter-spacing: 0.06em;
   }
-  .card-badge.new { background: #2d8a4e; }
+  .card-badge.live { background: #3a9a5c; }
 
   /* EFFECT VIEW */
-  #effect-view {
-    display: none;
-    height: 100%;
-    flex-direction: column;
-  }
-  #effect-view.visible { display: flex; }
+  #effect-view { display: none; height: 100%; }
+  #effect-view.on { display: block; }
 
-  #effect-frame-wrap {
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-    background: var(--bg);
-  }
+  /* The dots tool is embedded as srcdoc iframe */
+  #tool-iframe { width: 100%; height: 100%; border: none; display: block; }
 
-  #effect-frame {
-    width: 100%;
-    height: 100%;
-    border: none;
-    display: block;
-  }
-
-  /* EFFECT TOOLS (canvas-based) */
-  #tool-container {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-  }
-
-  #tool-sidebar {
-    width: 220px;
-    min-width: 220px;
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    background: var(--sidebar-bg);
-    padding: 0;
-  }
-
-  #tool-canvas-area {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg);
-    position: relative;
-    overflow: hidden;
-  }
-
-  #tool-canvas {
-    max-width: 100%;
-    max-height: 100%;
-    image-rendering: pixelated;
-    cursor: crosshair;
-  }
-
-  .tool-placeholder {
+  /* COMING SOON */
+  #coming-view {
+    display: none; height: 100%;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px;
     color: var(--muted);
-    font-size: 11px;
-    text-align: center;
-    line-height: 2;
   }
-  .tool-placeholder .big { font-size: 32px; display: block; margin-bottom: 8px; }
-
-  /* CONTROLS */
-  .ctrl-section {
-    border-bottom: 1px solid var(--border);
-    padding: 12px 14px;
-  }
-  .ctrl-section-label {
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 10px;
-  }
-
-  .ctrl-row { margin-bottom: 10px; }
-  .ctrl-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    margin-bottom: 4px;
-    color: var(--fg);
-  }
-  .ctrl-val { color: var(--muted); }
-
-  input[type=range] {
-    width: 100%;
-    -webkit-appearance: none;
-    appearance: none;
-    height: 2px;
-    background: var(--border);
-    outline: none;
-    cursor: pointer;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 10px; height: 10px;
-    background: var(--fg);
-    border-radius: 50%;
-    cursor: pointer;
-  }
-  input[type=range]::-moz-range-thumb {
-    width: 10px; height: 10px;
-    background: var(--fg);
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-  }
-
-  .ctrl-switcher { display: flex; gap: 1px; }
-  .sw-btn {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-family: var(--font);
-    font-size: 9px;
-    padding: 4px 2px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.1s;
-    letter-spacing: 0.03em;
-  }
-  .sw-btn:hover { color: var(--fg); }
-  .sw-btn.active { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-
-  .ctrl-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 10px;
-    cursor: pointer;
-    padding: 2px 0;
-  }
-  .toggle-switch {
-    width: 28px; height: 14px;
-    background: var(--border);
-    border-radius: 7px;
-    position: relative;
-    transition: background 0.2s;
-  }
-  .toggle-switch.on { background: var(--fg); }
-  .toggle-switch::after {
-    content: '';
-    position: absolute;
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--bg);
-    top: 2px; left: 2px;
-    transition: transform 0.2s;
-  }
-  .toggle-switch.on::after { transform: translateX(14px); }
-
-  .upload-btn {
-    width: 100%;
-    border: 1px dashed var(--border);
-    background: transparent;
-    color: var(--muted);
-    font-family: var(--font);
-    font-size: 10px;
-    padding: 10px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.15s;
-  }
-  .upload-btn:hover { border-color: var(--fg); color: var(--fg); background: var(--hover); }
-
-  .action-btn {
-    width: 100%;
-    background: var(--fg);
-    color: var(--bg);
-    border: none;
-    font-family: var(--font);
-    font-size: 10px;
-    padding: 8px;
-    cursor: pointer;
-    text-align: center;
-    letter-spacing: 0.05em;
-    transition: opacity 0.1s;
-    margin-top: 4px;
-  }
-  .action-btn:hover { opacity: 0.8; }
-  .action-btn.secondary {
-    background: transparent;
-    color: var(--fg);
-    border: 1px solid var(--border);
-  }
-  .action-btn.secondary:hover { background: var(--hover); }
-
-  .color-row { display: flex; gap: 4px; flex-wrap: wrap; }
-  .color-swatch {
-    width: 20px; height: 20px;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    position: relative;
-  }
-  .color-swatch.active::after {
-    content: '✓';
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    color: white;
-    text-shadow: 0 0 2px #000;
-  }
-
-  /* preprocessing notification */
-  #proc-status {
-    position: absolute;
-    bottom: 12px; left: 50%;
-    transform: translateX(-50%);
-    background: var(--fg);
-    color: var(--bg);
-    font-size: 10px;
-    padding: 6px 14px;
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-    white-space: nowrap;
-  }
-  #proc-status.visible { opacity: 1; }
-
-  /* EXPORT BAR */
-  #export-bar {
-    height: 36px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 14px;
-    background: var(--sidebar-bg);
-    flex-shrink: 0;
-  }
-  #export-bar .exp-label { font-size: 10px; color: var(--muted); flex: 1; }
-  .exp-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--fg);
-    font-family: var(--font);
-    font-size: 10px;
-    padding: 4px 10px;
-    cursor: pointer;
-    transition: all 0.1s;
-  }
-  .exp-btn:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-
-  /* scrollbar in tool-sidebar */
-  #tool-sidebar::-webkit-scrollbar { width: 3px; }
-  #tool-sidebar::-webkit-scrollbar-thumb { background: var(--border); }
-
-  /* canvas info overlay */
-  #canvas-info {
-    position: absolute;
-    bottom: 8px; right: 10px;
-    font-size: 9px;
-    color: var(--muted);
-    pointer-events: none;
-  }
+  #coming-view.on { display: flex; }
+  .coming-name { font-size: 20px; color: var(--text); }
+  .coming-sub  { font-size: 10px; line-height: 1.8; text-align: center; max-width: 280px; }
 </style>
 </head>
 <body>
@@ -474,1321 +162,758 @@
   <div id="sidebar">
     <div id="logo">
       <div class="name">GiocoGeometry</div>
-      <div class="tagline">image effects lab</div>
+      <div class="sub">image effects lab</div>
     </div>
-
-    <div class="sidebar-section">/effects</div>
-    <div id="effect-list">
-      <!-- populated by JS -->
-    </div>
-
-    <div id="sidebar-footer">
+    <div class="sb-section">/effects</div>
+    <div id="effect-list"></div>
+    <div id="sb-footer">
+      <div><a href="https://github.com/Mattityah/geo" target="_blank">github ↗</a></div>
       <div>mattityah.github.io/geo</div>
-      <div style="margin-top:4px"><a href="https://github.com/Mattityah/geo" target="_blank">github ↗</a></div>
     </div>
   </div>
 
   <!-- MAIN -->
   <div id="main">
-    <!-- TOPBAR -->
     <div id="topbar">
-      <div id="breadcrumb">
-        <span class="crumb root" style="cursor:pointer" onclick="showHome()">GiocoGeometry</span>
-        <span class="sep" id="bc-sep" style="display:none">/</span>
-        <span class="current" id="bc-effect"></span>
+      <div class="bc">
+        <span style="cursor:pointer" onclick="showHome()">GiocoGeometry</span>
+        <span class="bc-sep" id="bc-sep" style="display:none">/</span>
+        <span class="cur" id="bc-cur"></span>
       </div>
-      <div id="topbar-actions">
+      <div id="topbar-right">
         <button class="tb-btn" onclick="showHome()">home</button>
       </div>
     </div>
 
-    <!-- CONTENT -->
     <div id="content">
-
-      <!-- HOME VIEW -->
+      <!-- HOME -->
       <div id="home-view">
-        <div class="home-header">
-          <div class="home-title">image<br>effects</div>
-          <div class="home-sub">upload any image, apply generative effects inspired by print, computation and graphic design.</div>
-        </div>
-        <div class="effects-grid" id="cards-grid">
-          <!-- populated by JS -->
-        </div>
+        <div class="home-title">image<br>effects</div>
+        <div class="home-sub">upload any image — apply generative effects drawn from print, computation and graphic design.</div>
+        <div class="cards-grid" id="cards-grid"></div>
       </div>
 
-      <!-- EFFECT VIEW -->
+      <!-- EFFECT: embedded tool -->
       <div id="effect-view">
-        <div id="tool-container">
-          <div id="tool-sidebar">
-            <!-- populated per effect -->
-          </div>
-          <div id="tool-canvas-area">
-            <canvas id="tool-canvas" style="display:none"></canvas>
-            <div class="tool-placeholder" id="tool-placeholder">
-              <span class="big">↑</span>
-              upload an image to begin
-            </div>
-            <div id="proc-status">processing...</div>
-            <div id="canvas-info"></div>
-          </div>
-        </div>
-        <div id="export-bar">
-          <span class="exp-label" id="exp-label">no image loaded</span>
-          <button class="exp-btn" onclick="exportPNG()">export PNG</button>
-        </div>
+        <iframe id="tool-iframe" src="about:blank"></iframe>
       </div>
 
+      <!-- COMING SOON -->
+      <div id="coming-view">
+        <div class="coming-name" id="coming-name"></div>
+        <div class="coming-sub" id="coming-desc"></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px">coming soon</div>
+      </div>
     </div>
   </div>
 </div>
 
-<input type="file" id="file-input" accept="image/*" style="display:none">
-
 <script>
-// ─── EFFECT REGISTRY ───────────────────────────────────────────────────────
+// ── EFFECT REGISTRY ──────────────────────────────────────────────────────────
 const EFFECTS = [
-  { id:'dots',     name:'DOTS',              desc:'halftone grid, regular or benday',    live:true  },
-  { id:'dithering',name:'DITHERING',         desc:'floyd-steinberg, bayer, random',      live:true  },
-  { id:'stippling',name:'STIPPLING',         desc:'edge-based dot placement via sobel',  live:true  },
-  { id:'bevel',    name:'BEVEL',             desc:'emboss / bevel lighting effect',      live:true  },
-  { id:'edge',     name:'EDGE',              desc:'contour detection & emphasis',         live:true  },
-  { id:'recolor',  name:'RECOLOR',           desc:'gradient mapping with posterize',     live:true  },
-  { id:'patterns', name:'PATTERNS',          desc:'image-based halftone patterns',       live:true  },
-  { id:'distort',  name:'DISTORT',           desc:'displacement map distortion',         live:true  },
-  { id:'ascii',    name:'ASCII',             desc:'character-based image rendering',     live:true  },
-  { id:'scatter',  name:'SCATTER',           desc:'relaxed point cloud from density',    live:false },
-  { id:'displace', name:'DISPLACE',          desc:'3d point cloud displacement',         live:false },
-  { id:'cellular', name:'CELLULAR AUTOMATA', desc:'game-of-life image seeding',          live:false },
-  { id:'gradients',name:'GRADIENTS',         desc:'luminosity band fill with shapes',    live:false },
-  { id:'crt',      name:'CRT',               desc:'monitor / lcd / tv phosphor sim',     live:false },
-  { id:'slide',    name:'SLIDE',             desc:'3d orbit animation of images',        live:false },
+  { id:'dots',      name:'DOTS',             desc:'halftone grid · floyd-steinberg dithering · shapes · multi-color palette · SVG export', live:true  },
+  { id:'dithering', name:'DITHERING',        desc:'Floyd-Steinberg, Bayer and random dithering with color mode',                           live:false },
+  { id:'stippling', name:'STIPPLING',        desc:'edge-based dot placement via Sobel detection',                                          live:false },
+  { id:'bevel',     name:'BEVEL',            desc:'emboss / bevel pixel lighting effect',                                                  live:false },
+  { id:'edge',      name:'EDGE',             desc:'contour detection with depth and angle',                                               live:false },
+  { id:'recolor',   name:'RECOLOR',          desc:'gradient mapping with posterize and perlin noise',                                      live:false },
+  { id:'patterns',  name:'PATTERNS',         desc:'image-based halftone using uploaded patterns',                                          live:false },
+  { id:'distort',   name:'DISTORT',          desc:'displacement map warping with X/Y strength',                                           live:false },
+  { id:'ascii',     name:'ASCII',            desc:'character-density image rendering with custom charset',                                 live:false },
+  { id:'scatter',   name:'SCATTER',          desc:'relaxed point cloud from luminosity density',                                          live:false },
+  { id:'displace',  name:'DISPLACE',         desc:'3D WebGL point cloud with Z displacement',                                             live:false },
+  { id:'cellular',  name:'CELLULAR AUTOMATA',desc:'Game of Life seeded from image pixels',                                                live:false },
+  { id:'gradients', name:'GRADIENTS',        desc:'luminosity band fill with rect / ellipse shapes',                                      live:false },
+  { id:'crt',       name:'CRT',              desc:'monitor / LCD / TV phosphor dot simulation with WebGL shaders',                        live:false },
+  { id:'slide',     name:'SLIDE',            desc:'3D orbit animation of uploaded images',                                                live:false },
 ];
 
-// ─── STATE ─────────────────────────────────────────────────────────────────
-let state = {
-  effect: null,
-  srcImage: null,       // HTMLImageElement
-  srcDataURL: null,
-  params: {},
-  processing: false,
+// ── DOTS TOOL SOURCE ─────────────────────────────────────────────────────────
+// The full polished DOTS tool embedded as srcdoc
+const DOTS_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>DOTS — GiocoGeometry</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f0ede8; --panel: #e8e4de; --border: #ccc8c0;
+    --text: #1a1a1a; --muted: #888;
+    --font: 'Share Tech Mono', 'Courier New', monospace;
+    --panel-h: 340px;
+  }
+  html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
+
+  .canvas-wrap {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; position: relative; background: #d8d4ce; padding: 16px;
+  }
+  .canvas-outer { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+  #canvas { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; box-shadow: 0 2px 20px rgba(0,0,0,0.18); }
+  .hint { position: absolute; font-size: 12px; color: var(--muted); text-align: center; pointer-events: none; }
+  .spinner { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 11px; color: var(--muted); pointer-events: none; }
+  .spinner.visible { display: block; }
+
+  .panel { background: var(--panel); border-top: 1px solid var(--border); height: var(--panel-h); display: flex; flex-direction: column; position: relative; }
+  .handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 8px auto 4px; flex-shrink: 0; cursor: pointer; }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .tab { flex: 1; font-family: var(--font); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; padding: 6px 4px; border: none; background: transparent; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.1s; }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); }
+  .tab-content { display: none; flex: 1; overflow-y: auto; padding: 10px 14px 20px; }
+  .tab-content.active { display: block; }
+  .tab-content::-webkit-scrollbar { display: none; }
+
+  .row { margin-bottom: 10px; }
+  .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+  .row-top label { font-size: 11px; color: var(--text); }
+  .row-top input[type="number"] {
+    font-family: var(--font); font-size: 11px; width: 52px; padding: 2px 5px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    border-radius: 2px; text-align: right; -moz-appearance: textfield;
+  }
+  .row-top input[type="number"]::-webkit-inner-spin-button,
+  .row-top input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .row-top input[type="number"]:focus { outline: none; border-color: var(--text); }
+  input[type="range"] { width: 100%; height: 28px; -webkit-appearance: none; background: transparent; outline: none; cursor: pointer; padding: 0; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--border); border-radius: 1px; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--text); border-radius: 50%; margin-top: -8px; cursor: pointer; }
+
+  .upload-btn { width: 100%; font-family: var(--font); font-size: 12px; font-weight: bold; letter-spacing: 0.05em; background: var(--text); color: var(--bg); border: none; padding: 12px; border-radius: 3px; cursor: pointer; margin-bottom: 12px; position: relative; }
+  .upload-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 12px; }
+  .tog { width: 12px; height: 12px; border: 1.5px solid var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+
+  .sw-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .sw-label { font-size: 11px; min-width: 68px; flex-shrink: 0; }
+  .sw-btns { display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+  .sw-btn { font-family: var(--font); font-size: 12px; padding: 5px 10px; background: transparent; border: none; cursor: pointer; color: var(--muted); white-space: nowrap; }
+  .sw-btn.active { background: var(--text); color: var(--bg); }
+
+  .palette { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .swatch { width: 26px; height: 26px; border-radius: 4px; border: 2px solid transparent; cursor: pointer; }
+  .swatch.active { border-color: var(--text); }
+
+  .dither-preview { width: 100%; aspect-ratio: 1; display: block; margin: 8px 0; border: 1px solid var(--border); image-rendering: pixelated; }
+
+  .export-btn { width: 100%; font-family: var(--font); font-size: 12px; background: var(--text); color: var(--bg); border: none; padding: 12px; border-radius: 3px; cursor: pointer; margin-top: 4px; }
+
+  @media (min-width: 700px) {
+    body { flex-direction: row; }
+    .canvas-wrap { flex: 1; }
+    .panel { width: 260px; height: 100%; border-top: none; border-left: 1px solid var(--border); --panel-h: 100%; }
+    .handle { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas-wrap">
+  <div class="canvas-outer"><canvas id="canvas"></canvas></div>
+  <div class="hint" id="hint">Tap to upload an image</div>
+  <div class="spinner" id="spinner">rendering…</div>
+</div>
+
+<div class="panel" id="panel">
+  <div class="handle" id="handle"></div>
+  <div class="tabs">
+    <button class="tab active" data-tab="upload">Upload</button>
+    <button class="tab" data-tab="effect">Effect</button>
+    <button class="tab" data-tab="shape">Shape</button>
+    <button class="tab" data-tab="export">Export</button>
+    <button class="tab" id="reset-tab" title="Reset all parameters" style="flex:0;padding:6px 10px;font-size:14px">↺</button>
+  </div>
+
+  <!-- TAB: UPLOAD -->
+  <div class="tab-content active" id="tab-upload">
+    <button class="upload-btn">📁 Upload image<input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp"></button>
+    <div style="font-size:11px;margin-bottom:6px;color:var(--muted)">Canvas Size</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px" id="sw-preset">
+      <button class="sw-btn" data-w="1080" data-h="1080" onclick="applyPreset(this)">Instagram</button>
+      <button class="sw-btn" data-w="1920" data-h="1080" onclick="applyPreset(this)">16:9</button>
+      <button class="sw-btn" data-w="1080" data-h="1920" onclick="applyPreset(this)">Story</button>
+      <button class="sw-btn" data-w="794"  data-h="1123" onclick="applyPreset(this)">A4</button>
+      <button class="sw-btn" data-w="1200" data-h="628"  onclick="applyPreset(this)">Banner</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-end">
+      <div style="flex:1"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Width px</div><input type="number" id="input-w" value="800" min="100" max="4000" step="10" style="width:100%;font-family:var(--font);font-size:12px;padding:7px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;color:var(--text)"></div>
+      <div style="font-size:16px;color:var(--muted);padding-bottom:8px">×</div>
+      <div style="flex:1"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Height px</div><input type="number" id="input-h" value="800" min="100" max="4000" step="10" style="width:100%;font-family:var(--font);font-size:12px;padding:7px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;color:var(--text)"></div>
+    </div>
+    <div class="row"><div class="row-top"><label>Blur</label><input type="number" id="num-blur" value="0" min="0" max="8" step="1"></div><input type="range" id="blur" min="0" max="8" step="1" value="0"></div>
+    <div class="row"><div class="row-top"><label>Contrast</label><input type="number" id="num-contrast" value="1" min="0.5" max="3" step="0.1"></div><input type="range" id="contrast" min="0.5" max="3" step="0.1" value="1"></div>
+    <div class="row"><div class="row-top"><label>Brightness</label><input type="number" id="num-brightness" value="1" min="0.2" max="2" step="0.1"></div><input type="range" id="brightness" min="0.2" max="2" step="0.1" value="1"></div>
+    <div class="row"><div class="row-top"><label>Gamma</label><input type="number" id="num-gamma" value="1" min="0.1" max="3" step="0.1"></div><input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1"></div>
+    <div class="toggle-row" id="toggle-invert"><div class="tog" id="invert-ind">&nbsp;</div> Invert colors</div>
+  </div>
+
+  <!-- TAB: EFFECT -->
+  <div class="tab-content" id="tab-effect">
+    <div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">Dither Preview</div>
+    <canvas id="dither-preview" class="dither-preview"></canvas>
+    <div class="toggle-row" id="toggle-effect"><div class="tog" id="effect-ind">✓</div> Show Effect</div>
+    <div class="sw-row"><span class="sw-label">Dithering</span><div class="sw-btns" id="sw-dither"><button class="sw-btn" data-val="none">None</button><button class="sw-btn active" data-val="floyd">Floyd</button><button class="sw-btn" data-val="ordered">Bayer</button></div></div>
+    <div class="row"><div class="row-top"><label>Threshold</label><input type="number" id="num-threshold" value="128" min="0" max="255" step="1"></div><input type="range" id="threshold" min="0" max="255" step="1" value="128"></div>
+    <div class="sw-row"><span class="sw-label">Grid Type</span><div class="sw-btns" id="sw-grid"><button class="sw-btn active" data-val="regular">Regular</button><button class="sw-btn" data-val="benday">Benday</button></div></div>
+    <div class="row"><div class="row-top"><label>Step Size</label><input type="number" id="num-step-size" value="8" min="2" max="40" step="1"></div><input type="range" id="step-size" min="2" max="40" step="1" value="8"></div>
+    <div class="row"><div class="row-top"><label>Grid Angle</label><input type="number" id="num-grid-angle" value="0" min="-45" max="45" step="1"></div><input type="range" id="grid-angle" min="-45" max="45" step="1" value="0"></div>
+  </div>
+
+  <!-- TAB: SHAPE -->
+  <div class="tab-content" id="tab-shape">
+    <div class="sw-row"><span class="sw-label">Shape</span><div class="sw-btns" id="sw-shape"><button class="sw-btn active" data-val="square">■</button><button class="sw-btn" data-val="circle">●</button><button class="sw-btn" data-val="arrow">◀</button><button class="sw-btn" data-val="mix">✦</button></div></div>
+    <div class="sw-row" id="mix-row" style="display:none"><span class="sw-label">Pattern</span><div class="sw-btns" id="sw-mix"><button class="sw-btn active" data-val="ordered">Ordered</button><button class="sw-btn" data-val="random">Random</button></div></div>
+    <div class="row"><div class="row-top"><label>Shape Size</label><input type="number" id="num-shape-size" value="5" min="1" max="30" step="1"></div><input type="range" id="shape-size" min="1" max="30" step="1" value="5"></div>
+    <div class="row"><div class="row-top"><label>Corner Radius</label><input type="number" id="num-corner-radius" value="1" min="0" max="20" step="1"></div><input type="range" id="corner-radius" min="0" max="20" step="1" value="1"></div>
+    <div class="row"><div class="row-top"><label>Noise</label><input type="number" id="num-noise" value="0" min="0" max="10" step="1"></div><input type="range" id="noise" min="0" max="10" step="1" value="0"></div>
+    <div class="sw-row"><span class="sw-label">Color</span><div class="sw-btns" id="sw-color"><button class="sw-btn active" data-val="mono">Mono</button><button class="sw-btn" data-val="multi">Multi</button></div></div>
+    <div id="palette-wrap" style="display:none"><div style="font-size:11px;margin-bottom:6px">Palette</div><div class="palette" id="palette"></div></div>
+  </div>
+
+  <!-- TAB: EXPORT -->
+  <div class="tab-content" id="tab-export">
+    <div class="sw-row"><span class="sw-label">Format</span><div class="sw-btns" id="sw-format"><button class="sw-btn active" data-val="png">PNG</button><button class="sw-btn" data-val="svg">SVG</button></div></div>
+    <button class="export-btn" id="btn-export">Export canvas</button>
+  </div>
+</div>
+
+<script>
+const S = {
+  canvasW:800, canvasH:800, blur:0, contrast:1, brightness:1, gamma:1,
+  threshold:128, stepSize:8, shapeSize:5, cornerRadius:1,
+  gridAngle:0, noise:0,
+  dither:'floyd', grid:'regular', shape:'square',
+  mix:'ordered', color:'mono', format:'png',
+  showEffect:true, invert:false
 };
+const PALETTE = ['#2e5fa3','#c95f2a','#2a6b3a','#d4a0b0','#7a3b2e','#c8b040','#6b4a8a'];
+let activeColors = [...PALETTE];
+let sourceImg = null, renderJob = null;
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d',{willReadFrequently:true});
+const off = document.createElement('canvas');
+const offCtx = off.getContext('2d',{willReadFrequently:true});
+const spinner = document.getElementById('spinner');
 
-// ─── BOOT ──────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  buildSidebar();
-  buildCards();
-  showHome();
+[['blur','blur'],['contrast','contrast'],['brightness','brightness'],['gamma','gamma'],
+ ['threshold','threshold'],['step-size','stepSize'],['shape-size','shapeSize'],
+ ['corner-radius','cornerRadius'],['grid-angle','gridAngle'],['noise','noise']
+].forEach(([id,key])=>{
+  const slider=document.getElementById(id);
+  const numIn=document.getElementById('num-'+id);
+  function update(val){
+    val=Math.min(parseFloat(slider.max),Math.max(parseFloat(slider.min),parseFloat(val)||0));
+    S[key]=val; slider.value=val; if(numIn) numIn.value=val; scheduleRender();
+  }
+  slider.addEventListener('input',()=>update(slider.value));
+  if(numIn){numIn.addEventListener('change',()=>update(numIn.value));numIn.addEventListener('keydown',e=>{if(e.key==='Enter')update(numIn.value);});}
+});
 
-  document.getElementById('file-input').addEventListener('change', e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const url = URL.createObjectURL(f);
-    loadImage(url);
-    e.target.value = '';
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    tab.classList.add('active');
+    const tc=document.getElementById('tab-'+tab.dataset.tab);
+    if(tc) tc.classList.add('active');
+    if(tab.dataset.tab==='effect') setTimeout(updateDitherPreview,50);
   });
 });
 
-function buildSidebar() {
-  const list = document.getElementById('effect-list');
-  EFFECTS.forEach(ef => {
-    const div = document.createElement('div');
-    div.className = 'effect-item' + (ef.live ? ' live' : ' coming-soon');
-    div.dataset.id = ef.id;
-    div.innerHTML = `
-      <div class="effect-dot"></div>
-      <span class="effect-name">${ef.name}</span>
-      <span class="effect-tag">${ef.live ? 'live' : 'soon'}</span>
-    `;
-    if (ef.live) div.addEventListener('click', () => openEffect(ef.id));
-    list.appendChild(div);
+const panel=document.getElementById('panel');
+let dragStart=null, panelStartH=null;
+const PANEL_MIN=52, PANEL_MAX=window.innerHeight*0.85;
+document.getElementById('handle').addEventListener('touchstart',e=>{dragStart=e.touches[0].clientY;panelStartH=panel.offsetHeight;},{passive:true});
+document.addEventListener('touchmove',e=>{if(dragStart===null)return;const dy=dragStart-e.touches[0].clientY;panel.style.height=Math.min(PANEL_MAX,Math.max(PANEL_MIN,panelStartH+dy))+'px';},{passive:true});
+document.addEventListener('touchend',()=>{dragStart=null;});
+
+function makeSwitcher(id,key,extra){
+  document.getElementById(id)?.querySelectorAll('.sw-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.getElementById(id).querySelectorAll('.sw-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active'); S[key]=btn.dataset.val;
+      if(extra) extra(btn.dataset.val); scheduleRender();
+    });
   });
 }
+makeSwitcher('sw-dither','dither');
+makeSwitcher('sw-grid','grid');
+makeSwitcher('sw-format','format');
+makeSwitcher('sw-shape','shape',val=>{document.getElementById('mix-row').style.display=val==='mix'?'flex':'none';});
+makeSwitcher('sw-mix','mix');
+makeSwitcher('sw-color','color',val=>{document.getElementById('palette-wrap').style.display=val==='multi'?'block':'none';});
 
-function buildCards() {
-  const grid = document.getElementById('cards-grid');
-  EFFECTS.forEach(ef => {
-    const card = document.createElement('div');
-    card.className = 'effect-card' + (ef.live ? '' : ' coming-soon');
-    card.innerHTML = `
-      <div class="card-canvas-wrap">
-        <canvas id="preview-${ef.id}" width="180" height="70"></canvas>
-      </div>
-      ${ef.live ? '<div class="card-badge new">LIVE</div>' : '<div class="card-badge">SOON</div>'}
-      <div class="card-name">${ef.name}</div>
-      <div class="card-desc">${ef.desc}</div>
-    `;
-    if (ef.live) card.addEventListener('click', () => openEffect(ef.id));
-    grid.appendChild(card);
-    // draw preview
-    setTimeout(() => drawCardPreview(ef.id), 50);
+document.getElementById('toggle-effect').addEventListener('click',()=>{S.showEffect=!S.showEffect;document.getElementById('effect-ind').textContent=S.showEffect?'✓':' ';scheduleRender();});
+document.getElementById('toggle-invert').addEventListener('click',()=>{S.invert=!S.invert;document.getElementById('invert-ind').textContent=S.invert?'✓':' ';scheduleRender();});
+
+function buildPal(){
+  const c=document.getElementById('palette');
+  PALETTE.forEach(color=>{
+    const sw=document.createElement('div');
+    sw.className='swatch active'; sw.style.background=color; sw.dataset.color=color;
+    sw.addEventListener('click',()=>{
+      sw.classList.toggle('active');
+      activeColors=[...c.querySelectorAll('.swatch.active')].map(s=>s.dataset.color);
+      if(!activeColors.length){sw.classList.add('active');activeColors=[color];}
+      scheduleRender();
+    });
+    c.appendChild(sw);
   });
 }
+buildPal();
 
-// ─── NAVIGATION ────────────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+document.querySelector('.canvas-wrap').addEventListener('click',()=>{if(!sourceImg)document.getElementById('fileInput').click();});
+['dragover','drop'].forEach(ev=>{
+  document.querySelector('.canvas-wrap').addEventListener(ev,e=>{
+    e.preventDefault();
+    if(ev==='drop'&&e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);
+  });
+});
+function loadFile(f){
+  const r=new FileReader();
+  r.onload=ev=>{const img=new Image();img.onload=()=>{sourceImg=img;document.getElementById('hint').style.display='none';scheduleRender();};img.src=ev.target.result;};
+  r.readAsDataURL(f);
+}
+
+document.addEventListener('keydown',e=>{
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod&&e.key==='o'){e.preventDefault();document.getElementById('fileInput').click();}
+  if(mod&&e.key==='s'){e.preventDefault();doExport();}
+});
+
+let isDragging=false;
+document.addEventListener('mousedown',e=>{if(e.target.type==='range')isDragging=true;});
+document.addEventListener('mouseup',()=>{if(isDragging){isDragging=false;scheduleRender();}});
+document.addEventListener('touchend',()=>{if(isDragging){isDragging=false;scheduleRender();}});
+
+function scheduleRender(){clearTimeout(renderJob);renderJob=setTimeout(isDragging?doPreview:doRender,isDragging?200:60);}
+
+function doPreview(){
+  if(!sourceImg)return;
+  const origW=S.canvasW,origH=S.canvasH,origStep=S.stepSize;
+  const ps=Math.min(1,400/Math.max(origW,origH));
+  S.canvasW=Math.round(origW*ps); S.canvasH=Math.round(origH*ps); S.stepSize=Math.max(2,Math.round(origStep*ps));
+  doRender(); S.canvasW=origW; S.canvasH=origH; S.stepSize=origStep;
+}
+
+function getSafeStep(cw,ch,step){
+  const size=Math.max(cw,ch);
+  const diag=Math.ceil(Math.sqrt(2)*size)+step*4;
+  const MAX_CELLS=60000;
+  let s=step;
+  while(true){const gw=Math.ceil(diag/s)+2;const gh=Math.ceil(diag/s)+2;if(gw*gh<=MAX_CELLS)break;s++;}
+  if(s!==step){S.stepSize=s;const sl=document.getElementById('step-size');const ni=document.getElementById('num-step-size');if(sl)sl.value=s;if(ni)ni.value=s;}
+  const diag2=Math.ceil(Math.sqrt(2)*size)+s*4;
+  return{gw:Math.ceil(diag2/s)+2,gh:Math.ceil(diag2/s)+2,step:s};
+}
+
+let currentRenderID=0;
+function yieldFrame(){return new Promise(r=>setTimeout(r,0));}
+
+async function doRender(){
+  if(!sourceImg)return;
+  const myID=++currentRenderID;
+  spinner.classList.add('visible');
+  await yieldFrame(); if(myID!==currentRenderID)return;
+  const{gw,gh}=getSafeStep(S.canvasW,S.canvasH,S.stepSize);
+  canvas.width=S.canvasW; canvas.height=S.canvasH;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,S.canvasW,S.canvasH);
+  if(!S.showEffect){
+    off.width=S.canvasW;off.height=S.canvasH;offCtx.fillStyle='#fff';offCtx.fillRect(0,0,S.canvasW,S.canvasH);
+    const sc=Math.min(S.canvasW/sourceImg.width,S.canvasH/sourceImg.height);
+    const sw=sourceImg.width*sc,sh=sourceImg.height*sc;
+    offCtx.drawImage(sourceImg,(S.canvasW-sw)/2,(S.canvasH-sh)/2,sw,sh);
+    ctx.drawImage(off,0,0); spinner.classList.remove('visible'); return;
+  }
+  const gray=prepareGray(gw,gh);
+  await yieldFrame(); if(myID!==currentRenderID)return;
+  const mask=dither(gray,gw,gh);
+  await yieldFrame(); if(myID!==currentRenderID)return;
+  const cells=collectCells(mask,gw,gh,S.canvasW,S.canvasH);
+  await yieldFrame(); if(myID!==currentRenderID)return;
+  const r=S.shapeSize,cr=S.cornerRadius,CHUNK=1500;
+  if(S.color==='mono'){
+    for(let i=0;i<cells.length;i+=CHUNK){
+      if(myID!==currentRenderID)return;
+      ctx.fillStyle='#1a1a1a'; ctx.beginPath();
+      const end=Math.min(i+CHUNK,cells.length);
+      for(let j=i;j<end;j++){const c=cells[j];drawShape(ctx,c.shape,c.x,c.y,r,cr);}
+      ctx.fill(); await yieldFrame();
+    }
+  } else {
+    const byColor={};
+    cells.forEach(c=>{(byColor[c.color]=byColor[c.color]||[]).push(c);});
+    for(const[col,group]of Object.entries(byColor)){
+      if(myID!==currentRenderID)return;
+      ctx.fillStyle=col; ctx.beginPath();
+      group.forEach(c=>drawShape(ctx,c.shape,c.x,c.y,r,cr));
+      ctx.fill(); await yieldFrame();
+    }
+  }
+  if(myID===currentRenderID)spinner.classList.remove('visible');
+}
+
+function prepareGray(gw,gh){
+  off.width=gw; off.height=gh;
+  offCtx.fillStyle='#fff'; offCtx.fillRect(0,0,gw,gh);
+  offCtx.filter=\`blur(\${S.blur}px) contrast(\${S.contrast}) brightness(\${S.brightness})\`;
+  const scX=gw/sourceImg.width,scY=gh/sourceImg.height,sc=Math.min(scX,scY);
+  const sw=sourceImg.width*sc,sh=sourceImg.height*sc;
+  offCtx.drawImage(sourceImg,(gw-sw)/2,(gh-sh)/2,sw,sh);
+  offCtx.filter='none';
+  const d=offCtx.getImageData(0,0,gw,gh).data;
+  const gray=new Float32Array(gw*gh);
+  for(let i=0;i<gray.length;i++){
+    const p=i*4; let l=d[p]*.299+d[p+1]*.587+d[p+2]*.114;
+    if(S.gamma!==1)l=255*Math.pow(l/255,S.gamma);
+    gray[i]=S.invert?255-l:l;
+  }
+  return gray;
+}
+
+function dither(gray,gw,gh){
+  const out=new Uint8Array(gw*gh),buf=new Float32Array(gray),t=S.threshold;
+  if(S.dither==='none'){for(let i=0;i<buf.length;i++)out[i]=buf[i]<t?1:0;return out;}
+  if(S.dither==='ordered'){
+    const bayer=[0,128,32,160,192,64,224,96,48,176,16,144,240,112,208,80];
+    for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){const i=y*gw+x;out[i]=(buf[i]+bayer[(y%4)*4+(x%4)]*.5-64)<t?1:0;}
+    return out;
+  }
+  for(let y=0;y<gh;y++){
+    for(let x=0;x<gw;x++){
+      const i=y*gw+x,nw=buf[i]<t?0:255;
+      out[i]=nw===0?1:0;const err=buf[i]-nw;
+      if(x+1<gw)buf[i+1]+=err*7/16;
+      if(y+1<gh){if(x>0)buf[i+gw-1]+=err*3/16;buf[i+gw]+=err*5/16;if(x+1<gw)buf[i+gw+1]+=err/16;}
+    }
+  }
+  return out;
+}
+
+const MIX=['square','circle','arrow'];
+function shapeFor(col,row){
+  if(S.shape!=='mix')return S.shape;
+  if(S.mix==='random'){const s=((col*2654435761)^(row*2246822519))>>>0;return MIX[s%3];}
+  return MIX[(col+row)%3];
+}
+function colorFor(col){if(S.color==='mono'||!activeColors.length)return'#1a1a1a';return activeColors[col%activeColors.length];}
+
+function drawShape(ctx,shape,cx,cy,r,cr){
+  switch(shape){
+    case'circle':ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,Math.PI*2);break;
+    case'square':{const rx=Math.min(cr,r),x=cx-r,y=cy-r,w=r*2;
+      if(!rx){ctx.rect(x,y,w,w);break;}
+      ctx.moveTo(x+rx,y);ctx.lineTo(x+w-rx,y);ctx.arcTo(x+w,y,x+w,y+rx,rx);
+      ctx.lineTo(x+w,y+w-rx);ctx.arcTo(x+w,y+w,x+w-rx,y+w,rx);
+      ctx.lineTo(x+rx,y+w);ctx.arcTo(x,y+w,x,y+w-rx,rx);
+      ctx.lineTo(x,y+rx);ctx.arcTo(x,y,x+rx,y,rx);ctx.closePath();break;}
+    case'arrow':ctx.moveTo(cx-r,cy);ctx.lineTo(cx+r*.6,cy-r*.9);ctx.lineTo(cx+r*.6,cy+r*.9);ctx.closePath();break;
+  }
+}
+
+function collectCells(mask,gw,gh,cw,ch){
+  const size=Math.max(cw,ch),step=S.stepSize,angleRad=S.gridAngle*Math.PI/180;
+  const cx=cw/2,cy=ch/2;
+  const diag=Math.ceil(Math.sqrt(2)*size)+step*4;
+  const startX=cx-diag/2,startY=cy-diag/2;
+  const cols=Math.ceil(diag/step)+1,rows=Math.ceil(diag/step)+1;
+  const cells=[];
+  for(let row=0;row<=rows;row++){
+    for(let col=0;col<=cols;col++){
+      const gc=Math.round((col/cols)*(gw-1)),gr=Math.round((row/rows)*(gh-1));
+      if(!mask[gr*gw+gc])continue;
+      let lx=startX+col*step,ly=startY+row*step;
+      if(S.grid==='benday'&&row%2===1)lx+=step/2;
+      const dx=lx-cx,dy=ly-cy,a=angleRad;
+      const drawX=cx+dx*Math.cos(a)-dy*Math.sin(a);
+      const drawY=cy+dx*Math.sin(a)+dy*Math.cos(a);
+      const n=S.noise;
+      cells.push({col,row,x:n?drawX+(Math.random()-.5)*n:drawX,y:n?drawY+(Math.random()-.5)*n:drawY,shape:shapeFor(col,row),color:colorFor(col)});
+    }
+  }
+  return cells;
+}
+
+function applyPreset(btn){
+  document.querySelectorAll('#sw-preset .sw-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); S.canvasW=parseInt(btn.dataset.w); S.canvasH=parseInt(btn.dataset.h);
+  document.getElementById('input-w').value=S.canvasW; document.getElementById('input-h').value=S.canvasH; scheduleRender();
+}
+document.getElementById('input-w').addEventListener('change',e=>{S.canvasW=Math.max(100,Math.min(4000,parseInt(e.target.value)||800));e.target.value=S.canvasW;document.querySelectorAll('#sw-preset .sw-btn').forEach(b=>b.classList.remove('active'));scheduleRender();});
+document.getElementById('input-h').addEventListener('change',e=>{S.canvasH=Math.max(100,Math.min(4000,parseInt(e.target.value)||800));e.target.value=S.canvasH;document.querySelectorAll('#sw-preset .sw-btn').forEach(b=>b.classList.remove('active'));scheduleRender();});
+
+document.getElementById('btn-export').addEventListener('click',doExport);
+function doExport(){
+  if(!sourceImg)return;
+  if(S.format==='png'){const a=document.createElement('a');a.download='halftone.png';a.href=canvas.toDataURL('image/png');a.click();}
+  else{
+    const size=Math.max(S.canvasW,S.canvasH),step=S.stepSize;
+    const diag=Math.ceil(Math.sqrt(2)*size)+step*4;
+    const gw=Math.ceil(diag/step)+2,gh=Math.ceil(diag/step)+2;
+    const gray=prepareGray(gw,gh),mask=dither(gray,gw,gh),cells=collectCells(mask,gw,gh,S.canvasW,S.canvasH);
+    const r=S.shapeSize,cr=S.cornerRadius;
+    let s='';
+    cells.forEach(({shape,x,y,color})=>{
+      const fill=S.color==='mono'?'#1a1a1a':color,rx=Math.min(cr,r);
+      if(shape==='circle')s+=\`<circle cx="\${x.toFixed(1)}" cy="\${y.toFixed(1)}" r="\${r}" fill="\${fill}"/>\`;
+      else if(shape==='square')s+=\`<rect x="\${(x-r).toFixed(1)}" y="\${(y-r).toFixed(1)}" width="\${r*2}" height="\${r*2}" rx="\${rx}" fill="\${fill}"/>\`;
+      else s+=\`<polygon points="\${(x-r).toFixed(1)},\${y.toFixed(1)} \${(x+r*.6).toFixed(1)},\${(y-r*.9).toFixed(1)} \${(x+r*.6).toFixed(1)},\${(y+r*.9).toFixed(1)}" fill="\${fill}"/>\`;
+    });
+    const svg=\`<svg xmlns="http://www.w3.org/2000/svg" width="\${S.canvasW}" height="\${S.canvasH}"><rect width="\${S.canvasW}" height="\${S.canvasH}" fill="white"/><g>\${s}</g></svg>\`;
+    const a=document.createElement('a');a.download='halftone.svg';a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));a.click();
+  }
+}
+
+const DEFAULTS={blur:0,contrast:1,brightness:1,gamma:1,threshold:128,stepSize:8,shapeSize:5,cornerRadius:1,gridAngle:0,noise:0,dither:'floyd',grid:'regular',shape:'square',mix:'ordered',color:'mono',showEffect:true,invert:false};
+document.getElementById('reset-tab').addEventListener('click',()=>{
+  if(!confirm('Reset all parameters to defaults?'))return;
+  Object.assign(S,DEFAULTS); S.canvasW=800; S.canvasH=800;
+  [['blur','blur'],['contrast','contrast'],['brightness','brightness'],['gamma','gamma'],['threshold','threshold'],['step-size','stepSize'],['shape-size','shapeSize'],['corner-radius','cornerRadius'],['grid-angle','gridAngle'],['noise','noise']].forEach(([id,key])=>{
+    const sl=document.getElementById(id),ni=document.getElementById('num-'+id);
+    if(sl)sl.value=S[key];if(ni)ni.value=S[key];
+  });
+  document.getElementById('input-w').value=800;document.getElementById('input-h').value=800;
+  function resetSw(id,val){document.getElementById(id)?.querySelectorAll('.sw-btn').forEach(b=>b.classList.toggle('active',b.dataset.val===val));}
+  resetSw('sw-dither','floyd');resetSw('sw-grid','regular');resetSw('sw-shape','square');resetSw('sw-mix','ordered');resetSw('sw-color','mono');
+  document.getElementById('effect-ind').textContent='✓';document.getElementById('invert-ind').textContent=' ';
+  document.getElementById('mix-row').style.display='none';document.getElementById('palette-wrap').style.display='none';
+  scheduleRender();
+});
+
+const ditherCanvas=document.getElementById('dither-preview');
+const ditherCtx=ditherCanvas.getContext('2d');
+function updateDitherPreview(){
+  if(!sourceImg||!ditherCanvas)return;
+  const size=200;ditherCanvas.width=size;ditherCanvas.height=size;
+  const tempOff=document.createElement('canvas');tempOff.width=size;tempOff.height=size;
+  const tempCtx=tempOff.getContext('2d',{willReadFrequently:true});
+  tempCtx.fillStyle='#fff';tempCtx.fillRect(0,0,size,size);
+  tempCtx.filter=\`contrast(\${S.contrast}) brightness(\${S.brightness})\`;
+  const sc=Math.min(size/sourceImg.width,size/sourceImg.height);
+  const sw=sourceImg.width*sc,sh=sourceImg.height*sc;
+  tempCtx.drawImage(sourceImg,(size-sw)/2,(size-sh)/2,sw,sh);
+  tempCtx.filter='none';
+  const d=tempCtx.getImageData(0,0,size,size);
+  const gray=new Float32Array(size*size);
+  for(let i=0;i<gray.length;i++){const p=i*4;let l=d.data[p]*.299+d.data[p+1]*.587+d.data[p+2]*.114;if(S.gamma!==1)l=255*Math.pow(l/255,S.gamma);gray[i]=S.invert?255-l:l;}
+  const mask=dither(gray,size,size);
+  const out=ditherCtx.createImageData(size,size);
+  for(let i=0;i<mask.length;i++){const v=mask[i]?255:0;out.data[i*4]=out.data[i*4+1]=out.data[i*4+2]=v;out.data[i*4+3]=255;}
+  ditherCtx.putImageData(out,0,0);
+}
+document.querySelectorAll('.tab').forEach(tab=>{tab.addEventListener('click',()=>{if(tab.dataset.tab==='effect')setTimeout(updateDitherPreview,50);});});
+['threshold','blur','contrast','brightness','gamma'].forEach(id=>{document.getElementById(id)?.addEventListener('input',()=>{if(document.getElementById('tab-effect').classList.contains('active'))updateDitherPreview();});});
+<\/script>
+</body>
+</html>`;
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
 function showHome() {
   document.getElementById('home-view').style.display = 'block';
-  document.getElementById('effect-view').classList.remove('visible');
-  document.querySelectorAll('.effect-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('effect-view').classList.remove('on');
+  document.getElementById('coming-view').classList.remove('on');
   document.getElementById('bc-sep').style.display = 'none';
-  document.getElementById('bc-effect').textContent = '';
-  state.effect = null;
+  document.getElementById('bc-cur').textContent = '';
+  document.querySelectorAll('.ef-item').forEach(el => el.classList.remove('active'));
 }
 
 function openEffect(id) {
   const ef = EFFECTS.find(e => e.id === id);
-  if (!ef || !ef.live) return;
-  state.effect = id;
-  state.params = getDefaultParams(id);
+  if (!ef) return;
 
-  document.getElementById('home-view').style.display = 'none';
-  document.getElementById('effect-view').classList.add('visible');
-
-  document.querySelectorAll('.effect-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.id === id);
-  });
-
+  document.querySelectorAll('.ef-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
   document.getElementById('bc-sep').style.display = '';
-  document.getElementById('bc-effect').textContent = ef.name;
+  document.getElementById('bc-cur').textContent = ef.name;
+  document.getElementById('home-view').style.display = 'none';
 
-  buildEffectControls(id);
-
-  if (state.srcImage) {
-    renderEffect();
+  if (ef.live) {
+    document.getElementById('effect-view').classList.add('on');
+    document.getElementById('coming-view').classList.remove('on');
+    // Load the tool into the iframe
+    if (id === 'dots') {
+      const iframe = document.getElementById('tool-iframe');
+      // Only reload if needed
+      if (!iframe.dataset.loaded) {
+        const blob = new Blob([DOTS_HTML], { type: 'text/html' });
+        iframe.src = URL.createObjectURL(blob);
+        iframe.dataset.loaded = '1';
+      }
+    }
   } else {
-    document.getElementById('tool-canvas').style.display = 'none';
-    document.getElementById('tool-placeholder').style.display = 'flex';
-    document.getElementById('tool-placeholder').style.flexDirection = 'column';
-    document.getElementById('tool-placeholder').style.alignItems = 'center';
-    document.getElementById('tool-placeholder').style.justifyContent = 'center';
-    document.getElementById('exp-label').textContent = 'no image loaded';
+    document.getElementById('effect-view').classList.remove('on');
+    document.getElementById('coming-view').classList.add('on');
+    document.getElementById('coming-name').textContent = ef.name;
+    document.getElementById('coming-desc').textContent = ef.desc;
   }
 }
 
-// ─── DEFAULT PARAMS ────────────────────────────────────────────────────────
-function getDefaultParams(id) {
-  const defaults = {
-    dots: {
-      threshold: 128, angle: 0, ySquares: 40, xSquares: 40,
-      minSquareWidth: 2, maxSquareWidth: 20, gridType: 'Regular'
-    },
-    dithering: {
-      patternType: 'F-S', pixelSize: 4, colorMode: false,
-      lightnessThreshold: 128, colorCount: 8
-    },
-    stippling: {
-      lightnessThreshold: 50, minDotSize: 1, maxDotSize: 8,
-      cornerRadius: 0, stepSize: 6
-    },
-    bevel: { depth: 80, lightAngle: 45, effectThreshold: 0.5 },
-    edge:  { depth: 80, lightAngle: 135, effectThreshold: 0.3 },
-    recolor: {
-      posterizeSteps: 8, noiseIntensity: 0.1, noiseScale: 0.05,
-      noiseGamma: 1.5, colorAttribute: 'brightness',
-      gradientStops: [
-        {position:0,   color:'#1a1a1a'},
-        {position:50,  color:'#888888'},
-        {position:100, color:'#f0ede8'}
-      ]
-    },
-    patterns: { lightnessThreshold: 200, gridDensityNumber: 40, imageUrls: [] },
-    distort: {
-      displacementThreshold: 64, xDisplacementStrength: 30,
-      yDisplacementStrength: 30, preprocessTarget: 'base'
-    },
-    ascii: {
-      columns: 80, rows: 40, characterSet: ' .:-=+*#%@',
-      showComments: false, showBorders: false, borderStyle: 'single'
-    },
-  };
-  return defaults[id] || {};
-}
-
-// ─── CONTROLS BUILDER ──────────────────────────────────────────────────────
-function buildEffectControls(id) {
-  const sidebar = document.getElementById('tool-sidebar');
-  sidebar.innerHTML = '';
-
-  // Upload section
-  const uploadSec = section('IMAGE');
-  uploadSec.appendChild(uploadBtn('upload image', () => document.getElementById('file-input').click()));
-  sidebar.appendChild(uploadSec);
-
-  // Preprocessor
-  const preSec = section('PREPROCESS');
-  preSec.appendChild(slider('Blur', 'preBlur', 0, 10, 0, 1));
-  preSec.appendChild(slider('Grain', 'preGrain', 0, 1, 0, 0.05));
-  preSec.appendChild(slider('Gamma', 'preGamma', 0.1, 2, 1, 0.1));
-  preSec.appendChild(slider('Black Point', 'preBlack', 0, 255, 0, 1));
-  preSec.appendChild(slider('White Point', 'preWhite', 0, 255, 255, 1));
-  sidebar.appendChild(preSec);
-
-  // Effect-specific controls
-  const efSec = section(EFFECTS.find(e=>e.id===id).name);
-  buildSpecificControls(id, efSec);
-  sidebar.appendChild(efSec);
-
-  // Render button
-  const actSec = section('');
-  actSec.style.border = 'none';
-  const renderBtn = document.createElement('button');
-  renderBtn.className = 'action-btn';
-  renderBtn.textContent = 'apply effect';
-  renderBtn.onclick = () => renderEffect();
-  actSec.appendChild(renderBtn);
-  sidebar.appendChild(actSec);
-}
-
-function section(label) {
-  const s = document.createElement('div');
-  s.className = 'ctrl-section';
-  if (label) {
-    const l = document.createElement('div');
-    l.className = 'ctrl-section-label';
-    l.textContent = label;
-    s.appendChild(l);
-  }
-  return s;
-}
-
-function slider(label, key, min, max, val, step=1) {
-  const row = document.createElement('div');
-  row.className = 'ctrl-row';
-  const displayVal = () => {
-    const v = parseFloat(inp.value);
-    return Number.isInteger(step) ? Math.round(v) : v.toFixed(step < 0.01 ? 3 : step < 0.1 ? 2 : 1);
-  };
-  row.innerHTML = `
-    <div class="ctrl-label">
-      <span>${label}</span>
-      <span class="ctrl-val" id="val-${key}">${val}</span>
-    </div>
-  `;
-  const inp = document.createElement('input');
-  inp.type = 'range';
-  inp.min = min; inp.max = max; inp.step = step; inp.value = val;
-  inp.dataset.key = key;
-  inp.addEventListener('input', () => {
-    document.getElementById('val-'+key).textContent = displayVal();
-    updateParam(key, parseFloat(inp.value));
+// ── BUILD SIDEBAR ────────────────────────────────────────────────────────────
+function buildSidebar() {
+  const list = document.getElementById('effect-list');
+  EFFECTS.forEach(ef => {
+    const div = document.createElement('div');
+    div.className = 'ef-item' + (ef.live ? ' live' : ' soon');
+    div.dataset.id = ef.id;
+    div.innerHTML = `
+      <div class="ef-dot"></div>
+      <span class="ef-name">${ef.name}</span>
+      <span class="ef-tag">${ef.live ? 'live' : 'soon'}</span>
+    `;
+    div.addEventListener('click', () => openEffect(ef.id));
+    list.appendChild(div);
   });
-  row.appendChild(inp);
-  return row;
 }
 
-function switcher(label, key, options, val) {
-  const row = document.createElement('div');
-  row.className = 'ctrl-row';
-  row.innerHTML = `<div class="ctrl-label"><span>${label}</span></div>`;
-  const sw = document.createElement('div');
-  sw.className = 'ctrl-switcher';
-  options.forEach(opt => {
-    const btn = document.createElement('button');
-    btn.className = 'sw-btn' + (opt === val ? ' active' : '');
-    btn.textContent = opt;
-    btn.onclick = () => {
-      sw.querySelectorAll('.sw-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      updateParam(key, opt);
-    };
-    sw.appendChild(btn);
+// ── BUILD CARDS ──────────────────────────────────────────────────────────────
+function buildCards() {
+  const grid = document.getElementById('cards-grid');
+  EFFECTS.forEach(ef => {
+    const card = document.createElement('div');
+    card.className = 'card' + (ef.live ? '' : ' soon');
+    card.innerHTML = `
+      <div class="card-preview"><canvas id="prev-${ef.id}" width="160" height="80"></canvas></div>
+      ${ef.live ? '<div class="card-badge live">LIVE</div>' : '<div class="card-badge">SOON</div>'}
+      <div class="card-body">
+        <div class="card-name">${ef.name}</div>
+        <div class="card-desc">${ef.desc}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => openEffect(ef.id));
+    grid.appendChild(card);
+    setTimeout(() => drawPreview(ef.id), 60 + EFFECTS.indexOf(ef) * 15);
   });
-  row.appendChild(sw);
-  return row;
 }
 
-function toggle(label, key, val) {
-  const row = document.createElement('div');
-  row.className = 'ctrl-row';
-  const div = document.createElement('div');
-  div.className = 'ctrl-toggle';
-  const sw = document.createElement('div');
-  sw.className = 'toggle-switch' + (val ? ' on' : '');
-  div.innerHTML = `<span>${label}</span>`;
-  div.appendChild(sw);
-  div.onclick = () => {
-    const newVal = !sw.classList.contains('on');
-    sw.classList.toggle('on');
-    updateParam(key, newVal);
-  };
-  row.appendChild(div);
-  return row;
-}
-
-function uploadBtn(label, fn) {
-  const btn = document.createElement('button');
-  btn.className = 'upload-btn';
-  btn.textContent = '[ ' + label + ' ]';
-  btn.onclick = fn;
-  return btn;
-}
-
-function buildSpecificControls(id, sec) {
-  const p = state.params;
-  switch(id) {
-    case 'dots':
-      sec.appendChild(slider('Threshold', 'threshold', 0, 255, p.threshold));
-      sec.appendChild(switcher('Grid Type', 'gridType', ['Regular','Benday'], p.gridType));
-      sec.appendChild(slider('Angle', 'angle', -45, 45, p.angle));
-      sec.appendChild(slider('Y Squares', 'ySquares', 1, 100, p.ySquares));
-      sec.appendChild(slider('X Squares', 'xSquares', 1, 100, p.xSquares));
-      sec.appendChild(slider('Min Width', 'minSquareWidth', 0, 50, p.minSquareWidth));
-      sec.appendChild(slider('Max Width', 'maxSquareWidth', 0, 50, p.maxSquareWidth));
-      break;
-    case 'dithering':
-      sec.appendChild(switcher('Pattern', 'patternType', ['F-S','Bayer','Random'], p.patternType));
-      sec.appendChild(slider('Pixel Size', 'pixelSize', 1, 20, p.pixelSize));
-      sec.appendChild(toggle('Color Mode', 'colorMode', p.colorMode));
-      sec.appendChild(slider('Threshold', 'lightnessThreshold', 0, 255, p.lightnessThreshold));
-      sec.appendChild(slider('Color Count', 'colorCount', 2, 32, p.colorCount));
-      break;
-    case 'stippling':
-      sec.appendChild(slider('Threshold', 'lightnessThreshold', 0, 255, p.lightnessThreshold));
-      sec.appendChild(slider('Min Dot', 'minDotSize', 0, 40, p.minDotSize));
-      sec.appendChild(slider('Max Dot', 'maxDotSize', 0, 40, p.maxDotSize));
-      sec.appendChild(slider('Corner Radius', 'cornerRadius', 0, 20, p.cornerRadius));
-      sec.appendChild(slider('Step Size', 'stepSize', 3, 20, p.stepSize));
-      break;
-    case 'bevel':
-    case 'edge':
-      sec.appendChild(slider('Depth', 'depth', 0, 500, p.depth));
-      sec.appendChild(slider('Light Angle', 'lightAngle', 0, 360, p.lightAngle, 45));
-      sec.appendChild(slider('Threshold', 'effectThreshold', 0, 4, p.effectThreshold, 0.01));
-      break;
-    case 'recolor':
-      sec.appendChild(slider('Posterize', 'posterizeSteps', 2, 32, p.posterizeSteps));
-      sec.appendChild(slider('Noise', 'noiseIntensity', 0, 1, p.noiseIntensity, 0.01));
-      sec.appendChild(switcher('Map by', 'colorAttribute', ['brightness','hue','saturation'], p.colorAttribute));
-      // simple gradient preview
-      const gRow = document.createElement('div');
-      gRow.className = 'ctrl-row';
-      gRow.innerHTML = `<div class="ctrl-label"><span>Gradient</span></div>
-        <div style="height:12px;background:linear-gradient(to right,${p.gradientStops.map(s=>s.color).join(',')});border:1px solid var(--border)"></div>`;
-      sec.appendChild(gRow);
-      break;
-    case 'patterns':
-      sec.appendChild(slider('Threshold', 'lightnessThreshold', 0, 255, p.lightnessThreshold));
-      sec.appendChild(slider('Grid Density', 'gridDensityNumber', 10, 150, p.gridDensityNumber));
-      const uploadPatBtn = uploadBtn('upload pattern images', () => {
-        const fi = document.createElement('input');
-        fi.type = 'file'; fi.accept = 'image/*'; fi.multiple = true;
-        fi.onchange = e => {
-          const urls = Array.from(e.target.files).map(f => URL.createObjectURL(f));
-          updateParam('imageUrls', urls);
-        };
-        fi.click();
-      });
-      sec.appendChild(uploadPatBtn);
-      break;
-    case 'distort':
-      const uploadDispBtn = uploadBtn('upload displacement map', () => {
-        const fi = document.createElement('input');
-        fi.type = 'file'; fi.accept = 'image/*';
-        fi.onchange = e => {
-          const url = URL.createObjectURL(e.target.files[0]);
-          updateParam('displacementImageUrl', url);
-          loadDispMap(url);
-        };
-        fi.click();
-      });
-      sec.appendChild(uploadDispBtn);
-      sec.appendChild(slider('Threshold', 'displacementThreshold', 0, 255, p.displacementThreshold));
-      sec.appendChild(slider('X Strength', 'xDisplacementStrength', -100, 100, p.xDisplacementStrength));
-      sec.appendChild(slider('Y Strength', 'yDisplacementStrength', -100, 100, p.yDisplacementStrength));
-      break;
-    case 'ascii':
-      sec.appendChild(slider('Columns', 'columns', 20, 200, p.columns));
-      sec.appendChild(slider('Rows', 'rows', 10, 100, p.rows));
-      const csRow = document.createElement('div');
-      csRow.className = 'ctrl-row';
-      csRow.innerHTML = `<div class="ctrl-label"><span>Char Set</span></div>`;
-      const csInp = document.createElement('input');
-      csInp.type = 'text';
-      csInp.value = p.characterSet;
-      csInp.style.cssText = 'width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);font-family:var(--font);font-size:11px;padding:4px 6px;outline:none;';
-      csInp.oninput = () => updateParam('characterSet', csInp.value);
-      csRow.appendChild(csInp);
-      sec.appendChild(csRow);
-      sec.appendChild(toggle('Show Borders', 'showBorders', p.showBorders));
-      break;
-  }
-}
-
-// ─── STATE UPDATES ─────────────────────────────────────────────────────────
-function updateParam(key, val) {
-  state.params[key] = val;
-}
-
-// ─── IMAGE LOADING ─────────────────────────────────────────────────────────
-function loadImage(url) {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    state.srcImage = img;
-    state.srcDataURL = url;
-    document.getElementById('tool-placeholder').style.display = 'none';
-    document.getElementById('tool-canvas').style.display = 'block';
-    document.getElementById('exp-label').textContent = `${img.width} × ${img.height}`;
-    renderEffect();
-  };
-  img.onerror = () => alert('Failed to load image.');
-  img.src = url;
-}
-
-let dispMapImage = null;
-function loadDispMap(url) {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => { dispMapImage = img; };
-  img.src = url;
-}
-
-// ─── PREPROCESSOR ──────────────────────────────────────────────────────────
-function applyPreprocessor(ctx, w, h) {
-  const p = state.params;
-  const blur = p.preBlur || 0;
-  const grain = p.preGrain || 0;
-  const gamma = p.preGamma || 1;
-  const black = p.preBlack || 0;
-  const white = p.preWhite || 255;
-
-  if (blur > 0) ctx.filter = `blur(${blur}px)`;
-
-  const imageData = ctx.getImageData(0, 0, w, h);
-  const d = imageData.data;
-  const scale = 255 / Math.max(1, white - black);
-
-  for (let i = 0; i < d.length; i += 4) {
-    let r = d[i], g = d[i+1], b = d[i+2];
-    // grain
-    if (grain > 0) {
-      const n = (Math.random() - 0.5) * grain * 255;
-      r += n; g += n; b += n;
-    }
-    // gamma
-    if (gamma !== 1) {
-      r = 255 * Math.pow(Math.max(0,r/255), gamma);
-      g = 255 * Math.pow(Math.max(0,g/255), gamma);
-      b = 255 * Math.pow(Math.max(0,b/255), gamma);
-    }
-    // levels
-    if (black !== 0 || white !== 255) {
-      r = Math.max(0, Math.min(255, (r - black) * scale));
-      g = Math.max(0, Math.min(255, (g - black) * scale));
-      b = Math.max(0, Math.min(255, (b - black) * scale));
-    }
-    d[i] = r; d[i+1] = g; d[i+2] = b;
-  }
-  ctx.putImageData(imageData, 0, 0);
-  ctx.filter = 'none';
-  return ctx.getImageData(0, 0, w, h);
-}
-
-// ─── RENDER ────────────────────────────────────────────────────────────────
-function renderEffect() {
-  if (!state.srcImage || !state.effect) return;
-  showStatus('processing...');
-
-  const canvas = document.getElementById('tool-canvas');
-  const img = state.srcImage;
-
-  // Size canvas to image (max 800)
-  const maxW = Math.min(img.width, 800);
-  const scale = maxW / img.width;
-  const W = Math.round(img.width * scale);
-  const H = Math.round(img.height * scale);
-  canvas.width = W;
-  canvas.height = H;
-
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(img, 0, 0, W, H);
-
-  // Run preprocessor
-  const preprocessed = applyPreprocessor(ctx, W, H);
-  ctx.putImageData(preprocessed, 0, 0);
-
-  document.getElementById('canvas-info').textContent = `${W}×${H}`;
-
-  setTimeout(() => {
-    try {
-      RENDERERS[state.effect](ctx, W, H, state.params, canvas);
-    } catch(e) {
-      console.error(e);
-    }
-    hideStatus();
-  }, 20);
-}
-
-function showStatus(msg) {
-  const s = document.getElementById('proc-status');
-  s.textContent = msg;
-  s.classList.add('visible');
-}
-function hideStatus() {
-  document.getElementById('proc-status').classList.remove('visible');
-}
-
-// ─── EXPORT ────────────────────────────────────────────────────────────────
-function exportPNG() {
-  const canvas = document.getElementById('tool-canvas');
-  if (!canvas.width) return;
-  const id = state.effect || 'export';
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
-  a.download = `gioco-${id}-${Date.now()}.png`;
-  a.click();
-}
-
-// ─── RENDERERS ─────────────────────────────────────────────────────────────
-const RENDERERS = {};
-
-// ── DOTS ──
-RENDERERS.dots = function(ctx, W, H, p) {
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const px = imageData.data;
-  const angle = (p.angle || 0) * Math.PI / 180;
-  const ySquares = p.ySquares || 40;
-  const xSquares = p.xSquares || 40;
-  const minW = p.minSquareWidth || 2;
-  const maxW = p.maxSquareWidth || 20;
-  const threshold = p.threshold || 128;
-  const benday = p.gridType === 'Benday';
-
-  const cellW = W / xSquares;
-  const cellH = H / ySquares;
-  const cosA = Math.cos(angle), sinA = Math.sin(angle);
-  const cx = W/2, cy = H/2;
-
+// ── CARD PREVIEWS ────────────────────────────────────────────────────────────
+function drawPreview(id) {
+  const c = document.getElementById('prev-' + id);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#f0ede8';
+  ctx.fillStyle = '#e8e4de';
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#1a1a1a';
 
-  const diagW = Math.sqrt(W*W + H*H);
-  const step = Math.min(cellW, cellH) * 0.99;
-
-  for (let gy = -diagW; gy < diagW; gy += cellH) {
-    const bendayOffset = benday ? (Math.floor(gy / cellH) % 2 === 0 ? 0 : cellW * 0.5) : 0;
-    for (let gx = -diagW; gx < diagW; gx += cellW) {
-      const rx = gx + bendayOffset;
-      const sx = cx + rx * cosA - gy * sinA;
-      const sy = cy + rx * sinA + gy * cosA;
-
-      if (sx < -cellW || sx > W+cellW || sy < -cellH || sy > H+cellH) continue;
-
-      const px_x = Math.max(0, Math.min(W-1, Math.floor(sx)));
-      const px_y = Math.max(0, Math.min(H-1, Math.floor(sy)));
-      const idx = (px_y * W + px_x) * 4;
-      const r = px[idx], g = px[idx+1], b = px[idx+2], a = px[idx+3];
-      const alpha = a / 255;
-      const lum = (r*alpha + 255*(1-alpha) + g*alpha + 255*(1-alpha) + b*alpha + 255*(1-alpha)) / 3;
-
-      if (lum < threshold) {
-        const t = 1 - lum / threshold;
-        const size = minW + t * (maxW - minW);
-        if (size > 0.5) {
-          ctx.save();
-          ctx.translate(sx, sy);
-          ctx.rotate(angle);
-          ctx.fillRect(-size/2, -cellH/2, size, cellH);
-          ctx.restore();
+  switch(id) {
+    case 'dots': {
+      ctx.fillStyle = '#f0ede8'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#1a1a1a';
+      const step = 12;
+      for (let y = step/2; y < H; y += step) {
+        for (let x = step/2; x < W; x += step) {
+          const t = x / W;
+          const r = 1 + t * 4;
+          ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
         }
       }
+      break;
     }
-  }
-};
-
-// ── DITHERING ──
-RENDERERS.dithering = function(ctx, W, H, p) {
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const src = imageData.data;
-  const ps = Math.max(1, p.pixelSize || 4);
-  const cols = Math.ceil(W / ps);
-  const rows = Math.ceil(H / ps);
-  const threshold = p.lightnessThreshold || 128;
-  const pattern = p.patternType || 'F-S';
-  const colorMode = p.colorMode;
-  const colorCount = p.colorCount || 8;
-
-  // Sample grid
-  if (colorMode) {
-    // Color dithering
-    const grid = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const px = Math.floor(c * ps + ps/2);
-        const py = Math.floor(r * ps + ps/2);
-        const sx = Math.max(0, Math.min(W-1, px));
-        const sy = Math.max(0, Math.min(H-1, py));
-        const i = (sy * W + sx) * 4;
-        const a = src[i+3]/255;
-        grid.push({
-          r: src[i]*a + 255*(1-a),
-          g: src[i+1]*a + 255*(1-a),
-          b: src[i+2]*a + 255*(1-a)
-        });
-      }
-    }
-
-    const palette = buildPalette(colorCount);
-
-    if (pattern === 'F-S') {
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const idx = row * cols + col;
-          const px = grid[idx];
-          const newC = nearestColor(px.r, px.g, px.b, palette);
-          grid[idx] = newC;
-          const er = px.r - newC.r, eg = px.g - newC.g, eb = px.b - newC.b;
-          const spread = (ti, f) => {
-            if (ti < 0 || ti >= grid.length) return;
-            grid[ti].r = Math.max(0,Math.min(255, grid[ti].r + er*f));
-            grid[ti].g = Math.max(0,Math.min(255, grid[ti].g + eg*f));
-            grid[ti].b = Math.max(0,Math.min(255, grid[ti].b + eb*f));
-          };
-          if (col+1 < cols) spread(idx+1, 7/16);
-          if (row+1 < rows) {
-            if (col > 0) spread(idx+cols-1, 3/16);
-            spread(idx+cols, 5/16);
-            if (col+1 < cols) spread(idx+cols+1, 1/16);
-          }
-        }
-      }
-    } else {
+    case 'dithering': {
+      ctx.fillStyle = '#f0ede8'; ctx.fillRect(0,0,W,H);
       const bayer = [[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const idx = row * cols + col;
-          const px = grid[idx];
-          const [c1, c2] = nearestTwo(px.r, px.g, px.b, palette);
-          const threshold2 = pattern === 'Random' ? Math.random() : bayer[row%4][col%4]/16;
-          grid[idx] = threshold2 < 0.5 ? c1 : c2;
-        }
+      const ps = 4;
+      for (let y = 0; y < H; y += ps) for (let x = 0; x < W; x += ps) {
+        const t = x / W;
+        const thresh = bayer[Math.floor(y/ps)%4][Math.floor(x/ps)%4] / 16;
+        ctx.fillStyle = t > thresh ? '#1a1a1a' : '#f0ede8';
+        ctx.fillRect(x, y, ps, ps);
       }
+      break;
     }
-
-    ctx.clearRect(0, 0, W, H);
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const c = grid[row * cols + col];
-        ctx.fillStyle = `rgb(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)})`;
-        ctx.fillRect(col*ps, row*ps, ps, ps);
+    case 'stippling': {
+      ctx.fillStyle = '#f0ede8'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#1a1a1a';
+      const cx = W/2, cy = H/2, R = Math.min(W,H)*0.33;
+      for (let a = 0; a < Math.PI*2; a += 0.12) {
+        const x = cx + Math.cos(a)*R, y = cy + Math.sin(a)*R;
+        const s = 1.5 + Math.random() * 2.5;
+        ctx.fillRect(x, y, s, s);
       }
+      for (let a = 0; a < Math.PI*2; a += 0.22) {
+        const x = cx + Math.cos(a)*R*0.55, y = cy + Math.sin(a)*R*0.55;
+        ctx.fillRect(x, y, 1.5, 1.5);
+      }
+      break;
     }
-  } else {
-    // Grayscale dithering
-    const grid = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const px = Math.floor(c * ps + ps/2);
-        const py = Math.floor(r * ps + ps/2);
-        const sx = Math.max(0, Math.min(W-1, px));
-        const sy = Math.max(0, Math.min(H-1, py));
-        const i = (sy * W + sx) * 4;
-        const a = src[i+3]/255;
-        const lum = (src[i]*a+255*(1-a) + src[i+1]*a+255*(1-a) + src[i+2]*a+255*(1-a))/3;
-        grid.push(lum);
-      }
+    case 'bevel': {
+      const g = ctx.createLinearGradient(0,0,W,H);
+      g.addColorStop(0,'#fff'); g.addColorStop(0.5,'#aaa'); g.addColorStop(1,'#111');
+      ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+      break;
     }
-
-    const bayer = [[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
-
-    if (pattern === 'F-S') {
-      const scale = 255 / threshold;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const idx = r * cols + c;
-          const scaled = Math.min(255, grid[idx] * scale);
-          const out = scaled > 127 ? 255 : 0;
-          grid[idx] = out;
-          const err = scaled - out;
-          if (c+1 < cols) grid[idx+1] += 7*err/16/scale;
-          if (r+1 < rows) {
-            if (c > 0) grid[idx+cols-1] += 3*err/16/scale;
-            grid[idx+cols] += 5*err/16/scale;
-            if (c+1 < cols) grid[idx+cols+1] += 1*err/16/scale;
-          }
-        }
-      }
-    } else if (pattern === 'Bayer') {
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const t = threshold / 128 * (bayer[r%4][c%4]/16*255);
-          grid[r*cols+c] = grid[r*cols+c] > t ? 255 : 0;
-        }
-      }
-    } else {
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const t = threshold * Math.random() * 2;
-          grid[r*cols+c] = grid[r*cols+c] > t ? 255 : 0;
-        }
-      }
+    case 'edge': {
+      ctx.fillStyle = '#888'; ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = 0; x <= W; x++) { const y = H/2 + Math.sin(x/12)*H*0.3; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+      ctx.stroke();
+      ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = 0; x <= W; x++) { const y = H/2 + 2 + Math.sin(x/12)*H*0.3; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+      ctx.stroke();
+      break;
     }
-
-    ctx.clearRect(0, 0, W, H);
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const v = Math.round(grid[r*cols+c]);
-        ctx.fillStyle = `rgb(${v},${v},${v})`;
-        ctx.fillRect(c*ps, r*ps, ps, ps);
-      }
+    case 'recolor': {
+      const g = ctx.createLinearGradient(0,0,W,0);
+      g.addColorStop(0,'#1a1a1a'); g.addColorStop(0.25,'#2e5fa3'); g.addColorStop(0.5,'#c95f2a'); g.addColorStop(0.75,'#c8b040'); g.addColorStop(1,'#f0ede8');
+      ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+      ctx.globalAlpha = 0.25;
+      for (let i = 0; i < 6; i++) { ctx.fillStyle = i%2?'#000':'#fff'; ctx.fillRect(i*W/6,0,W/6,H); }
+      ctx.globalAlpha = 1;
+      break;
     }
-  }
-};
-
-function buildPalette(n) {
-  const p = [{r:0,g:0,b:0},{r:255,g:255,b:255}];
-  const side = Math.ceil(Math.pow(n-2, 1/3));
-  const step = side > 1 ? 255/(side-1) : 255;
-  for (let i=0; i<side && p.length<n; i++)
-    for (let j=0; j<side && p.length<n; j++)
-      for (let k=0; k<side && p.length<n; k++)
-        if (!(i===0&&j===0&&k===0) && !(i===side-1&&j===side-1&&k===side-1))
-          p.push({r:Math.round(i*step),g:Math.round(j*step),b:Math.round(k*step)});
-  return p;
-}
-
-function nearestColor(r,g,b,palette) {
-  let best=Infinity, bc=palette[0];
-  for (const c of palette) {
-    const d = Math.pow((r-c.r)*.299,2)+Math.pow((g-c.g)*.587,2)+Math.pow((b-c.b)*.114,2);
-    if (d<best){best=d;bc=c;}
-  }
-  return bc;
-}
-
-function nearestTwo(r,g,b,palette) {
-  const sorted = [...palette].map(c=>({c,d:Math.pow((r-c.r)*.299,2)+Math.pow((g-c.g)*.587,2)+Math.pow((b-c.b)*.114,2)})).sort((a,b)=>a.d-b.d);
-  return [sorted[0].c, sorted[1].c];
-}
-
-// ── STIPPLING ──
-RENDERERS.stippling = function(ctx, W, H, p) {
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const px = imageData.data;
-  const step = p.stepSize || 6;
-  const minD = p.minDotSize || 1;
-  const maxD = p.maxDotSize || 8;
-  const threshold = p.lightnessThreshold || 50;
-  const cr = p.cornerRadius || 0;
-
-  // Sobel
-  const getLum = (x, y) => {
-    x = Math.max(0, Math.min(W-1, x));
-    y = Math.max(0, Math.min(H-1, y));
-    const i = (y*W+x)*4;
-    const a = px[i+3]/255;
-    return (px[i]*a+255*(1-a) + px[i+1]*a+255*(1-a) + px[i+2]*a+255*(1-a))/3;
-  };
-
-  const Gx = [[-1,0,1],[-2,0,2],[-1,0,1]];
-  const Gy = [[-1,-2,-1],[0,0,0],[1,2,1]];
-
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#f0ede8';
-  ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#1a1a1a';
-
-  for (let y = 0; y < H; y += step) {
-    for (let x = 0; x < W; x += step) {
-      let gx = 0, gy = 0;
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const l = getLum(x+dx, y+dy);
-          gx += l * Gx[dy+1][dx+1];
-          gy += l * Gy[dy+1][dx+1];
-        }
+    case 'patterns': {
+      ctx.fillStyle = '#f0ede8'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#1a1a1a';
+      const cell = 10;
+      for (let y = 0; y < H; y += cell) for (let x = 0; x < W; x += cell) {
+        const t = (x/W + y/H) / 2;
+        if (t < 0.55) { ctx.globalAlpha = 1 - t; ctx.fillRect(x+1,y+1,cell-2,cell-2); }
       }
-      const mag = Math.sqrt(gx*gx + gy*gy);
-      if (mag > threshold) {
-        const size = Math.max(minD, Math.min(maxD, minD + (mag-threshold)/255*(maxD-minD)));
-        if (size > 0) {
-          if (cr > 0) {
-            roundRect(ctx, x, y, size, size, Math.min(cr, size/2));
-          } else {
-            ctx.fillRect(x, y, size, size);
-          }
-        }
+      ctx.globalAlpha = 1;
+      break;
+    }
+    case 'distort': {
+      for (let y = 0; y < H; y++) {
+        const shift = Math.sin(y / 7) * 20 * (y/H);
+        ctx.fillStyle = `hsl(${200 + y/H*40},20%,${45+shift}%)`;
+        ctx.fillRect(0, y, W, 1);
       }
+      break;
+    }
+    case 'ascii': {
+      ctx.fillStyle = '#f0ede8'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = '6px monospace'; ctx.textBaseline = 'top';
+      const chars = ' .:-=+*#%@';
+      for (let y = 0; y < H; y += 8) for (let x = 0; x < W; x += 5) {
+        const t = (x/W + y/H) / 2;
+        ctx.fillText(chars[Math.floor(t*(chars.length-1))], x, y);
+      }
+      break;
+    }
+    default: {
+      const hues = { scatter:140, displace:270, cellular:0, gradients:40, crt:200, slide:290 };
+      const h = hues[id] || 200;
+      ctx.fillStyle = `hsl(${h},15%,88%)`; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = `hsl(${h},30%,40%)`;
+      ctx.font = '9px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('coming soon', W/2, H/2);
+      ctx.textAlign = 'left';
+      break;
     }
   }
-};
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.lineTo(x+w-r, y);
-  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-  ctx.lineTo(x+w, y+h-r);
-  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h);
-  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-  ctx.lineTo(x, y+r);
-  ctx.quadraticCurveTo(x, y, x+r, y);
-  ctx.closePath();
-  ctx.fill();
 }
 
-// ── BEVEL / EDGE ──
-function bevelBase(ctx, W, H, p) {
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const src = imageData.data;
-  const out = new Uint8ClampedArray(src.length);
-  const depth = p.depth || 80;
-  const angle = ((p.lightAngle || 45) * Math.PI / 180);
-  const thr = p.effectThreshold || 0.5;
-  const dx = Math.round(Math.cos(angle));
-  const dy = Math.round(Math.sin(angle));
-
-  const getLum = (x, y) => {
-    if (x<0||x>=W||y<0||y>=H) return 128;
-    const i=(y*W+x)*4;
-    const a=src[i+3]/255;
-    return (src[i]*a+255*(1-a)+src[i+1]*a+255*(1-a)+src[i+2]*a+255*(1-a))/3;
-  };
-
-  for (let y=1; y<H-1; y++) {
-    for (let x=1; x<W-1; x++) {
-      const i=(y*W+x)*4;
-      const u=getLum(x,y);
-      const nx=Math.max(0,Math.min(W-1,x+dx));
-      const ny=Math.max(0,Math.min(H-1,y+dy));
-      const ni=(ny*W+nx)*4;
-      const a2=src[ni+3]/255;
-      const n=(src[ni]*a2+255*(1-a2)+src[ni+1]*a2+255*(1-a2)+src[ni+2]*a2+255*(1-a2))/3;
-      const diff=(n-u)/255;
-      let v;
-      if (Math.abs(diff)>thr/255) {
-        v=Math.max(0,Math.min(255, u + diff*depth));
-      } else {
-        v=128;
-      }
-      out[i]=out[i+1]=out[i+2]=Math.round(v);
-      out[i+3]=src[i+3];
-    }
-  }
-  ctx.putImageData(new ImageData(out,W,H),0,0);
-}
-
-RENDERERS.bevel = bevelBase;
-RENDERERS.edge = bevelBase;
-
-// ── RECOLOR ──
-RENDERERS.recolor = function(ctx, W, H, p) {
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const d = imageData.data;
-  const steps = p.posterizeSteps || 8;
-  const noiseI = p.noiseIntensity || 0;
-  const noiseS = p.noiseScale || 0.05;
-  const noiseG = p.noiseGamma || 1;
-  const attr = p.colorAttribute || 'brightness';
-  const stops = p.gradientStops || [{position:0,color:'#000'},{position:100,color:'#fff'}];
-
-  // Parse stops
-  const parsedStops = stops.map(s => {
-    const hex = s.color.replace('#','');
-    const r2=parseInt(hex.slice(0,2),16);
-    const g2=parseInt(hex.slice(2,4),16);
-    const b2=parseInt(hex.slice(4,6),16);
-    return {pos: s.position/100, r:r2, g:g2, b:b2};
-  });
-
-  const lerpColor = (t) => {
-    for (let i=0; i<parsedStops.length-1; i++) {
-      if (t <= parsedStops[i+1].pos) {
-        const st = parsedStops[i], en = parsedStops[i+1];
-        const f = (t - st.pos) / (en.pos - st.pos);
-        return {
-          r: Math.round(st.r + f*(en.r-st.r)),
-          g: Math.round(st.g + f*(en.g-st.g)),
-          b: Math.round(st.b + f*(en.b-st.b))
-        };
-      }
-    }
-    const last = parsedStops[parsedStops.length-1];
-    return {r:last.r, g:last.g, b:last.b};
-  };
-
-  // Simple noise
-  const noise = (x,y) => {
-    const s = Math.sin(x*12.9898*noiseS+y*78.233*noiseS)*43758.5453;
-    return s - Math.floor(s);
-  };
-
-  for (let y=0; y<H; y++) {
-    for (let x=0; x<W; x++) {
-      const i=(y*W+x)*4;
-      const r=d[i],g=d[i+1],b=d[i+2],a=d[i+3];
-      const alpha=a/255;
-      let f;
-      if (attr==='brightness') {
-        f=(r*alpha+255*(1-alpha)+g*alpha+255*(1-alpha)+b*alpha+255*(1-alpha))/3/255;
-      } else {
-        f=(r*alpha+255*(1-alpha)+g*alpha+255*(1-alpha)+b*alpha+255*(1-alpha))/3/255;
-      }
-      // noise
-      if (noiseI > 0) {
-        let n = noise(x,y);
-        n = Math.pow(n, noiseG);
-        f = Math.max(0, Math.min(1, f + (n-0.5)*2*noiseI));
-      }
-      // posterize
-      if (steps > 1) f = Math.floor(f*steps)/(steps-1);
-      f = Math.max(0, Math.min(1, f));
-      const c = lerpColor(f);
-      d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255;
-    }
-  }
-  ctx.putImageData(imageData,0,0);
-};
-
-// ── PATTERNS ──
-RENDERERS.patterns = function(ctx, W, H, p) {
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const src = imageData.data;
-  const density = p.gridDensityNumber || 40;
-  const threshold = p.lightnessThreshold || 200;
-  const imageUrls = p.imageUrls || [];
-
-  if (imageUrls.length === 0) {
-    // Demo: checkerboard
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#f0ede8';
-    ctx.fillRect(0, 0, W, H);
-    const cell = Math.min(W,H) / density;
-    const cols2 = Math.ceil(W/cell), rows2 = Math.ceil(H/cell);
-    for (let r=0; r<rows2; r++) {
-      for (let c=0; c<cols2; c++) {
-        const si=(Math.floor(c*cell)+Math.floor(r*cell)*W)*4;
-        const alpha=src[si+3]/255;
-        const lum=(src[si]*alpha+255*(1-alpha)+src[si+1]*alpha+255*(1-alpha)+src[si+2]*alpha+255*(1-alpha))/3;
-        if (lum < threshold) {
-          const t = 1 - lum/threshold;
-          ctx.fillStyle = '#1a1a1a';
-          ctx.globalAlpha = t;
-          ctx.fillRect(c*cell, r*cell, cell, cell);
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
-    return;
-  }
-
-  // Load and draw pattern images
-  let loaded = 0;
-  const imgs = [];
-  imageUrls.forEach((url, idx) => {
-    const im = new Image();
-    im.crossOrigin = 'anonymous';
-    im.onload = () => {
-      imgs[idx] = im;
-      if (++loaded === imageUrls.length) drawPatterns();
-    };
-    im.src = url;
-  });
-
-  function drawPatterns() {
-    // Calc average brightness per image
-    const avgs = imgs.map(im => {
-      const tc = document.createElement('canvas');
-      tc.width = im.width; tc.height = im.height;
-      const tx = tc.getContext('2d');
-      tx.drawImage(im, 0, 0);
-      const d2 = tx.getImageData(0,0,tc.width,tc.height).data;
-      let s=0;
-      for (let i=0;i<d2.length;i+=4) s+=Math.sqrt(.299*d2[i]**2+.587*d2[i+1]**2+.114*d2[i+2]**2);
-      return s / (tc.width*tc.height);
-    });
-    const sorted = imgs.map((im,i)=>({im,b:avgs[i]})).sort((a,b)=>a.b-b.b);
-
-    const cell = Math.min(W,H)/density;
-    const cols2=Math.ceil(W/cell), rows2=Math.ceil(H/cell);
-    ctx.clearRect(0,0,W,H);
-    ctx.fillStyle='#f0ede8';
-    ctx.fillRect(0,0,W,H);
-
-    for (let r=0;r<rows2;r++) {
-      for (let c=0;c<cols2;c++) {
-        const si=(Math.min(H-1,Math.floor(c*cell))*W+Math.min(W-1,Math.floor(r*cell)))*4;
-        // actually sample correctly
-        const sx=Math.floor(c*cell), sy=Math.floor(r*cell);
-        const i2=(Math.min(H-1,sy)*W+Math.min(W-1,sx))*4;
-        const alpha=src[i2+3]/255;
-        const lum=(src[i2]*alpha+255*(1-alpha)+src[i2+1]*alpha+255*(1-alpha)+src[i2+2]*alpha+255*(1-alpha))/3;
-        if (lum < threshold) {
-          const ti=Math.floor(lum/threshold*sorted.length);
-          const fi=Math.max(0,Math.min(sorted.length-1,ti));
-          ctx.drawImage(sorted[fi].im, c*cell, r*cell, cell, cell);
-        }
-      }
-    }
-  }
-};
-
-// ── DISTORT ──
-RENDERERS.distort = function(ctx, W, H, p) {
-  const base = ctx.getImageData(0, 0, W, H);
-  const disp = dispMapImage;
-  const xStr = p.xDisplacementStrength || 30;
-  const yStr = p.yDisplacementStrength || 30;
-  const thr = p.displacementThreshold || 64;
-
-  if (!disp) {
-    // Demo: radial distort
-    const out = new ImageData(W, H);
-    const src = base.data;
-    const od = out.data;
-    const cx2=W/2, cy2=H/2;
-    for (let y=0;y<H;y++) {
-      for (let x=0;x<W;x++) {
-        const i=(y*W+x)*4;
-        const dx2=x-cx2, dy2=y-cy2;
-        const dist=Math.sqrt(dx2*dx2+dy2*dy2);
-        const mag=dist/Math.max(W,H)*xStr;
-        const angle2=Math.atan2(dy2,dx2);
-        const sx2=Math.max(0,Math.min(W-1,Math.floor(x+Math.cos(angle2)*mag)));
-        const sy2=Math.max(0,Math.min(H-1,Math.floor(y+Math.sin(angle2)*mag)));
-        const si=(sy2*W+sx2)*4;
-        od[i]=src[si]; od[i+1]=src[si+1]; od[i+2]=src[si+2]; od[i+3]=src[si+3];
-      }
-    }
-    ctx.putImageData(out,0,0);
-    return;
-  }
-
-  // Use displacement map
-  const tc=document.createElement('canvas');
-  tc.width=W; tc.height=H;
-  const tx=tc.getContext('2d');
-  tx.drawImage(disp,0,0,W,H);
-  const dispData=tx.getImageData(0,0,W,H);
-  const dd=dispData.data;
-
-  const out=new ImageData(W,H);
-  const src=base.data;
-  const od=out.data;
-
-  for (let y=0;y<H;y++) {
-    for (let x=0;x<W;x++) {
-      const i=(y*W+x)*4;
-      const dv=dd[i];
-      if (dv > thr) {
-        const oxf=mapRange(dv,0,255,-xStr,xStr);
-        const oyf=mapRange(dv,0,255,-yStr,yStr);
-        const sx2=Math.max(0,Math.min(W-1,Math.floor(x+oxf)));
-        const sy2=Math.max(0,Math.min(H-1,Math.floor(y+oyf)));
-        const si=(sy2*W+sx2)*4;
-        od[i]=src[si]; od[i+1]=src[si+1]; od[i+2]=src[si+2]; od[i+3]=src[si+3];
-      } else {
-        od[i]=src[i]; od[i+1]=src[i+1]; od[i+2]=src[i+2]; od[i+3]=src[i+3];
-      }
-    }
-  }
-  ctx.putImageData(out,0,0);
-};
-
-function mapRange(v,a,b,c,d) { return c + (v-a)/(b-a)*(d-c); }
-
-// ── ASCII ──
-RENDERERS.ascii = function(ctx, W, H, p) {
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const src = imageData.data;
-  const cols2 = p.columns || 80;
-  const rows2 = p.rows || 40;
-  const charset = p.characterSet || ' .:-=+*#%@';
-  const borders = p.showBorders;
-
-  // Analyze charset brightness
-  const tc = document.createElement('canvas');
-  const fs = 12;
-  tc.width = fs*2; tc.height = fs*2;
-  const tx = tc.getContext('2d');
-  tx.font = `${fs}px monospace`;
-  tx.textAlign = 'center'; tx.textBaseline = 'middle';
-
-  const analyzed = [...new Set(charset)].map(ch => {
-    tx.clearRect(0,0,tc.width,tc.height);
-    tx.fillStyle='white'; tx.fillRect(0,0,tc.width,tc.height);
-    tx.fillStyle='black'; tx.fillText(ch,tc.width/2,tc.height/2);
-    const d2=tx.getImageData(0,0,tc.width,tc.height).data;
-    let s=0,n=0;
-    for (let i=0;i<d2.length;i+=4){if(d2[i+3]>0){s+=(255-d2[i])/255;n++;}}
-    return {ch, b: n>0?s/n:0};
-  }).sort((a,b)=>a.b-b.b);
-
-  const sorted = analyzed.map(a=>a.ch).join('');
-
-  const cellW = W/cols2, cellH = H/rows2;
-
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle = '#f0ede8';
-  ctx.fillRect(0,0,W,H);
-  ctx.fillStyle = '#1a1a1a';
-
-  const charPx = Math.max(6, Math.floor(cellH * 0.9));
-  ctx.font = `${charPx}px monospace`;
-  ctx.textBaseline = 'top';
-
-  for (let r=0;r<rows2;r++) {
-    for (let c=0;c<cols2;c++) {
-      const px=Math.min(W-1,Math.floor(c*cellW+cellW/2));
-      const py=Math.min(H-1,Math.floor(r*cellH+cellH/2));
-      const i=(py*W+px)*4;
-      const alpha=src[i+3]/255;
-      const lum=(src[i]*alpha+255*(1-alpha)+src[i+1]*alpha+255*(1-alpha)+src[i+2]*alpha+255*(1-alpha))/3;
-      const inv=1-lum/255;
-      const ci=Math.max(0,Math.min(sorted.length-1,Math.floor(inv*(sorted.length-1))));
-      ctx.fillText(sorted[ci]||' ', c*cellW, r*cellH);
-    }
-  }
-};
-
-// ─── CARD PREVIEWS ─────────────────────────────────────────────────────────
-function drawCardPreview(id) {
-  const canvas = document.getElementById('preview-'+id);
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-
-  // Generate synthetic preview based on effect type
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#e8e4df';
-  ctx.fillRect(0,0,W,H);
-
-  switch(id) {
-    case 'dots': drawPreviewDots(ctx,W,H); break;
-    case 'dithering': drawPreviewDither(ctx,W,H); break;
-    case 'stippling': drawPreviewStipple(ctx,W,H); break;
-    case 'bevel': drawPreviewBevel(ctx,W,H); break;
-    case 'edge': drawPreviewEdge(ctx,W,H); break;
-    case 'recolor': drawPreviewRecolor(ctx,W,H); break;
-    case 'patterns': drawPreviewPatterns(ctx,W,H); break;
-    case 'distort': drawPreviewDistort(ctx,W,H); break;
-    case 'ascii': drawPreviewAscii(ctx,W,H); break;
-    default: drawPreviewGeneric(ctx,W,H,id); break;
-  }
-}
-
-function drawPreviewDots(ctx,W,H) {
-  ctx.fillStyle='#f0ede8'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#1a1a1a';
-  for (let y=4;y<H;y+=10) for (let x=4;x<W;x+=10) {
-    const t=x/W;
-    const s=t*6+1;
-    ctx.beginPath(); ctx.arc(x,y,s/2,0,Math.PI*2); ctx.fill();
-  }
-}
-
-function drawPreviewDither(ctx,W,H) {
-  ctx.fillStyle='#f0ede8'; ctx.fillRect(0,0,W,H);
-  const ps=4;
-  const bayer=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
-  for (let y=0;y<H;y+=ps) for (let x=0;x<W;x+=ps) {
-    const t=(x/W+y/H)/2;
-    const thresh=bayer[Math.floor(y/ps)%4][Math.floor(x/ps)%4]/16;
-    ctx.fillStyle=t>thresh?'#1a1a1a':'#f0ede8';
-    ctx.fillRect(x,y,ps,ps);
-  }
-}
-
-function drawPreviewStipple(ctx,W,H) {
-  ctx.fillStyle='#f0ede8'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#1a1a1a';
-  // Draw a circle edge
-  const cx=W/2,cy=H/2,r=Math.min(W,H)*0.35;
-  for (let a=0;a<Math.PI*2;a+=0.15) {
-    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
-    const s=2+Math.random()*3;
-    ctx.fillRect(x,y,s,s);
-  }
-}
-
-function drawPreviewBevel(ctx,W,H) {
-  const g=ctx.createLinearGradient(0,0,W,H);
-  g.addColorStop(0,'#ffffff');
-  g.addColorStop(0.5,'#888888');
-  g.addColorStop(1,'#000000');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-}
-
-function drawPreviewEdge(ctx,W,H) {
-  ctx.fillStyle='#888888'; ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle='#ffffff'; ctx.lineWidth=1.5;
-  ctx.beginPath();
-  for (let x=0;x<W;x++) {
-    const y=H/2+Math.sin(x/10)*H/4;
-    x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-  }
-  ctx.stroke();
-  ctx.strokeStyle='#000000'; ctx.lineWidth=1;
-  ctx.beginPath();
-  for (let x=0;x<W;x++) {
-    const y=H/2+Math.sin(x/10)*H/4+2;
-    x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-  }
-  ctx.stroke();
-}
-
-function drawPreviewRecolor(ctx,W,H) {
-  const g=ctx.createLinearGradient(0,0,W,0);
-  g.addColorStop(0,'#1a1a1a');
-  g.addColorStop(0.33,'#3a7bd5');
-  g.addColorStop(0.66,'#d53a3a');
-  g.addColorStop(1,'#f0ede8');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-  // posterize bands
-  const steps=6;
-  ctx.globalAlpha=0.3;
-  for (let i=0;i<steps;i++) {
-    const x=i*W/steps;
-    ctx.fillStyle=i%2?'#000':'#fff';
-    ctx.fillRect(x,0,W/steps,H);
-  }
-  ctx.globalAlpha=1;
-}
-
-function drawPreviewPatterns(ctx,W,H) {
-  ctx.fillStyle='#f0ede8'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#1a1a1a';
-  const cell=8;
-  for (let y=0;y<H;y+=cell) for (let x=0;x<W;x+=cell) {
-    const t=(x/W+y/H)/2;
-    if (t < 0.6) ctx.fillRect(x+1,y+1,cell-2,cell-2);
-  }
-}
-
-function drawPreviewDistort(ctx,W,H) {
-  for (let y=0;y<H;y++) {
-    const shift=Math.sin(y/8)*15*(y/H);
-    ctx.fillStyle=`hsl(${y/H*60+200},30%,${50+shift/2}%)`;
-    ctx.fillRect(0,y,W,1);
-  }
-}
-
-function drawPreviewAscii(ctx,W,H) {
-  ctx.fillStyle='#f0ede8'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#1a1a1a';
-  ctx.font='6px monospace';
-  ctx.textBaseline='top';
-  const chars=' .:-=+*#%@';
-  for (let y=0;y<H;y+=8) for (let x=0;x<W;x+=5) {
-    const t=(x/W+y/H)/2;
-    const ci=Math.floor(t*(chars.length-1));
-    ctx.fillText(chars[ci],x,y);
-  }
-}
-
-function drawPreviewGeneric(ctx,W,H,id) {
-  const colors={'scatter':'#2d8a4e','displace':'#4a2d8a','cellular':'#8a2d2d','gradients':'#8a6a2d','crt':'#2d6a8a','slide':'#6a2d8a'};
-  const c=colors[id]||'#888';
-  ctx.fillStyle=c+'22'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle=c;
-  ctx.font='10px monospace';
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-  ctx.fillText('coming soon',W/2,H/2);
-  ctx.textAlign='left';
-}
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildSidebar();
+  buildCards();
+  showHome();
+});
 </script>
 </body>
 </html>
