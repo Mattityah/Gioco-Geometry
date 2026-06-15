@@ -197,9 +197,27 @@
       📁 Upload image
       <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
     </button>
-    <div class="row">
-      <div class="row-label">Canvas Size <span id="val-canvas-size">800</span></div>
-      <input type="range" id="canvas-size" min="200" max="1600" step="100" value="800">
+    <!-- Canvas dimensions -->
+    <div style="font-size:11px;margin-bottom:6px;color:var(--muted)">Canvas Size</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px" id="sw-preset">
+      <button class="sw-btn" data-w="1080" data-h="1080" onclick="applyPreset(this)">Instagram</button>
+      <button class="sw-btn" data-w="1920" data-h="1080" onclick="applyPreset(this)">16:9</button>
+      <button class="sw-btn" data-w="1080" data-h="1920" onclick="applyPreset(this)">Story</button>
+      <button class="sw-btn" data-w="794"  data-h="1123" onclick="applyPreset(this)">A4</button>
+      <button class="sw-btn" data-w="1200" data-h="628"  onclick="applyPreset(this)">Banner</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-end">
+      <div style="flex:1">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Width px</div>
+        <input type="number" id="input-w" value="800" min="100" max="4000" step="10"
+          style="width:100%;font-family:var(--font);font-size:12px;padding:7px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;color:var(--text)">
+      </div>
+      <div style="font-size:16px;color:var(--muted);padding-bottom:8px">×</div>
+      <div style="flex:1">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Height px</div>
+        <input type="number" id="input-h" value="800" min="100" max="4000" step="10"
+          style="width:100%;font-family:var(--font);font-size:12px;padding:7px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;color:var(--text)">
+      </div>
     </div>
     <div class="row">
       <div class="row-label">Blur <span id="val-blur">0</span></div>
@@ -315,7 +333,7 @@
 <script>
 // ---- STATE ----
 const S = {
-  canvasSize: 800, blur: 0, contrast: 1, brightness: 1, gamma: 1,
+  canvasW: 800, canvasH: 800, blur: 0, contrast: 1, brightness: 1, gamma: 1,
   threshold: 128, stepSize: 8, shapeSize: 5, cornerRadius: 1,
   gridAngle: 0, noise: 0,
   dither: 'floyd', grid: 'regular', shape: 'square',
@@ -337,7 +355,7 @@ const spinner = document.getElementById('spinner');
 
 // ---- SLIDERS ----
 [
-  ['canvas-size','canvasSize'],['blur','blur'],['contrast','contrast'],
+  ['blur','blur'],['contrast','contrast'],
   ['brightness','brightness'],['gamma','gamma'],['threshold','threshold'],
   ['step-size','stepSize'],['shape-size','shapeSize'],
   ['corner-radius','cornerRadius'],['grid-angle','gridAngle'],['noise','noise']
@@ -571,9 +589,10 @@ function drawShape(ctx, shape, cx, cy, r, cr) {
 }
 
 // ---- COLLECT CELLS (shared between render & SVG export) ----
-function collectCells(mask, gw, gh, size) {
+function collectCells(mask, gw, gh, cw, ch) {
+  const size = Math.max(cw,ch);
   const step = S.stepSize, angleRad = S.gridAngle * Math.PI/180;
-  const cx = size/2, cy = size/2;
+  const cx = cw/2, cy = ch/2;
   const diag = Math.ceil(Math.sqrt(2)*size) + step*4;
   const startX = cx - diag/2, startY = cy - diag/2;
   const cols = Math.ceil(diag/step)+1, rows = Math.ceil(diag/step)+1;
@@ -606,6 +625,30 @@ function collectCells(mask, gw, gh, size) {
   return cells;
 }
 
+
+// ---- CANVAS DIMENSIONS ----
+function applyPreset(btn) {
+  document.querySelectorAll('#sw-preset .sw-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  S.canvasW = parseInt(btn.dataset.w);
+  S.canvasH = parseInt(btn.dataset.h);
+  document.getElementById('input-w').value = S.canvasW;
+  document.getElementById('input-h').value = S.canvasH;
+  scheduleRender();
+}
+document.getElementById('input-w').addEventListener('change', e => {
+  S.canvasW = Math.max(100, Math.min(4000, parseInt(e.target.value)||800));
+  e.target.value = S.canvasW;
+  document.querySelectorAll('#sw-preset .sw-btn').forEach(b => b.classList.remove('active'));
+  scheduleRender();
+});
+document.getElementById('input-h').addEventListener('change', e => {
+  S.canvasH = Math.max(100, Math.min(4000, parseInt(e.target.value)||800));
+  e.target.value = S.canvasH;
+  document.querySelectorAll('#sw-preset .sw-btn').forEach(b => b.classList.remove('active'));
+  scheduleRender();
+});
+
 // ---- MAIN RENDER ----
 function doRender() {
   if (!sourceImg) return;
@@ -614,21 +657,21 @@ function doRender() {
 
   // Use requestAnimationFrame to not block UI
   requestAnimationFrame(() => {
-    const size = S.canvasSize;
+    const size = Math.max(S.canvasW, S.canvasH); // largest dimension for grid calc
     const step = S.stepSize;
     const diag = Math.ceil(Math.sqrt(2)*size)+step*4;
     const gw = Math.ceil(diag/step)+2;
     const gh = Math.ceil(diag/step)+2;
 
-    canvas.width = size; canvas.height = size;
-    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,size,size);
+    canvas.width = S.canvasW; canvas.height = S.canvasH;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,S.canvasW,S.canvasH);
 
     if (!S.showEffect) {
-      off.width=size; off.height=size;
-      offCtx.fillStyle='#fff'; offCtx.fillRect(0,0,size,size);
-      const sc=Math.max(size/sourceImg.width,size/sourceImg.height);
+      off.width=S.canvasW; off.height=S.canvasH;
+      offCtx.fillStyle='#fff'; offCtx.fillRect(0,0,S.canvasW,S.canvasH);
+      const sc=Math.max(S.canvasW/sourceImg.width,S.canvasH/sourceImg.height);
       const sw=sourceImg.width*sc, sh=sourceImg.height*sc;
-      offCtx.drawImage(sourceImg,(size-sw)/2,(size-sh)/2,sw,sh);
+      offCtx.drawImage(sourceImg,(S.canvasW-sw)/2,(S.canvasH-sh)/2,sw,sh);
       ctx.drawImage(off,0,0);
       spinner.classList.remove('visible');
       return;
@@ -636,7 +679,7 @@ function doRender() {
 
     const gray = prepareGray(gw, gh);
     const mask = dither(gray, gw, gh);
-    const cells = collectCells(mask, gw, gh, size);
+    const cells = collectCells(mask, gw, gh, S.canvasW, S.canvasH);
     const r = S.shapeSize, cr = S.cornerRadius;
 
     if (S.color === 'mono') {
@@ -668,12 +711,12 @@ function doExport() {
     a.href = canvas.toDataURL('image/png');
     a.click();
   } else {
-    const size = S.canvasSize, step = S.stepSize;
+    const size = Math.max(S.canvasW,S.canvasH), step = S.stepSize;
     const diag = Math.ceil(Math.sqrt(2)*size)+step*4;
     const gw = Math.ceil(diag/step)+2, gh = Math.ceil(diag/step)+2;
     const gray = prepareGray(gw,gh);
     const mask = dither(gray,gw,gh);
-    const cells = collectCells(mask,gw,gh,size);
+    const cells = collectCells(mask,gw,gh,S.canvasW,S.canvasH);
     const r = S.shapeSize, cr = S.cornerRadius;
     let s = '';
     cells.forEach(({shape,x,y,color}) => {
@@ -683,7 +726,7 @@ function doExport() {
       else if (shape==='square') s+=`<rect x="${(x-r).toFixed(1)}" y="${(y-r).toFixed(1)}" width="${r*2}" height="${r*2}" rx="${rx}" fill="${fill}"/>`;
       else s+=`<polygon points="${(x-r).toFixed(1)},${y.toFixed(1)} ${(x+r*.6).toFixed(1)},${(y-r*.9).toFixed(1)} ${(x+r*.6).toFixed(1)},${(y+r*.9).toFixed(1)}" fill="${fill}"/>`;
     });
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="white"/><g>${s}</g></svg>`;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${S.canvasW}" height="${S.canvasH}"><rect width="${S.canvasW}" height="${S.canvasH}" fill="white"/><g>${s}</g></svg>`;
     const a=document.createElement('a');
     a.download='halftone.svg';
     a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
