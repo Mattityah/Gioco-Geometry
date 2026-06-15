@@ -578,14 +578,18 @@ function scheduleRender() {
 }
 
 function doPreview() {
-  // Fast preview: render at 1/3 resolution while dragging
+  // Fast preview: render at reduced resolution while dragging
   if (!sourceImg) return;
-  const origW = S.canvasW, origH = S.canvasH;
-  S.canvasW = Math.round(origW / 3);
-  S.canvasH = Math.round(origH / 3);
+  const origW = S.canvasW, origH = S.canvasH, origStep = S.stepSize;
+  // Scale down to max 400px equivalent for preview
+  const previewScale = Math.min(1, 400 / Math.max(origW, origH));
+  S.canvasW = Math.round(origW * previewScale);
+  S.canvasH = Math.round(origH * previewScale);
+  S.stepSize = Math.max(2, Math.round(origStep * previewScale));
   doRender();
   S.canvasW = origW;
   S.canvasH = origH;
+  S.stepSize = origStep;
 }
 
 // ---- GRAYSCALE PREPARE ----
@@ -594,9 +598,12 @@ function prepareGray(gw, gh) {
   offCtx.fillStyle = '#fff';
   offCtx.fillRect(0, 0, gw, gh);
   offCtx.filter = `blur(${S.blur}px) contrast(${S.contrast}) brightness(${S.brightness})`;
-  const sc = Math.max(gw / sourceImg.width, gh / sourceImg.height);
+  // Contain: fit image inside canvas, letterbox with white
+  const scX = gw / sourceImg.width, scY = gh / sourceImg.height;
+  const sc = Math.min(scX, scY);
   const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
-  offCtx.drawImage(sourceImg, (gw-sw)/2, (gh-sh)/2, sw, sh);
+  const ox = (gw - sw) / 2, oy = (gh - sh) / 2;
+  offCtx.drawImage(sourceImg, ox, oy, sw, sh);
   offCtx.filter = 'none';
 
   const d = offCtx.getImageData(0, 0, gw, gh).data;
@@ -688,6 +695,7 @@ function drawShape(ctx, shape, cx, cy, r, cr) {
 function collectCells(mask, gw, gh, cw, ch) {
   const size = Math.max(cw,ch);
   const step = S.stepSize, angleRad = S.gridAngle * Math.PI/180;
+  // step here matches gw/gh so grid aligns
   const cx = cw/2, cy = ch/2;
   const diag = Math.ceil(Math.sqrt(2)*size) + step*4;
   const startX = cx - diag/2, startY = cy - diag/2;
@@ -765,7 +773,7 @@ function doRender() {
     if (!S.showEffect) {
       off.width=S.canvasW; off.height=S.canvasH;
       offCtx.fillStyle='#fff'; offCtx.fillRect(0,0,S.canvasW,S.canvasH);
-      const sc=Math.max(S.canvasW/sourceImg.width,S.canvasH/sourceImg.height);
+      const sc=Math.min(S.canvasW/sourceImg.width,S.canvasH/sourceImg.height); // contain
       const sw=sourceImg.width*sc, sh=sourceImg.height*sc;
       offCtx.drawImage(sourceImg,(S.canvasW-sw)/2,(S.canvasH-sh)/2,sw,sh);
       ctx.drawImage(off,0,0);
@@ -773,9 +781,9 @@ function doRender() {
       return;
     }
 
-    const gray = prepareGray(gw, gh);
-    const mask = dither(gray, gw, gh);
-    const cells = collectCells(mask, gw, gh, S.canvasW, S.canvasH);
+    const gray = prepareGray(gw2, gh2);
+    const mask = dither(gray, gw2, gh2);
+    const cells = collectCells(mask, gw2, gh2, S.canvasW, S.canvasH);
     const r = S.shapeSize, cr = S.cornerRadius;
 
     if (S.color === 'mono') {
