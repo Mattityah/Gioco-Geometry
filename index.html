@@ -34,13 +34,11 @@
   .switcher { display: flex; gap: 4px; margin-top: 10px; align-items: center; }
   .switcher label { font-size: 11px; min-width: 70px; flex-shrink: 0; }
   .switcher-btns { display: flex; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
-  .switcher-btns button { font-family: var(--font); font-size: 13px; padding: 3px 10px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); }
+  .switcher-btns button { font-family: var(--font); font-size: 12px; padding: 3px 9px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); }
   .switcher-btns button.active { background: var(--text); color: var(--bg); }
   .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 11px; cursor: pointer; user-select: none; }
   .toggle-indicator { width: 10px; height: 10px; border: 1px solid var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 8px; }
   .sidebar-footer { padding: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-  .format-switcher { display: flex; align-items: center; gap: 8px; }
-  .format-switcher label { font-size: 11px; }
   .btn-export { font-family: var(--font); font-size: 12px; background: var(--text); color: var(--bg); border: none; padding: 10px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-radius: 2px; width: 100%; }
   .btn-export:hover { opacity: 0.85; }
   .canvas-area { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
@@ -49,13 +47,13 @@
   .drop-hint p { font-size: 13px; color: var(--text-muted); }
   .sidebar::-webkit-scrollbar { width: 4px; }
   .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
-
-  /* Color palette */
   .color-palette { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
-  .color-swatch { width: 20px; height: 20px; border-radius: 2px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.1s; }
+  .color-swatch { width: 22px; height: 22px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.1s; }
   .color-swatch.active { border-color: var(--text); }
   .color-row { margin-top: 10px; }
-  .color-row label { font-size: 11px; display: block; margin-bottom: 6px; }
+  .color-row > label { font-size: 11px; display: block; margin-bottom: 6px; }
+  .shape-size-row { display: none; }
+  .shape-size-row.visible { display: block; }
 </style>
 </head>
 <body>
@@ -102,13 +100,13 @@
       </div>
     </div>
 
+    <!-- Toggles -->
     <div class="toggle-row" id="toggle-effect">
       <div style="display:flex;align-items:center;gap:2px;font-size:11px;color:var(--text-muted)">
         <span>[</span><span class="toggle-indicator" id="effect-indicator">✓</span><span>]</span>
       </div>
       <label>Show Effect</label>
     </div>
-
     <div class="toggle-row" id="toggle-invert">
       <div style="display:flex;align-items:center;gap:2px;font-size:11px;color:var(--text-muted)">
         <span>[</span><span class="toggle-indicator" id="invert-indicator">&nbsp;</span><span>]</span>
@@ -121,27 +119,35 @@
       <input type="range" id="threshold" min="0" max="255" step="1" value="128">
     </div>
 
+    <!-- Size mode -->
+    <div class="switcher">
+      <label>Size Mode</label>
+      <div class="switcher-btns" id="size-mode-switcher">
+        <button class="active" data-val="dynamic">Dynamic</button>
+        <button data-val="fixed">Fixed</button>
+      </div>
+    </div>
+
     <!-- Shape -->
     <div class="switcher">
       <label>Shape</label>
       <div class="switcher-btns" id="shape-switcher">
         <button class="active" data-val="circle" title="Circle">●</button>
         <button data-val="square" title="Square">■</button>
-        <button data-val="triangle" title="Triangle">▲</button>
+        <button data-val="arrow" title="Arrow left">◀</button>
         <button data-val="mix" title="Mix">✦</button>
       </div>
     </div>
 
-    <!-- Mix pattern (visible only in mix mode) -->
     <div id="mix-pattern-row" class="switcher" style="display:none">
       <label>Pattern</label>
       <div class="switcher-btns" id="mix-pattern-switcher">
-        <button class="active" data-val="ordered">Grid</button>
+        <button class="active" data-val="ordered">Ordered</button>
         <button data-val="random">Random</button>
       </div>
     </div>
 
-    <!-- Color mode -->
+    <!-- Color -->
     <div class="switcher">
       <label>Color</label>
       <div class="switcher-btns" id="color-mode-switcher">
@@ -150,12 +156,9 @@
       </div>
     </div>
 
-    <!-- Multi-color palette (hidden in mono mode) -->
     <div id="palette-row" class="color-row" style="display:none">
       <label>Palette</label>
-      <div class="color-palette" id="color-palette">
-        <!-- swatches injected by JS -->
-      </div>
+      <div class="color-palette" id="color-palette"></div>
     </div>
 
     <!-- Grid -->
@@ -171,7 +174,7 @@
       <div class="control-label">Grid Angle <span id="val-grid-angle">0</span></div>
       <input type="range" id="grid-angle" min="-45" max="45" step="1" value="0">
     </div>
-    <div class="control-row">
+    <div class="control-row" id="row-min-size">
       <div class="control-label">Min Dot Size <span id="val-min-dot-size">1</span></div>
       <input type="range" id="min-dot-size" min="0" max="50" step="1" value="1">
     </div>
@@ -180,12 +183,12 @@
       <input type="range" id="max-dot-size" min="0" max="50" step="1" value="10">
     </div>
     <div class="control-row">
-      <div class="control-label">Corner Radius <span id="val-corner-radius">4</span></div>
-      <input type="range" id="corner-radius" min="0" max="20" step="1" value="4">
+      <div class="control-label">Corner Radius <span id="val-corner-radius">2</span></div>
+      <input type="range" id="corner-radius" min="0" max="20" step="1" value="2">
     </div>
     <div class="control-row">
       <div class="control-label">Step Size <span id="val-step-size">14</span></div>
-      <input type="range" id="step-size" min="3" max="40" step="1" value="14">
+      <input type="range" id="step-size" min="4" max="60" step="1" value="14">
     </div>
     <div class="control-row">
       <div class="control-label">Noise <span id="val-noise">0</span></div>
@@ -194,8 +197,8 @@
   </div>
 
   <div class="sidebar-footer">
-    <div class="format-switcher">
-      <label>Output format</label>
+    <div class="switcher" style="margin-top:0">
+      <label style="font-size:11px">Format</label>
       <div class="switcher-btns" id="format-switcher">
         <button class="active" data-val="png">PNG</button>
         <button data-val="svg">SVG</button>
@@ -223,25 +226,48 @@ let gridType = 'regular';
 let shapeType = 'circle';
 let mixPattern = 'ordered';
 let colorMode = 'mono';
+let sizeMode = 'dynamic';
 let outputFormat = 'png';
 let renderTimeout = null;
 
-// Shape cycling for mix mode
-const SHAPES = ['circle', 'square', 'triangle'];
+// Reference-style palette (pastel/muted like the inspiration image)
+const PALETTE_COLORS = [
+  '#3a5ca8', // blue
+  '#d4632a', // orange
+  '#2e6b3e', // dark green
+  '#d4a0a0', // pink
+  '#7a3b2e', // maroon
+  '#d4b84a', // yellow
+];
 
-// Color palettes
-const PALETTES = {
-  active: ['#1a1a1a', '#c0392b', '#2980b9', '#27ae60', '#e67e22', '#8e44ad'],
-};
+let activeColors = [...PALETTE_COLORS];
 
-// Swatch selection (which colors are enabled)
-let activeColors = [...PALETTES.active];
+// Shape sets for mix mode
+// ordered: cycles through a 3-cell pattern per row
+const MIX_SHAPES = ['circle', 'square', 'arrow'];
+
+function getShapeForCell(col, row) {
+  if (shapeType !== 'mix') return shapeType;
+  if (mixPattern === 'random') {
+    const seed = ((col * 2654435761) ^ (row * 2246822519)) >>> 0;
+    return MIX_SHAPES[seed % MIX_SHAPES.length];
+  }
+  // Ordered: each column cycles, shifted by row
+  return MIX_SHAPES[(col + row) % MIX_SHAPES.length];
+}
+
+function getColorForCell(col, row) {
+  if (colorMode === 'mono') return '#1a1a1a';
+  if (activeColors.length === 0) return '#1a1a1a';
+  // Cycle by column (like in the reference image)
+  return activeColors[col % activeColors.length];
+}
 
 // Build palette UI
 function buildPalette() {
   const container = document.getElementById('color-palette');
   container.innerHTML = '';
-  PALETTES.active.forEach((color, i) => {
+  PALETTE_COLORS.forEach(color => {
     const sw = document.createElement('div');
     sw.className = 'color-swatch active';
     sw.style.background = color;
@@ -257,41 +283,13 @@ function buildPalette() {
 }
 buildPalette();
 
-function getShapeForCell(col, row) {
-  if (shapeType !== 'mix') return shapeType;
-  if (mixPattern === 'random') {
-    // Deterministic random based on position
-    const seed = (col * 2654435761 ^ row * 2246822519) >>> 0;
-    return SHAPES[seed % SHAPES.length];
-  }
-  // Ordered: tile a 3x3 pattern
-  const pattern = [
-    ['circle',   'triangle', 'square'  ],
-    ['square',   'circle',   'triangle'],
-    ['triangle', 'square',   'circle'  ],
-  ];
-  return pattern[row % 3][col % 3];
-}
-
-function getColorForCell(col, row) {
-  if (colorMode === 'mono') return '#000000';
-  if (activeColors.length === 0) return '#000000';
-  // Cycle colors by column in ordered, random-ish in random
-  if (mixPattern === 'random' || shapeType !== 'mix') {
-    const seed = (col * 1234567 ^ row * 7654321) >>> 0;
-    return activeColors[seed % activeColors.length];
-  }
-  return activeColors[col % activeColors.length];
-}
-
 const state = {
   canvasSize: 600, blur: 0, grain: 0, gamma: 1,
   blackPoint: 0, whitePoint: 255, threshold: 128,
   gridAngle: 0, minDotSize: 1, maxDotSize: 10,
-  cornerRadius: 4, stepSize: 14, noise: 0
+  cornerRadius: 2, stepSize: 14, noise: 0
 };
 
-// Sliders
 [
   ['canvas-size','canvasSize'], ['blur','blur'], ['grain','grain'],
   ['gamma','gamma'], ['black-point','blackPoint'], ['white-point','whitePoint'],
@@ -308,7 +306,6 @@ const state = {
   });
 });
 
-// Collapsible
 document.getElementById('toggle-preprocess').addEventListener('click', function() {
   const sec = document.getElementById('section-preprocess');
   const icon = this.querySelector('.toggle-icon');
@@ -317,7 +314,6 @@ document.getElementById('toggle-preprocess').addEventListener('click', function(
   if (!sec.classList.contains('collapsed')) sec.style.maxHeight = '500px';
 });
 
-// Toggles
 document.getElementById('toggle-effect').addEventListener('click', () => {
   showEffect = !showEffect;
   document.getElementById('effect-indicator').textContent = showEffect ? '✓' : ' ';
@@ -330,7 +326,6 @@ document.getElementById('toggle-invert').addEventListener('click', () => {
   scheduleRender();
 });
 
-// Switchers
 document.querySelectorAll('.switcher-btns').forEach(group => {
   group.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -339,6 +334,10 @@ document.querySelectorAll('.switcher-btns').forEach(group => {
       const val = btn.dataset.val;
       if (group.id === 'grid-type-switcher') gridType = val;
       if (group.id === 'format-switcher') outputFormat = val;
+      if (group.id === 'size-mode-switcher') {
+        sizeMode = val;
+        document.getElementById('row-min-size').style.display = val === 'dynamic' ? 'block' : 'none';
+      }
       if (group.id === 'shape-switcher') {
         shapeType = val;
         document.getElementById('mix-pattern-row').style.display = val === 'mix' ? 'flex' : 'none';
@@ -353,7 +352,6 @@ document.querySelectorAll('.switcher-btns').forEach(group => {
   });
 });
 
-// File input
 document.getElementById('fileInput').addEventListener('change', e => {
   if (e.target.files[0]) loadFile(e.target.files[0]);
 });
@@ -384,7 +382,6 @@ function scheduleRender() {
   renderTimeout = setTimeout(render, 40);
 }
 
-// ---- PREPARE IMAGE ----
 function prepareImage(size) {
   offscreen.width = size;
   offscreen.height = size;
@@ -400,7 +397,6 @@ function prepareImage(size) {
   offCtx.filter = 'none';
 
   const d = offCtx.getImageData(0, 0, size, size);
-
   for (let i = 0; i < d.data.length; i += 4) {
     if (state.grain > 0) {
       const n = (Math.random() - 0.5) * state.grain * 255;
@@ -428,37 +424,84 @@ function sampleLum(pixels, x, y, size) {
   return lum;
 }
 
-// ---- DRAW ONE SHAPE ----
 function drawShape(ctx, shape, cx, cy, r, cr) {
-  switch(shape) {
+  switch (shape) {
     case 'circle':
       ctx.moveTo(cx + r, cy);
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       break;
+
     case 'square': {
       const rx = Math.min(cr, r);
       const x = cx - r, y = cy - r, w = r * 2;
       if (rx <= 0) { ctx.rect(x, y, w, w); break; }
       ctx.moveTo(x + rx, y);
       ctx.lineTo(x + w - rx, y); ctx.arcTo(x+w, y, x+w, y+rx, rx);
-      ctx.lineTo(x + w, y + w - rx); ctx.arcTo(x+w, y+w, x+w-rx, y+w, rx);
-      ctx.lineTo(x + rx, y + w); ctx.arcTo(x, y+w, x, y+w-rx, rx);
-      ctx.lineTo(x, y + rx); ctx.arcTo(x, y, x+rx, y, rx);
+      ctx.lineTo(x+w, y+w-rx); ctx.arcTo(x+w, y+w, x+w-rx, y+w, rx);
+      ctx.lineTo(x+rx, y+w); ctx.arcTo(x, y+w, x, y+w-rx, rx);
+      ctx.lineTo(x, y+rx); ctx.arcTo(x, y, x+rx, y, rx);
       ctx.closePath();
       break;
     }
-    case 'triangle': {
-      const h = r * 1.8;
-      ctx.moveTo(cx, cy - h * 0.65);
-      ctx.lineTo(cx + r, cy + h * 0.35);
-      ctx.lineTo(cx - r, cy + h * 0.35);
+
+    case 'arrow': {
+      // Left-pointing arrow/triangle like in the reference
+      ctx.moveTo(cx - r, cy);           // tip (left)
+      ctx.lineTo(cx + r * 0.6, cy - r); // top right
+      ctx.lineTo(cx + r * 0.6, cy + r); // bottom right
       ctx.closePath();
       break;
     }
   }
 }
 
-// ---- MAIN RENDER ----
+function collectCells() {
+  const { stepSize: step, gridAngle, minDotSize, maxDotSize, noise, threshold } = state;
+  const size = state.canvasSize;
+  const angleRad = gridAngle * Math.PI / 180;
+  const cx = size / 2, cy = size / 2;
+  const diag = Math.ceil(Math.sqrt(2) * size) + step * 4;
+  const startX = cx - diag / 2, startY = cy - diag / 2;
+  const cols = Math.ceil(diag / step) + 1;
+  const rows = Math.ceil(diag / step) + 1;
+
+  const imageData = prepareImage(size);
+  const pixels = imageData.data;
+  const cells = [];
+
+  for (let row = 0; row <= rows; row++) {
+    for (let col = 0; col <= cols; col++) {
+      let lx = startX + col * step;
+      let ly = startY + row * step;
+      if (gridType === 'benday' && row % 2 === 1) lx += step / 2;
+
+      const dx = lx - cx, dy = ly - cy;
+      const drawX = cx + dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
+      const drawY = cy + dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
+
+      const lum = sampleLum(pixels, lx, ly, size);
+      if (lum > threshold) continue;
+
+      let r;
+      if (sizeMode === 'fixed') {
+        r = maxDotSize;
+      } else {
+        const t = lum / threshold; // 0=dark=big, 1=min
+        r = maxDotSize * (1 - t) + minDotSize * t;
+      }
+      if (r < 0.3) continue;
+
+      const nx = noise > 0 ? drawX + (Math.random()-0.5)*noise : drawX;
+      const ny = noise > 0 ? drawY + (Math.random()-0.5)*noise : drawY;
+
+      cells.push({ col, row, nx, ny, r,
+        shape: getShapeForCell(col, row),
+        color: getColorForCell(col, row) });
+    }
+  }
+  return cells;
+}
+
 function render() {
   if (!sourceImg) return;
   const size = state.canvasSize;
@@ -467,74 +510,36 @@ function render() {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, size, size);
 
-  const imageData = prepareImage(size);
-  if (!showEffect) { ctx.putImageData(imageData, 0, 0); return; }
+  if (!showEffect) {
+    const d = prepareImage(size);
+    ctx.putImageData(d, 0, 0);
+    return;
+  }
 
-  const { stepSize: step, gridAngle, minDotSize, maxDotSize, cornerRadius, noise, threshold } = state;
-  const angleRad = gridAngle * Math.PI / 180;
-  const pixels = imageData.data;
-  const cx = size / 2, cy = size / 2;
-  const diag = Math.ceil(Math.sqrt(2) * size) + step * 4;
-  const startX = cx - diag / 2, startY = cy - diag / 2;
-  const cols = Math.ceil(diag / step) + 1;
-  const rows = Math.ceil(diag / step) + 1;
+  const { cornerRadius } = state;
+  const cells = collectCells();
 
   if (colorMode === 'mono') {
-    // Single pass for mono
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#1a1a1a';
     ctx.beginPath();
-    for (let row = 0; row <= rows; row++) {
-      for (let col = 0; col <= cols; col++) {
-        let lx = startX + col * step;
-        let ly = startY + row * step;
-        if (gridType === 'benday' && row % 2 === 1) lx += step / 2;
-        const dx = lx - cx, dy = ly - cy;
-        const drawX = cx + dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
-        const drawY = cy + dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
-        const lum = sampleLum(pixels, lx, ly, size);
-        if (lum > threshold) continue;
-        const t = lum / threshold;
-        const r = maxDotSize * (1 - t) + minDotSize * t;
-        if (r < 0.3) continue;
-        const nx = noise > 0 ? drawX + (Math.random()-0.5)*noise : drawX;
-        const ny = noise > 0 ? drawY + (Math.random()-0.5)*noise : drawY;
-        drawShape(ctx, getShapeForCell(col, row), nx, ny, r, cornerRadius);
-      }
-    }
+    cells.forEach(c => drawShape(ctx, c.shape, c.nx, c.ny, c.r, cornerRadius));
     ctx.fill();
   } else {
-    // Multi-color: draw each color separately
-    const colorBuckets = {};
-    for (let row = 0; row <= rows; row++) {
-      for (let col = 0; col <= cols; col++) {
-        let lx = startX + col * step;
-        let ly = startY + row * step;
-        if (gridType === 'benday' && row % 2 === 1) lx += step / 2;
-        const dx = lx - cx, dy = ly - cy;
-        const drawX = cx + dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
-        const drawY = cy + dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
-        const lum = sampleLum(pixels, lx, ly, size);
-        if (lum > threshold) continue;
-        const t = lum / threshold;
-        const r = maxDotSize * (1 - t) + minDotSize * t;
-        if (r < 0.3) continue;
-        const nx = noise > 0 ? drawX + (Math.random()-0.5)*noise : drawX;
-        const ny = noise > 0 ? drawY + (Math.random()-0.5)*noise : drawY;
-        const color = getColorForCell(col, row);
-        if (!colorBuckets[color]) colorBuckets[color] = [];
-        colorBuckets[color].push({ nx, ny, r, shape: getShapeForCell(col, row) });
-      }
-    }
-    Object.entries(colorBuckets).forEach(([color, dots]) => {
+    // Group by color for efficient rendering
+    const byColor = {};
+    cells.forEach(c => {
+      if (!byColor[c.color]) byColor[c.color] = [];
+      byColor[c.color].push(c);
+    });
+    Object.entries(byColor).forEach(([color, group]) => {
       ctx.fillStyle = color;
       ctx.beginPath();
-      dots.forEach(({ nx, ny, r, shape }) => drawShape(ctx, shape, nx, ny, r, cornerRadius));
+      group.forEach(c => drawShape(ctx, c.shape, c.nx, c.ny, c.r, cornerRadius));
       ctx.fill();
     });
   }
 }
 
-// ---- EXPORT ----
 document.getElementById('btn-export').addEventListener('click', doExport);
 function doExport() {
   if (!sourceImg) return;
@@ -548,49 +553,31 @@ function doExport() {
 
 function exportSVG() {
   const size = state.canvasSize;
-  const { stepSize: step, gridAngle, minDotSize, maxDotSize, cornerRadius, noise, threshold } = state;
-  const angleRad = gridAngle * Math.PI / 180;
-  const imageData = prepareImage(size);
-  const pixels = imageData.data;
-  const cx = size/2, cy = size/2;
-  const diag = Math.ceil(Math.sqrt(2)*size) + step*4;
-  const startX = cx - diag/2, startY = cy - diag/2;
-  const cols = Math.ceil(diag/step)+1, rows = Math.ceil(diag/step)+1;
+  const cells = collectCells();
+  const { cornerRadius } = state;
   let shapes = '';
 
-  for (let row = 0; row <= rows; row++) {
-    for (let col = 0; col <= cols; col++) {
-      let lx = startX + col*step, ly = startY + row*step;
-      if (gridType==='benday' && row%2===1) lx += step/2;
-      const dx=lx-cx, dy=ly-cy;
-      const drawX = cx + dx*Math.cos(angleRad) - dy*Math.sin(angleRad);
-      const drawY = cy + dx*Math.sin(angleRad) + dy*Math.cos(angleRad);
-      const lum = sampleLum(pixels, lx, ly, size);
-      if (lum > threshold) continue;
-      const t = lum/threshold;
-      const r = maxDotSize*(1-t) + minDotSize*t;
-      if (r < 0.3) continue;
-      const nx = noise>0 ? drawX+(Math.random()-.5)*noise : drawX;
-      const ny = noise>0 ? drawY+(Math.random()-.5)*noise : drawY;
-      const shape = getShapeForCell(col, row);
-      const color = getColorForCell(col, row);
-      const fill = colorMode==='mono' ? 'black' : color;
-
-      if (shape==='circle') {
-        shapes += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}"/>`;
-      } else if (shape==='square') {
-        const rx = Math.min(cornerRadius, r);
-        shapes += `<rect x="${(nx-r).toFixed(1)}" y="${(ny-r).toFixed(1)}" width="${(r*2).toFixed(1)}" height="${(r*2).toFixed(1)}" rx="${rx}" fill="${fill}"/>`;
-      } else {
-        const h = r*1.8;
-        shapes += `<polygon points="${nx.toFixed(1)},${(ny-h*.65).toFixed(1)} ${(nx+r).toFixed(1)},${(ny+h*.35).toFixed(1)} ${(nx-r).toFixed(1)},${(ny+h*.35).toFixed(1)}" fill="${fill}"/>`;
-      }
+  cells.forEach(({ shape, nx, ny, r, color }) => {
+    const fill = colorMode === 'mono' ? '#1a1a1a' : color;
+    const rx = Math.min(cornerRadius, r);
+    if (shape === 'circle') {
+      shapes += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}"/>`;
+    } else if (shape === 'square') {
+      shapes += `<rect x="${(nx-r).toFixed(1)}" y="${(ny-r).toFixed(1)}" width="${(r*2).toFixed(1)}" height="${(r*2).toFixed(1)}" rx="${rx}" fill="${fill}"/>`;
+    } else if (shape === 'arrow') {
+      const p1 = `${(nx-r).toFixed(1)},${ny.toFixed(1)}`;
+      const p2 = `${(nx+r*.6).toFixed(1)},${(ny-r).toFixed(1)}`;
+      const p3 = `${(nx+r*.6).toFixed(1)},${(ny+r).toFixed(1)}`;
+      shapes += `<polygon points="${p1} ${p2} ${p3}" fill="${fill}"/>`;
     }
-  }
+  });
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="white"/><g>${shapes}</g></svg>`;
-  const blob = new Blob([svg],{type:'image/svg+xml'});
+  const blob = new Blob([svg], {type:'image/svg+xml'});
   const link = document.createElement('a');
-  link.download='halftone.svg'; link.href=URL.createObjectURL(blob); link.click();
+  link.download = 'halftone.svg';
+  link.href = URL.createObjectURL(blob);
+  link.click();
 }
 </script>
 </body>
