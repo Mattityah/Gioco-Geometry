@@ -132,6 +132,33 @@
     position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
   }
 
+  /* Reset button */
+  .reset-btn {
+    font-family: var(--font);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    float: right;
+    margin-top: -2px;
+  }
+  .reset-btn:hover { border-color: var(--text); color: var(--text); }
+
+  /* Dither preview canvas */
+  .dither-preview {
+    width: 100%;
+    aspect-ratio: 1;
+    display: block;
+    margin: 8px 0;
+    border: 1px solid var(--border);
+    image-rendering: pixelated;
+  }
+
   /* Slider + number combo */
   .row { margin-bottom: 10px; }
   .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
@@ -227,6 +254,7 @@
     <button class="tab" data-tab="effect">Effect</button>
     <button class="tab" data-tab="shape">Shape</button>
     <button class="tab" data-tab="export">Export</button>
+    <button class="tab" id="reset-tab" title="Reset all parameters" style="flex:0;padding:6px 10px;font-size:14px">↺</button>
   </div>
 
   <!-- TAB: UPLOAD -->
@@ -292,6 +320,8 @@
 
   <!-- TAB: EFFECT -->
   <div class="tab-content" id="tab-effect">
+    <div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">Dither Preview</div>
+    <canvas id="dither-preview" class="dither-preview"></canvas>
     <div class="toggle-row" id="toggle-effect">
       <div class="tog" id="effect-ind">✓</div> Show Effect
     </div>
@@ -882,6 +912,120 @@ function doExport() {
     a.click();
   }
 }
+
+// ---- RESET ----
+const DEFAULTS = {
+  blur:0, contrast:1, brightness:1, gamma:1, threshold:128,
+  stepSize:8, shapeSize:5, cornerRadius:1, gridAngle:0, noise:0,
+  dither:'floyd', grid:'regular', shape:'square', mix:'ordered',
+  color:'mono', showEffect:true, invert:false
+};
+
+document.getElementById('reset-tab').addEventListener('click', () => {
+  if (!confirm('Reset all parameters to defaults?')) return;
+
+  Object.assign(S, DEFAULTS);
+  S.canvasW = 800; S.canvasH = 800;
+
+  // Sync sliders + number inputs
+  [
+    ['blur','blur'],['contrast','contrast'],['brightness','brightness'],
+    ['gamma','gamma'],['threshold','threshold'],['step-size','stepSize'],
+    ['shape-size','shapeSize'],['corner-radius','cornerRadius'],
+    ['grid-angle','gridAngle'],['noise','noise']
+  ].forEach(([id, key]) => {
+    const sl = document.getElementById(id);
+    const ni = document.getElementById('num-'+id);
+    if (sl) sl.value = S[key];
+    if (ni) ni.value = S[key];
+  });
+
+  // Sync dimension inputs
+  const iw = document.getElementById('input-w');
+  const ih = document.getElementById('input-h');
+  if (iw) iw.value = 800;
+  if (ih) ih.value = 800;
+
+  // Sync switchers
+  function resetSwitcher(id, val) {
+    document.getElementById(id)?.querySelectorAll('.sw-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.val === val);
+    });
+  }
+  resetSwitcher('sw-dither', 'floyd');
+  resetSwitcher('sw-grid', 'regular');
+  resetSwitcher('sw-shape', 'square');
+  resetSwitcher('sw-mix', 'ordered');
+  resetSwitcher('sw-color', 'mono');
+
+  // Sync toggles
+  document.getElementById('effect-ind').textContent = '✓';
+  document.getElementById('invert-ind').textContent = ' ';
+
+  // Hide conditional panels
+  document.getElementById('mix-row').style.display = 'none';
+  document.getElementById('palette-wrap').style.display = 'none';
+
+  scheduleRender();
+});
+
+// ---- DITHER PREVIEW ----
+const ditherCanvas = document.getElementById('dither-preview');
+const ditherCtx = ditherCanvas.getContext('2d');
+
+function updateDitherPreview() {
+  if (!sourceImg || !ditherCanvas) return;
+  const size = 200; // small preview
+  ditherCanvas.width = size;
+  ditherCanvas.height = size;
+
+  // Draw grayscale + dither at small size
+  const tempOff = document.createElement('canvas');
+  tempOff.width = size; tempOff.height = size;
+  const tempCtx = tempOff.getContext('2d', { willReadFrequently: true });
+  tempCtx.fillStyle = '#fff';
+  tempCtx.fillRect(0, 0, size, size);
+  tempCtx.filter = `contrast(${S.contrast}) brightness(${S.brightness})`;
+  const sc = Math.min(size / sourceImg.width, size / sourceImg.height);
+  const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
+  tempCtx.drawImage(sourceImg, (size-sw)/2, (size-sh)/2, sw, sh);
+  tempCtx.filter = 'none';
+
+  const d = tempCtx.getImageData(0, 0, size, size);
+  const gray = new Float32Array(size * size);
+  for (let i = 0; i < gray.length; i++) {
+    const p = i*4;
+    let l = d.data[p]*.299 + d.data[p+1]*.587 + d.data[p+2]*.114;
+    if (S.gamma !== 1) l = 255 * Math.pow(l/255, S.gamma);
+    gray[i] = S.invert ? 255-l : l;
+  }
+  const mask = dither(gray, size, size);
+
+  // Draw B&W result
+  const out = ditherCtx.createImageData(size, size);
+  for (let i = 0; i < mask.length; i++) {
+    const v = mask[i] ? 255 : 0;
+    out.data[i*4]=out.data[i*4+1]=out.data[i*4+2]=v;
+    out.data[i*4+3]=255;
+  }
+  ditherCtx.putImageData(out, 0, 0);
+}
+
+// Update dither preview when effect tab is shown
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.tab === 'effect') setTimeout(updateDitherPreview, 50);
+  });
+});
+
+// Also update on relevant param changes
+['threshold','blur','contrast','brightness','gamma'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    if (document.getElementById('tab-effect').classList.contains('active')) {
+      updateDitherPreview();
+    }
+  });
+});
 </script>
 </body>
 </html>
