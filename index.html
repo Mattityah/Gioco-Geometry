@@ -32,16 +32,16 @@
   .collapsible { overflow: hidden; transition: max-height 0.2s ease; }
   .collapsible.collapsed { max-height: 0 !important; }
   .switcher { display: flex; gap: 4px; margin-top: 10px; align-items: center; }
-  .switcher label { font-size: 11px; min-width: 70px; }
-  .switcher-btns { display: flex; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
-  .switcher-btns button { font-family: var(--font); font-size: 11px; padding: 3px 10px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); }
+  .switcher label { font-size: 11px; min-width: 70px; flex-shrink: 0; }
+  .switcher-btns { display: flex; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; flex-wrap: wrap; }
+  .switcher-btns button { font-family: var(--font); font-size: 13px; padding: 3px 10px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); transition: all 0.1s; }
   .switcher-btns button.active { background: var(--text); color: var(--bg); }
-  .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 11px; cursor: pointer; }
+  .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 11px; cursor: pointer; user-select: none; }
   .toggle-indicator { width: 10px; height: 10px; border: 1px solid var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 8px; }
   .sidebar-footer { padding: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
   .format-switcher { display: flex; align-items: center; gap: 8px; }
   .format-switcher label { font-size: 11px; }
-  .btn-export { font-family: var(--font); font-size: 12px; background: var(--text); color: var(--bg); border: none; padding: 10px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-radius: 2px; }
+  .btn-export { font-family: var(--font); font-size: 12px; background: var(--text); color: var(--bg); border: none; padding: 10px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-radius: 2px; width: 100%; }
   .btn-export:hover { opacity: 0.85; }
   .canvas-area { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
   #canvas { display: block; }
@@ -59,7 +59,7 @@
     <h1>[ dots ]</h1>
   </div>
 
-  <div class="upload-area" id="uploadArea">
+  <div class="upload-area">
     <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
     <div class="upload-label">Upload media <span class="shortcut">cmd + O</span></div>
     <div class="upload-hint">[.jpg, .png, .webp]</div>
@@ -95,6 +95,7 @@
       </div>
     </div>
 
+    <!-- Toggles -->
     <div class="toggle-row" id="toggle-effect">
       <div style="display:flex;align-items:center;gap:2px;font-size:11px;color:var(--text-muted)">
         <span>[</span><span class="toggle-indicator" id="effect-indicator">✓</span><span>]</span>
@@ -102,11 +103,30 @@
       <label>Show Effect</label>
     </div>
 
+    <div class="toggle-row" id="toggle-invert">
+      <div style="display:flex;align-items:center;gap:2px;font-size:11px;color:var(--text-muted)">
+        <span>[</span><span class="toggle-indicator" id="invert-indicator">&nbsp;</span><span>]</span>
+      </div>
+      <label>Invert</label>
+    </div>
+
     <div class="control-row">
       <div class="control-label">Threshold <span id="val-threshold">128</span></div>
       <input type="range" id="threshold" min="0" max="255" step="1" value="128">
     </div>
 
+    <!-- Shape -->
+    <div class="switcher">
+      <label>Shape</label>
+      <div class="switcher-btns" id="shape-switcher">
+        <button class="active" data-val="circle" title="Circle">●</button>
+        <button data-val="square" title="Square">■</button>
+        <button data-val="triangle" title="Triangle">▲</button>
+        <button data-val="mix" title="Mix">✦</button>
+      </div>
+    </div>
+
+    <!-- Grid -->
     <div class="switcher">
       <label>Grid Type</label>
       <div class="switcher-btns" id="grid-type-switcher">
@@ -161,16 +181,27 @@
 <script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-// Offscreen canvas for pixel sampling
 const offscreen = document.createElement('canvas');
 const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
 
 let sourceImg = null;
 let showEffect = true;
+let invertColors = false;
 let gridType = 'regular';
+let shapeType = 'circle';
 let outputFormat = 'png';
 let renderTimeout = null;
+
+// Seeded shape assignment per cell (stable across re-renders)
+const shapeMap = {};
+const SHAPES = ['circle', 'square', 'triangle'];
+
+function getShape(col, row) {
+  if (shapeType !== 'mix') return shapeType;
+  const key = col + '_' + row;
+  if (!shapeMap[key]) shapeMap[key] = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+  return shapeMap[key];
+}
 
 const state = {
   canvasSize: 600, blur: 0, grain: 0, gamma: 1,
@@ -179,7 +210,7 @@ const state = {
   cornerRadius: 4, stepSize: 8, noise: 2
 };
 
-// Bind sliders
+// Sliders
 [
   ['canvas-size','canvasSize'], ['blur','blur'], ['grain','grain'],
   ['gamma','gamma'], ['black-point','blackPoint'], ['white-point','whitePoint'],
@@ -212,6 +243,13 @@ document.getElementById('toggle-effect').addEventListener('click', () => {
   scheduleRender();
 });
 
+// Invert toggle
+document.getElementById('toggle-invert').addEventListener('click', () => {
+  invertColors = !invertColors;
+  document.getElementById('invert-indicator').textContent = invertColors ? '✓' : ' ';
+  scheduleRender();
+});
+
 // Switchers
 document.querySelectorAll('.switcher-btns').forEach(group => {
   group.querySelectorAll('button').forEach(btn => {
@@ -220,6 +258,11 @@ document.querySelectorAll('.switcher-btns').forEach(group => {
       btn.classList.add('active');
       if (group.id === 'grid-type-switcher') gridType = btn.dataset.val;
       if (group.id === 'format-switcher') outputFormat = btn.dataset.val;
+      if (group.id === 'shape-switcher') {
+        shapeType = btn.dataset.val;
+        // Clear shape map when changing shape mode
+        Object.keys(shapeMap).forEach(k => delete shapeMap[k]);
+      }
       scheduleRender();
     });
   });
@@ -251,7 +294,6 @@ function loadFile(file) {
   reader.readAsDataURL(file);
 }
 
-// Keyboard shortcuts
 document.addEventListener('keydown', e => {
   const mod = e.metaKey || e.ctrlKey;
   if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); document.getElementById('fileInput').click(); }
@@ -267,11 +309,9 @@ function scheduleRender() {
 function prepareImage(size) {
   offscreen.width = size;
   offscreen.height = size;
-  // Fill WHITE so areas outside the image don't read as dark pixels
   offCtx.fillStyle = '#ffffff';
   offCtx.fillRect(0, 0, size, size);
 
-  // Scale to cover
   const scale = Math.max(size / sourceImg.width, size / sourceImg.height);
   const sw = sourceImg.width * scale;
   const sh = sourceImg.height * scale;
@@ -282,53 +322,78 @@ function prepareImage(size) {
   offCtx.drawImage(sourceImg, sx, sy, sw, sh);
   offCtx.filter = 'none';
 
+  const d = offCtx.getImageData(0, 0, size, size);
+
   // Grain
   if (state.grain > 0) {
-    const d = offCtx.getImageData(0, 0, size, size);
     for (let i = 0; i < d.data.length; i += 4) {
       const n = (Math.random() - 0.5) * state.grain * 255;
       d.data[i]   = Math.min(255, Math.max(0, d.data[i]   + n));
       d.data[i+1] = Math.min(255, Math.max(0, d.data[i+1] + n));
       d.data[i+2] = Math.min(255, Math.max(0, d.data[i+2] + n));
     }
-    offCtx.putImageData(d, 0, 0);
   }
 
-  return offCtx.getImageData(0, 0, size, size);
+  // Invert
+  if (invertColors) {
+    for (let i = 0; i < d.data.length; i += 4) {
+      d.data[i]   = 255 - d.data[i];
+      d.data[i+1] = 255 - d.data[i+1];
+      d.data[i+2] = 255 - d.data[i+2];
+    }
+  }
+
+  return d;
 }
 
-// ---- SAMPLE luminosity at (x, y) ----
-function sampleLum(pixels, x, y, size, bp, wp, gamma) {
-  const px = Math.round(x);
-  const py = Math.round(y);
-  if (px < 0 || px >= size || py < 0 || py >= size) return 255; // out of bounds = white
+// ---- SAMPLE luminosity ----
+function sampleLum(pixels, x, y, size) {
+  const px = Math.round(x), py = Math.round(y);
+  if (px < 0 || px >= size || py < 0 || py >= size) return 255;
   const i = (py * size + px) * 4;
   let lum = pixels[i] * 0.299 + pixels[i+1] * 0.587 + pixels[i+2] * 0.114;
-  // Levels
+  const { blackPoint: bp, whitePoint: wp, gamma } = state;
   lum = Math.min(255, Math.max(0, (lum - bp) / Math.max(1, wp - bp) * 255));
-  // Gamma
   if (gamma !== 1) lum = 255 * Math.pow(lum / 255, gamma);
   return lum;
 }
 
-// ---- DRAW ROUNDED RECT ----
-function drawDot(ctx, cx, cy, r, cr) {
-  const x = cx - r, y = cy - r, w = r * 2, h = r * 2;
-  const rx = Math.min(cr, r);
-  if (rx <= 0) {
-    ctx.rect(x, y, w, h);
-    return;
+// ---- DRAW SHAPES ----
+function drawShape(ctx, shape, cx, cy, radius, cornerRadius) {
+  const r = radius;
+  switch(shape) {
+    case 'circle':
+      ctx.moveTo(cx + r, cy);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      break;
+    case 'square': {
+      const rx = Math.min(cornerRadius, r);
+      const x = cx - r, y = cy - r, w = r * 2, h = r * 2;
+      if (rx <= 0) {
+        ctx.rect(x, y, w, h);
+      } else {
+        ctx.moveTo(x + rx, y);
+        ctx.lineTo(x + w - rx, y);
+        ctx.arcTo(x + w, y, x + w, y + rx, rx);
+        ctx.lineTo(x + w, y + h - rx);
+        ctx.arcTo(x + w, y + h, x + w - rx, y + h, rx);
+        ctx.lineTo(x + rx, y + h);
+        ctx.arcTo(x, y + h, x, y + h - rx, rx);
+        ctx.lineTo(x, y + rx);
+        ctx.arcTo(x, y, x + rx, y, rx);
+        ctx.closePath();
+      }
+      break;
+    }
+    case 'triangle': {
+      const h = r * 1.8;
+      ctx.moveTo(cx, cy - h * 0.6);
+      ctx.lineTo(cx + r, cy + h * 0.4);
+      ctx.lineTo(cx - r, cy + h * 0.4);
+      ctx.closePath();
+      break;
+    }
   }
-  ctx.moveTo(x + rx, y);
-  ctx.lineTo(x + w - rx, y);
-  ctx.arcTo(x + w, y, x + w, y + rx, rx);
-  ctx.lineTo(x + w, y + h - rx);
-  ctx.arcTo(x + w, y + h, x + w - rx, y + h, rx);
-  ctx.lineTo(x + rx, y + h);
-  ctx.arcTo(x, y + h, x, y + h - rx, rx);
-  ctx.lineTo(x, y + rx);
-  ctx.arcTo(x, y, x + rx, y, rx);
-  ctx.closePath();
 }
 
 // ---- MAIN RENDER ----
@@ -339,7 +404,6 @@ function render() {
   canvas.width = size;
   canvas.height = size;
 
-  // White background
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, size, size);
 
@@ -351,61 +415,45 @@ function render() {
   }
 
   const { stepSize: step, gridAngle, minDotSize, maxDotSize,
-          cornerRadius, noise, threshold, gamma, blackPoint, whitePoint } = state;
+          cornerRadius, noise, threshold } = state;
 
   const angleRad = gridAngle * Math.PI / 180;
-  const cosA = Math.cos(-angleRad);
-  const sinA = Math.sin(-angleRad);
   const pixels = imageData.data;
-
-  ctx.fillStyle = '#000000';
-  ctx.beginPath();
-
-  // We iterate over a rotated grid.
-  // For each grid cell, we rotate the cell center back to image space to sample,
-  // then draw the dot at the rotated position on canvas.
-  const cx = size / 2;
-  const cy = size / 2;
-
-  // Grid must cover the full canvas even when rotated
+  const cx = size / 2, cy = size / 2;
   const diag = Math.ceil(Math.sqrt(2) * size) + step * 2;
   const startX = cx - diag / 2;
   const startY = cy - diag / 2;
   const cols = Math.ceil(diag / step);
   const rows = Math.ceil(diag / step);
 
+  ctx.fillStyle = '#000000';
+  ctx.beginPath();
+
   for (let row = 0; row <= rows; row++) {
     for (let col = 0; col <= cols; col++) {
-      // Position in LOCAL grid space (centered at canvas center)
       let localX = startX + col * step;
       let localY = startY + row * step;
 
-      // Benday: shift every other row
       if (gridType === 'benday' && row % 2 === 1) localX += step / 2;
 
-      // Rotate the grid point around canvas center to get CANVAS draw position
-      const dx = localX - cx;
-      const dy = localY - cy;
+      // Rotate to get draw position
+      const dx = localX - cx, dy = localY - cy;
       const drawX = cx + dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
       const drawY = cy + dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
 
-      // Sample image at the UNROTATED position (localX, localY) — image is axis-aligned
-      const lum = sampleLum(pixels, localX, localY, size,
-                             blackPoint, whitePoint, gamma);
-
-      // Skip bright pixels
+      // Sample at unrotated position
+      const lum = sampleLum(pixels, localX, localY, size);
       if (lum > threshold) continue;
 
-      // Map darkness to dot size
-      const t = lum / threshold; // 0=dark=big, 1=threshold=min
+      const t = lum / threshold;
       const radius = maxDotSize * (1 - t) + minDotSize * t;
       if (radius < 0.5) continue;
 
-      // Apply noise to draw position
       const nx = noise > 0 ? drawX + (Math.random() - 0.5) * noise : drawX;
       const ny = noise > 0 ? drawY + (Math.random() - 0.5) * noise : drawY;
 
-      drawDot(ctx, nx, ny, radius, cornerRadius);
+      const shape = getShape(col, row);
+      drawShape(ctx, shape, nx, ny, radius, cornerRadius);
     }
   }
 
@@ -419,7 +467,7 @@ function doExport() {
   if (!sourceImg) return;
   if (outputFormat === 'png') {
     const link = document.createElement('a');
-    link.download = 'halftone-dots.png';
+    link.download = 'halftone.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
   } else {
@@ -429,8 +477,7 @@ function doExport() {
 
 function exportSVG() {
   const size = state.canvasSize;
-  const { stepSize: step, gridAngle, minDotSize, maxDotSize,
-          cornerRadius, noise, threshold, gamma, blackPoint, whitePoint } = state;
+  const { stepSize: step, gridAngle, minDotSize, maxDotSize, cornerRadius, noise, threshold } = state;
   const angleRad = gridAngle * Math.PI / 180;
   const imageData = prepareImage(size);
   const pixels = imageData.data;
@@ -448,20 +495,24 @@ function exportSVG() {
       const dx = localX - cx, dy = localY - cy;
       const drawX = cx + dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
       const drawY = cy + dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
-      const lum = sampleLum(pixels, localX, localY, size, blackPoint, whitePoint, gamma);
+      const lum = sampleLum(pixels, localX, localY, size);
       if (lum > threshold) continue;
       const t = lum / threshold;
       const radius = maxDotSize * (1 - t) + minDotSize * t;
       if (radius < 0.5) continue;
       const nx = noise > 0 ? drawX + (Math.random()-0.5)*noise : drawX;
       const ny = noise > 0 ? drawY + (Math.random()-0.5)*noise : drawY;
-      const rx = Math.min(cornerRadius, radius);
-      if (rx >= radius) {
-        shapes += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="${radius.toFixed(1)}"/>`;
-      } else {
-        const x = (nx-radius).toFixed(1), y = (ny-radius).toFixed(1);
-        const w = (radius*2).toFixed(1);
-        shapes += `<rect x="${x}" y="${y}" width="${w}" height="${w}" rx="${rx.toFixed(1)}"/>`;
+      const r = radius;
+      const shape = getShape(col, row);
+
+      if (shape === 'circle') {
+        shapes += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="${r.toFixed(1)}"/>`;
+      } else if (shape === 'square') {
+        const rx = Math.min(cornerRadius, r);
+        shapes += `<rect x="${(nx-r).toFixed(1)}" y="${(ny-r).toFixed(1)}" width="${(r*2).toFixed(1)}" height="${(r*2).toFixed(1)}" rx="${rx.toFixed(1)}"/>`;
+      } else if (shape === 'triangle') {
+        const h = r * 1.8;
+        shapes += `<polygon points="${nx.toFixed(1)},${(ny-h*0.6).toFixed(1)} ${(nx+r).toFixed(1)},${(ny+h*0.4).toFixed(1)} ${(nx-r).toFixed(1)},${(ny+h*0.4).toFixed(1)}"/>`;
       }
     }
   }
@@ -472,7 +523,7 @@ function exportSVG() {
 </svg>`;
   const blob = new Blob([svg], {type:'image/svg+xml'});
   const link = document.createElement('a');
-  link.download = 'halftone-dots.svg';
+  link.download = 'halftone.svg';
   link.href = URL.createObjectURL(blob);
   link.click();
 }
