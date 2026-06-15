@@ -267,7 +267,9 @@ function scheduleRender() {
 function prepareImage(size) {
   offscreen.width = size;
   offscreen.height = size;
-  offCtx.clearRect(0, 0, size, size);
+  // Fill WHITE so areas outside the image don't read as dark pixels
+  offCtx.fillStyle = '#ffffff';
+  offCtx.fillRect(0, 0, size, size);
 
   // Scale to cover
   const scale = Math.max(size / sourceImg.width, size / sourceImg.height);
