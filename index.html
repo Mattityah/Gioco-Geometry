@@ -121,23 +121,26 @@ button, input {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   overflow-x: auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .mode-switch::-webkit-scrollbar { display: none; }
 
 .mode-btn {
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   font-size: 7.5px;
-  letter-spacing: .04em;
+  letter-spacing: .03em;
   text-transform: uppercase;
-  padding: 4px 7px;
+  padding: 5px 2px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--muted);
   border-radius: 3px;
   cursor: pointer;
   white-space: nowrap;
+  text-align: center;
+  overflow: hidden;
 }
 
 .mode-btn.active {
@@ -3056,19 +3059,15 @@ function svgForDithering() {
 function getCircuitColors() {
   if (S.circuitColor === 'invert') return { bg: '#1a1a1a', fg: ['#ccff00'] };
   if (S.circuitColor === 'multi') {
-    const swatches = [...document.querySelectorAll('#circuit-palette .swatch.active')];
-    const cols = swatches.map(s => s.dataset.color);
+    const cols = [...document.querySelectorAll('#circuit-palette .swatch.active')].map(s => s.dataset.color);
     return { bg: '#ffffff', fg: cols.length ? cols : ['#1a1a1a'] };
   }
   return { bg: '#ffffff', fg: ['#1a1a1a'] };
 }
 
 async function renderCircuit(myID) {
-  const cw = S.canvasW;
-  const ch = S.canvasH;
-  canvas.width = cw;
-  canvas.height = ch;
-
+  const cw = S.canvasW, ch = S.canvasH;
+  canvas.width = cw; canvas.height = ch;
   const { bg, fg } = getCircuitColors();
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, cw, ch);
@@ -3082,10 +3081,6 @@ async function renderCircuit(myID) {
   const cell = Math.max(4, Math.round(S.circuitCell));
   const gcols = Math.ceil(cw / cell);
   const grows = Math.ceil(ch / cell);
-
-  const prep = prepareGray(gcols, grows);
-  const gray = prep.gray;
-
   const traceW = Math.max(1, Math.round(S.circuitWidth));
   const nodeR = Math.max(0, S.circuitNode);
   const chaos = S.circuitChaos / 100;
@@ -3093,7 +3088,16 @@ async function renderCircuit(myID) {
   const nodeShape = S.circuitNodeShape;
   const symbols = S.circuitSymbols;
   const symFreq = Math.max(1, S.circuitSymfreq);
+  const busMode = S.circuitBus;
+  const busW = Math.max(1, Math.round(S.circuitBusWidth));
+  const breakPct = S.circuitBreak / 100;
+  const fragMode = S.circuitFrag;
+  const fragCell = Math.max(8, Math.round(S.circuitFragCell));
+  const dispX = S.circuitDispX;
+  const dispY = S.circuitDispY;
+  const fragChaos = S.circuitFragChaos / 100;
 
+  // Deterministic seeded random
   function rand(seed) {
     const x = Math.sin(seed * 127.1 + 1) * 43758.5453;
     return x - Math.floor(x);
@@ -3103,39 +3107,93 @@ async function renderCircuit(myID) {
     return fg[Math.abs(col * 7 + row * 13) % fg.length];
   }
 
+  // ---- STEP 1: Sample image at grid resolution ----
+  const prep = prepareGray(gcols, grows);
+  const gray = prep.gray;
+
   function isActive(col, row) {
     if (col < 0 || col >= gcols || row < 0 || row >= grows) return false;
     return gray[row * gcols + col] <= densityThresh;
   }
 
-  // ---- TRACES ----
+  // ---- STEP 2: GLITCH BASE LAYER ----
+  // If frag mode active: draw displaced/glitched version of source image as base
+  if (fragMode !== 'none' && (dispX !== 0 || dispY !== 0 || fragChaos > 0)) {
+    const fCols = Math.ceil(cw / fragCell);
+    const fRows = Math.ceil(ch / fragCell);
+
+    // Sample source at frag cell resolution
+    const srcOff = document.createElement('canvas');
+    srcOff.width = cw; srcOff.height = ch;
+    const sCtxG = srcOff.getContext('2d', { willReadFrequently: true });
+    drawSourceToCanvas(srcOff, sCtxG, cw, ch);
+    const srcPixels = sCtxG.getImageData(0, 0, cw, ch).data;
+
+    for (let fr = 0; fr < fRows; fr++) {
+      for (let fc = 0; fc < fCols; fc++) {
+        // Only affect active (dark) zones from the image
+        const gCol = Math.floor(fc * fragCell / cell);
+        const gRow = Math.floor(fr * fragCell / cell);
+        if (!isActive(gCol, gRow)) continue;
+
+        // Per-row glitch: entire rows shift horizontally (like CRT glitch)
+        const rowSeed = rand(fr * 31 + 7);
+        const isGlitchRow = rowSeed < fragChaos;
+        const rowShiftX = isGlitchRow ? (rand(fr * 13) - 0.5) * dispX * 2 : 0;
+        const rowShiftY = isGlitchRow ? (rand(fr * 17) - 0.5) * dispY * 0.5 : 0;
+
+        const srcX = Math.max(0, Math.min(cw - 1, fc * fragCell + rowShiftX));
+        const srcY = Math.max(0, Math.min(ch - 1, fr * fragCell + rowShiftY));
+
+        const pi = (Math.round(srcY) * cw + Math.round(srcX)) * 4;
+        const r2 = srcPixels[pi], g2 = srcPixels[pi+1], b2 = srcPixels[pi+2];
+        const lum = r2 * 0.299 + g2 * 0.587 + b2 * 0.114;
+
+        // Draw the displaced block in fg color at varying opacity based on lum
+        ctx.fillStyle = colorAt(fc, fr);
+        ctx.globalAlpha = Math.max(0.15, 1 - lum / 255) * 0.7;
+        ctx.fillRect(fc * fragCell, fr * fragCell, fragCell - 1, fragCell - 1);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  await yieldFrame();
+  if (myID !== currentRenderID) return;
+
+  // ---- STEP 3: TRACES ----
   ctx.lineCap = 'square';
 
   for (let row = 0; row < grows; row++) {
     for (let col = 0; col < gcols - 1; col++) {
-      const idx = row * gcols + col;
       if (!isActive(col, row)) continue;
-      if (rand(idx * 3 + 1) < chaos * 0.55) continue;
+      if (rand(row * gcols + col + 1) < chaos * 0.55) continue;
 
       const x1 = col * cell + cell / 2;
       const x2 = (col + 1) * cell + cell / 2;
-      const y  = row * cell + cell / 2;
+      const y = row * cell + cell / 2;
+      const idx = row * gcols + col;
 
+      // Vary trace width slightly for organic feel
+      const lw = rand(idx * 3) > 0.8 ? traceW + 1 : traceW;
       ctx.strokeStyle = colorAt(col, row);
-      ctx.lineWidth = traceW;
+      ctx.lineWidth = lw;
       ctx.beginPath();
 
-      // L-bend with occasional diagonal jog
-      if (rand(idx * 5 + 2) < chaos * 0.45 && row + 1 < grows) {
+      // L-bend, diagonal-45, or straight
+      const r3 = rand(idx * 5 + 2);
+      if (r3 < chaos * 0.3 && row + 1 < grows) {
+        // L-bend with jog
         const midX = x1 + (x2 - x1) * (0.25 + rand(idx) * 0.5);
         const jog = (rand(idx * 2) > 0.5 ? 1 : -1) * cell;
-        ctx.moveTo(x1, y);
-        ctx.lineTo(midX, y);
-        ctx.lineTo(midX, y + jog);
-        ctx.lineTo(x2, y + jog);
+        ctx.moveTo(x1, y); ctx.lineTo(midX, y);
+        ctx.lineTo(midX, y + jog); ctx.lineTo(x2, y + jog);
+      } else if (r3 < chaos * 0.45 && row + 1 < grows && col + 1 < gcols) {
+        // 45-degree diagonal segment
+        ctx.moveTo(x1, y); ctx.lineTo(x1 + cell * 0.4, y);
+        ctx.lineTo(x2, y + cell * 0.5);
       } else {
-        ctx.moveTo(x1, y);
-        ctx.lineTo(x2, y);
+        ctx.moveTo(x1, y); ctx.lineTo(x2, y);
       }
       ctx.stroke();
     }
@@ -3145,17 +3203,23 @@ async function renderCircuit(myID) {
     for (let col = 0; col < gcols; col++) {
       const idx = row * gcols + col;
       if (!isActive(col, row)) continue;
-      if (rand(idx * 3 + 7) < chaos * 0.45 + 0.25) continue;
+      if (rand(idx * 3 + 7) < chaos * 0.45 + 0.2) continue;
 
-      const x  = col * cell + cell / 2;
+      const x = col * cell + cell / 2;
       const y1 = row * cell + cell / 2;
       const y2 = (row + 1) * cell + cell / 2;
+      const lw = rand(idx * 3 + 1) > 0.8 ? traceW + 1 : traceW;
 
       ctx.strokeStyle = colorAt(col, row);
-      ctx.lineWidth = traceW;
+      ctx.lineWidth = lw;
       ctx.beginPath();
-      ctx.moveTo(x, y1);
-      ctx.lineTo(x, y2);
+
+      // Occasional diagonal on vertical traces too
+      if (rand(idx * 7 + 3) < chaos * 0.25) {
+        ctx.moveTo(x, y1); ctx.lineTo(x + cell * 0.3, y1 + cell * 0.5); ctx.lineTo(x, y2);
+      } else {
+        ctx.moveTo(x, y1); ctx.lineTo(x, y2);
+      }
       ctx.stroke();
     }
   }
@@ -3163,74 +3227,48 @@ async function renderCircuit(myID) {
   await yieldFrame();
   if (myID !== currentRenderID) return;
 
-  // ---- NODES ----
+  // ---- STEP 4: NODES ----
   function drawNode(x, y, r, shape, color) {
     if (r <= 0) return;
     ctx.fillStyle = color;
     ctx.strokeStyle = color;
     ctx.lineCap = 'round';
-
     const shapes = ['circle','square','cross','diamond','donut','target','via'];
     const s = shape === 'mix'
       ? shapes[Math.floor(rand(x * 13.7 + y * 7.3 + 1) * shapes.length)]
       : shape;
-
     switch(s) {
       case 'circle':
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-        break;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); break;
       case 'square':
-        ctx.fillRect(x - r, y - r, r * 2, r * 2);
-        break;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2); break;
       case 'cross':
-        ctx.lineWidth = Math.max(1, r * 0.65);
-        ctx.lineCap = 'square';
+        ctx.lineWidth = Math.max(1, r * 0.65); ctx.lineCap = 'square';
         ctx.beginPath();
-        ctx.moveTo(x - r, y); ctx.lineTo(x + r, y);
-        ctx.moveTo(x, y - r); ctx.lineTo(x, y + r);
+        ctx.moveTo(x-r,y); ctx.lineTo(x+r,y);
+        ctx.moveTo(x,y-r); ctx.lineTo(x,y+r);
         ctx.stroke();
         ctx.lineWidth = Math.max(1, traceW * 0.7);
-        ctx.beginPath();
-        ctx.arc(x, y, r * 1.1, 0, Math.PI * 2);
-        ctx.stroke();
-        break;
+        ctx.beginPath(); ctx.arc(x, y, r*1.1, 0, Math.PI*2); ctx.stroke(); break;
       case 'diamond':
         ctx.beginPath();
-        ctx.moveTo(x, y - r);
-        ctx.lineTo(x + r, y);
-        ctx.lineTo(x, y + r);
-        ctx.lineTo(x - r, y);
-        ctx.closePath();
-        ctx.fill();
-        break;
+        ctx.moveTo(x,y-r); ctx.lineTo(x+r,y); ctx.lineTo(x,y+r); ctx.lineTo(x-r,y);
+        ctx.closePath(); ctx.fill(); break;
       case 'donut':
-        // Filled ring — outer filled, inner bg
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = ctx.fillStyle === color ? (S.circuitColor === 'invert' ? '#1a1a1a' : '#ffffff') : color;
-        ctx.fillStyle = S.circuitColor === 'invert' ? '#1a1a1a' : '#ffffff';
-        ctx.beginPath();
-        ctx.arc(x, y, r * 0.45, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = color;
-        break;
+        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = bg;
+        ctx.beginPath(); ctx.arc(x,y,r*0.45,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = color; break;
       case 'target':
-        // Concentric circles
-        ctx.lineWidth = Math.max(1, traceW * 0.7);
-        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(x, y, r * 0.55, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(x, y, r * 0.2, 0, Math.PI * 2); ctx.fill();
-        break;
+        ctx.lineWidth = Math.max(1,traceW*0.7);
+        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x,y,r*0.55,0,Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x,y,r*0.2,0,Math.PI*2); ctx.fill(); break;
       case 'via':
-        // Square pad with circle hole — standard PCB via
-        ctx.fillRect(x - r * 1.2, y - r * 1.2, r * 2.4, r * 2.4);
-        ctx.fillStyle = S.circuitColor === 'invert' ? '#1a1a1a' : '#ffffff';
-        ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = color;
-        break;
+        ctx.fillRect(x-r*1.2,y-r*1.2,r*2.4,r*2.4);
+        ctx.fillStyle = bg;
+        ctx.beginPath(); ctx.arc(x,y,r*0.5,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = color; break;
     }
   }
 
@@ -3238,309 +3276,254 @@ async function renderCircuit(myID) {
     for (let row = 0; row < grows; row++) {
       for (let col = 0; col < gcols; col++) {
         if (!isActive(col, row)) continue;
-        if (rand(col * 11 + row * 7 + 3) > 0.42) continue;
-        const x = col * cell + cell / 2;
-        const y = row * cell + cell / 2;
-        drawNode(x, y, nodeR, nodeShape, colorAt(col, row));
+        if (rand(col*11+row*7+3) > 0.42) continue;
+        drawNode(col*cell+cell/2, row*cell+cell/2, nodeR, nodeShape, colorAt(col,row));
       }
     }
   }
 
-  const busMode = S.circuitBus;
-  const busW = Math.max(1, Math.round(S.circuitBusWidth));
-  const breakPct = S.circuitBreak / 100;
+  await yieldFrame();
+  if (myID !== currentRenderID) return;
 
+  // ---- STEP 5: BUS LINES (chip-art dense parallel lines) ----
   if (busMode !== 'none') {
     ctx.lineCap = 'butt';
 
-    // Chip-art style: dense groups of ultra-fine parallel lines spanning full canvas
-    // Each group has 3-7 lines with slight spacing variation, like silicon bus traces
     function drawBusGroup(isHoriz, startPos, groupSeed) {
-      const lineCount = 2 + Math.floor(rand(groupSeed) * 5); // 2-6 lines per group
-      const baseSpacing = busW + Math.max(1, Math.floor(rand(groupSeed * 2) * 3));
-
+      const lineCount = 2 + Math.floor(rand(groupSeed) * 5);
+      const baseSpacing = busW + Math.max(1, Math.floor(rand(groupSeed*2)*3));
       for (let li = 0; li < lineCount; li++) {
         const offset = li * baseSpacing;
-        // Vary line thickness — some thin (1px), some thick (busW)
-        const lw = rand(groupSeed * 3 + li) > 0.65 ? busW : Math.max(1, Math.round(busW * 0.4));
-        const color = fg[Math.abs(Math.floor(groupSeed * 7 + li * 3)) % fg.length];
-
+        const lw2 = rand(groupSeed*3+li) > 0.65 ? busW : Math.max(1, Math.round(busW*0.4));
+        const color = fg[Math.abs(Math.floor(groupSeed*7+li*3)) % fg.length];
         ctx.strokeStyle = color;
-        ctx.lineWidth = lw;
-
+        ctx.lineWidth = lw2;
         if (isHoriz) {
-          const y = startPos + offset;
-          if (y >= ch) return;
-          // Draw full line with possible breaks
+          const py = startPos + offset;
+          if (py < 0 || py >= ch) continue;
+          // Only draw over active image areas
           let x = 0;
           while (x < cw) {
-            // Breaks: short gaps to simulate damaged/cut traces
-            const gapChance = rand(x * 0.01 + y * 0.07 + li * 11);
-            if (gapChance < breakPct) {
-              // Gap: random length
-              x += Math.max(2, Math.round(rand(x * 0.02 + li) * cell * 3));
+            const gCol = Math.floor(x / cell);
+            const gRow = Math.floor(py / cell);
+            const gapChance = rand(x*0.01+py*0.07+li*11);
+            const inActiveZone = isActive(gCol, gRow);
+            if (gapChance < breakPct || !inActiveZone) {
+              x += Math.max(2, Math.round(rand(x*0.02+li)*cell*3));
               continue;
             }
-            // Segment: draw to next potential break point
-            const segEnd = Math.min(cw, x + cell * (2 + Math.floor(rand(x * 0.015 + y * 0.03) * 12)));
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(segEnd, y);
-            ctx.stroke();
-            // Occasional small perpendicular stub — looks like a via connection
-            if (rand(x * 0.02 + y * 0.05 + li) > 0.88) {
-              const sx = x + (segEnd - x) * 0.5;
-              const stubLen = cell * (0.5 + rand(sx) * 1.5);
-              const dir = rand(sx * 0.1) > 0.5 ? 1 : -1;
-              ctx.beginPath();
-              ctx.moveTo(sx, y);
-              ctx.lineTo(sx, y + dir * stubLen);
-              ctx.stroke();
-              // Tiny pad at stub end
+            const segEnd = Math.min(cw, x + cell*(2+Math.floor(rand(x*0.015+py*0.03)*12)));
+            ctx.beginPath(); ctx.moveTo(x, py); ctx.lineTo(segEnd, py); ctx.stroke();
+            // Stub
+            if (rand(x*0.02+py*0.05+li) > 0.88) {
+              const sx = x + (segEnd-x)*0.5;
+              const stubLen = cell*(0.5+rand(sx)*1.5);
+              const dir = rand(sx*0.1)>0.5?1:-1;
+              ctx.beginPath(); ctx.moveTo(sx,py); ctx.lineTo(sx,py+dir*stubLen); ctx.stroke();
               ctx.fillStyle = color;
-              ctx.fillRect(sx - lw, y + dir * stubLen - lw, lw * 2, lw * 2);
+              ctx.fillRect(sx-lw2, py+dir*stubLen-lw2, lw2*2, lw2*2);
             }
-            x = segEnd + Math.max(1, Math.round(rand(segEnd * 0.01) * 3));
+            x = segEnd + Math.max(1, Math.round(rand(segEnd*0.01)*3));
           }
         } else {
-          // Vertical
-          const x = startPos + offset;
-          if (x >= cw) return;
+          const px = startPos + offset;
+          if (px < 0 || px >= cw) continue;
           let y = 0;
           while (y < ch) {
-            const gapChance = rand(y * 0.01 + x * 0.07 + li * 11);
-            if (gapChance < breakPct) {
-              y += Math.max(2, Math.round(rand(y * 0.02 + li) * cell * 3));
+            const gCol = Math.floor(px / cell);
+            const gRow = Math.floor(y / cell);
+            const gapChance = rand(y*0.01+px*0.07+li*11);
+            const inActiveZone = isActive(gCol, gRow);
+            if (gapChance < breakPct || !inActiveZone) {
+              y += Math.max(2, Math.round(rand(y*0.02+li)*cell*3));
               continue;
             }
-            const segEnd = Math.min(ch, y + cell * (2 + Math.floor(rand(y * 0.015 + x * 0.03) * 12)));
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x, segEnd);
-            ctx.stroke();
-            if (rand(y * 0.02 + x * 0.05 + li) > 0.88) {
-              const sy = y + (segEnd - y) * 0.5;
-              const stubLen = cell * (0.5 + rand(sy) * 1.5);
-              const dir = rand(sy * 0.1) > 0.5 ? 1 : -1;
-              ctx.beginPath();
-              ctx.moveTo(x, sy);
-              ctx.lineTo(x + dir * stubLen, sy);
-              ctx.stroke();
+            const segEnd = Math.min(ch, y + cell*(2+Math.floor(rand(y*0.015+px*0.03)*12)));
+            ctx.beginPath(); ctx.moveTo(px, y); ctx.lineTo(px, segEnd); ctx.stroke();
+            if (rand(y*0.02+px*0.05+li) > 0.88) {
+              const sy = y+(segEnd-y)*0.5;
+              const stubLen = cell*(0.5+rand(sy)*1.5);
+              const dir = rand(sy*0.1)>0.5?1:-1;
+              ctx.beginPath(); ctx.moveTo(px,sy); ctx.lineTo(px+dir*stubLen,sy); ctx.stroke();
               ctx.fillStyle = color;
-              ctx.fillRect(x + dir * stubLen - lw, sy - lw, lw * 2, lw * 2);
+              ctx.fillRect(px+dir*stubLen-lw2, sy-lw2, lw2*2, lw2*2);
             }
-            y = segEnd + Math.max(1, Math.round(rand(segEnd * 0.01) * 3));
+            y = segEnd + Math.max(1, Math.round(rand(segEnd*0.01)*3));
           }
         }
       }
     }
 
     if (busMode === 'h' || busMode === 'both') {
-      // Space bus groups across canvas height — denser than before
-      const numGroups = Math.max(3, Math.round(ch / (cell * (4 + rand(7) * 4))));
+      const numGroups = Math.max(3, Math.round(ch/(cell*(4+rand(7)*4))));
       const spacing = ch / numGroups;
       for (let g = 0; g < numGroups; g++) {
-        const startY = Math.round(g * spacing + rand(g * 3) * spacing * 0.3);
-        drawBusGroup(true, startY, g * 31 + 7);
+        drawBusGroup(true, Math.round(g*spacing+rand(g*3)*spacing*0.3), g*31+7);
       }
     }
-
     if (busMode === 'v' || busMode === 'both') {
-      const numGroups = Math.max(3, Math.round(cw / (cell * (4 + rand(13) * 4))));
+      const numGroups = Math.max(3, Math.round(cw/(cell*(4+rand(13)*4))));
       const spacing = cw / numGroups;
       for (let g = 0; g < numGroups; g++) {
-        const startX = Math.round(g * spacing + rand(g * 5) * spacing * 0.3);
-        drawBusGroup(false, startX, g * 37 + 13);
+        drawBusGroup(false, Math.round(g*spacing+rand(g*5)*spacing*0.3), g*37+13);
       }
     }
   }
 
   await yieldFrame();
   if (myID !== currentRenderID) return;
-  function drawResistor(x, y, w, h, color) {
-    ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, traceW * 0.8); ctx.lineCap = 'square';
-    ctx.beginPath();
-    ctx.moveTo(x, y+h/2); ctx.lineTo(x+w*0.2, y+h/2);
-    ctx.moveTo(x+w*0.8, y+h/2); ctx.lineTo(x+w, y+h/2);
-    ctx.stroke();
-    ctx.strokeRect(x+w*0.2, y+h*0.2, w*0.6, h*0.6);
-  }
 
-  function drawCapacitor(x, y, w, h, color) {
-    ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, traceW * 0.8);
-    const mx = x+w/2, gap = w*0.08;
+  // ---- STEP 6: COMPONENT SYMBOLS ----
+  function drawResistor(x,y,w,h,color) {
+    ctx.strokeStyle=color; ctx.lineWidth=Math.max(1,traceW*0.8); ctx.lineCap='square';
     ctx.beginPath();
-    ctx.moveTo(x, y+h/2); ctx.lineTo(mx-gap, y+h/2);
-    ctx.moveTo(x+w, y+h/2); ctx.lineTo(mx+gap, y+h/2);
-    ctx.moveTo(mx-gap, y+h*0.15); ctx.lineTo(mx-gap, y+h*0.85);
-    ctx.moveTo(mx+gap, y+h*0.15); ctx.lineTo(mx+gap, y+h*0.85);
+    ctx.moveTo(x,y+h/2); ctx.lineTo(x+w*0.2,y+h/2);
+    ctx.moveTo(x+w*0.8,y+h/2); ctx.lineTo(x+w,y+h/2);
+    ctx.stroke(); ctx.strokeRect(x+w*0.2,y+h*0.2,w*0.6,h*0.6);
+  }
+  function drawCapacitor(x,y,w,h,color) {
+    ctx.strokeStyle=color; ctx.lineWidth=Math.max(1,traceW*0.8);
+    const mx=x+w/2,gap=w*0.08;
+    ctx.beginPath();
+    ctx.moveTo(x,y+h/2); ctx.lineTo(mx-gap,y+h/2);
+    ctx.moveTo(x+w,y+h/2); ctx.lineTo(mx+gap,y+h/2);
+    ctx.moveTo(mx-gap,y+h*0.15); ctx.lineTo(mx-gap,y+h*0.85);
+    ctx.moveTo(mx+gap,y+h*0.15); ctx.lineTo(mx+gap,y+h*0.85);
     ctx.stroke();
   }
-
-  function drawDiode(x, y, w, h, color) {
-    ctx.strokeStyle = color; ctx.fillStyle = color;
-    ctx.lineWidth = Math.max(1, traceW * 0.8); ctx.lineCap = 'square';
-    const mx = x+w/2, cy2 = y+h/2, tr = h*0.35;
-    ctx.beginPath();
-    ctx.moveTo(x, cy2); ctx.lineTo(mx-tr, cy2);
-    ctx.moveTo(mx+tr, cy2); ctx.lineTo(x+w, cy2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(mx-tr, cy2-tr); ctx.lineTo(mx-tr, cy2+tr); ctx.lineTo(mx+tr, cy2); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(mx+tr, cy2-tr); ctx.lineTo(mx+tr, cy2+tr); ctx.stroke();
+  function drawDiode(x,y,w,h,color) {
+    ctx.strokeStyle=color; ctx.fillStyle=color;
+    ctx.lineWidth=Math.max(1,traceW*0.8); ctx.lineCap='square';
+    const mx=x+w/2,cy2=y+h/2,tr=h*0.35;
+    ctx.beginPath(); ctx.moveTo(x,cy2); ctx.lineTo(mx-tr,cy2); ctx.moveTo(mx+tr,cy2); ctx.lineTo(x+w,cy2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx-tr,cy2-tr); ctx.lineTo(mx-tr,cy2+tr); ctx.lineTo(mx+tr,cy2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(mx+tr,cy2-tr); ctx.lineTo(mx+tr,cy2+tr); ctx.stroke();
   }
-
-  function drawGND(x, y, w, h, color) {
-    ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, traceW * 0.8); ctx.lineCap = 'square';
-    const mx = x+w/2;
-    ctx.beginPath(); ctx.moveTo(mx, y+h*0.1); ctx.lineTo(mx, y+h*0.45); ctx.stroke();
-    [0,1,2].forEach(b => {
-      const bw = w*(0.8-b*0.22), by = y+h*(0.45+b*0.17);
-      ctx.beginPath(); ctx.moveTo(mx-bw/2, by); ctx.lineTo(mx+bw/2, by); ctx.stroke();
+  function drawGND(x,y,w,h,color) {
+    ctx.strokeStyle=color; ctx.lineWidth=Math.max(1,traceW*0.8); ctx.lineCap='square';
+    const mx=x+w/2;
+    ctx.beginPath(); ctx.moveTo(mx,y+h*0.1); ctx.lineTo(mx,y+h*0.45); ctx.stroke();
+    [0,1,2].forEach(b=>{
+      const bw=w*(0.8-b*0.22),by=y+h*(0.45+b*0.17);
+      ctx.beginPath(); ctx.moveTo(mx-bw/2,by); ctx.lineTo(mx+bw/2,by); ctx.stroke();
     });
   }
-
-  function drawIC(x, y, w, h, color) {
-    ctx.strokeStyle = color; ctx.fillStyle = bg; ctx.lineWidth = Math.max(1, traceW * 0.8);
-    ctx.strokeRect(x, y, w, h); ctx.fillRect(x+1, y+1, w-2, h-2);
-    const pins = Math.max(2, Math.round(h/cell)), ps = h/(pins+1);
-    ctx.strokeStyle = color;
-    for (let p = 1; p <= pins; p++) {
-      const py = y+p*ps;
-      ctx.beginPath();
-      ctx.moveTo(x-cell*0.5, py); ctx.lineTo(x, py);
-      ctx.moveTo(x+w, py); ctx.lineTo(x+w+cell*0.5, py);
-      ctx.stroke();
-      ctx.fillStyle = color;
-      ctx.fillRect(x-cell*0.5-1, py-1, 3, 3);
-      ctx.fillRect(x+w+cell*0.5-1, py-1, 3, 3);
+  function drawIC(x,y,w,h,color) {
+    ctx.strokeStyle=color; ctx.fillStyle=bg; ctx.lineWidth=Math.max(1,traceW*0.8);
+    ctx.strokeRect(x,y,w,h); ctx.fillRect(x+1,y+1,w-2,h-2);
+    const pins=Math.max(2,Math.round(h/cell)),ps=h/(pins+1);
+    ctx.strokeStyle=color;
+    for(let p=1;p<=pins;p++){
+      const py=y+p*ps;
+      ctx.beginPath(); ctx.moveTo(x-cell*0.5,py); ctx.lineTo(x,py); ctx.moveTo(x+w,py); ctx.lineTo(x+w+cell*0.5,py); ctx.stroke();
+      ctx.fillStyle=color;
+      ctx.fillRect(x-cell*0.5-1,py-1,3,3); ctx.fillRect(x+w+cell*0.5-1,py-1,3,3);
     }
-    ctx.strokeStyle = color;
-    ctx.beginPath(); ctx.arc(x+w/2, y, cell*0.25, 0, Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x+w/2,y,cell*0.25,0,Math.PI); ctx.stroke();
   }
 
   if (symbols !== 'none') {
-    const symTypes = symbols === 'all'
-      ? ['resistor','cap','ic','diode','gnd']
-      : [symbols];
-
-    for (let row = 1; row < grows - 1; row++) {
-      for (let col = 1; col < gcols - 1; col++) {
-        const idx = row * gcols + col;
-        if (!isActive(col, row)) continue;
-        if (rand(idx * 17 + 9) > (1 / symFreq)) continue;
-        const x = col * cell, y = row * cell;
-        const symType = symTypes[Math.floor(rand(idx * 3) * symTypes.length)];
-        const color = colorAt(col, row);
-        if (symType === 'resistor') drawResistor(x-cell*0.5, y, cell*2, cell, color);
-        else if (symType === 'cap') drawCapacitor(x-cell*0.5, y, cell*2, cell, color);
-        else if (symType === 'diode') drawDiode(x-cell*0.5, y, cell*2, cell, color);
-        else if (symType === 'gnd') drawGND(x, y, cell, cell*1.5, color);
-        else if (symType === 'ic') {
-          const icW = cell*(2+Math.floor(rand(idx)*2));
-          const icH = cell*(2+Math.floor(rand(idx*2)*3));
-          drawIC(x, y, icW, icH, color);
+    const symTypes = symbols === 'all' ? ['resistor','cap','ic','diode','gnd'] : [symbols];
+    for (let row = 1; row < grows-1; row++) {
+      for (let col = 1; col < gcols-1; col++) {
+        const idx = row*gcols+col;
+        if (!isActive(col,row)) continue;
+        if (rand(idx*17+9) > (1/symFreq)) continue;
+        const x=col*cell, y=row*cell;
+        const symType = symTypes[Math.floor(rand(idx*3)*symTypes.length)];
+        const color = colorAt(col,row);
+        if (symType==='resistor') drawResistor(x-cell*0.5,y,cell*2,cell,color);
+        else if (symType==='cap') drawCapacitor(x-cell*0.5,y,cell*2,cell,color);
+        else if (symType==='diode') drawDiode(x-cell*0.5,y,cell*2,cell,color);
+        else if (symType==='gnd') drawGND(x,y,cell,cell*1.5,color);
+        else if (symType==='ic') {
+          drawIC(x,y,cell*(2+Math.floor(rand(idx)*2)),cell*(2+Math.floor(rand(idx*2)*3)),color);
         }
       }
     }
   }
+
   await yieldFrame();
   if (myID !== currentRenderID) return;
 
-  // ---- FRAGMENTATION / TEXT MODE ----
-  if (S.circuitFrag !== 'none') {
-    const fCell = Math.max(8, Math.round(S.circuitFragCell));
-    const fCols = Math.ceil(cw / fCell);
-    const fRows = Math.ceil(ch / fCell);
-    const fChaos = S.circuitFragChaos / 100;
-    const dispX = S.circuitDispX;
-    const dispY = S.circuitDispY;
+  // ---- STEP 7: TEXT / BLOCKS FRAGMENTATION OVERLAY ----
+  if (fragMode !== 'none') {
+    const fCols = Math.ceil(cw / fragCell);
+    const fRows = Math.ceil(ch / fragCell);
 
     const CHARSETS = {
       elec: 'ΩμΦ∑±×÷√∞∂∫≈≠RC#@!?$&*01',
       alpha: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
       num:   '0123456789',
-      mix:   'ΩμΦ∑RC01ABXYZabxyz#@!?±×÷'
+      mix:   'ΩμΦRC01ABXYZabxyz#@!?±×÷∞'
     };
     const charset = CHARSETS[S.circuitCharset] || CHARSETS.elec;
-
-    // Sample source at frag resolution
-    const fragOff = document.createElement('canvas');
-    fragOff.width = fCols; fragOff.height = fRows;
-    const fCtx = fragOff.getContext('2d', { willReadFrequently: true });
-    drawSourceToCanvas(fragOff, fCtx, fCols, fRows);
-    const fragData = fCtx.getImageData(0, 0, fCols, fRows).data;
-
-    const fontSize = Math.max(6, Math.round(fCell * 0.72));
+    const fontSize = Math.max(6, Math.round(fragCell * 0.68));
     ctx.font = `bold ${fontSize}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     for (let fr = 0; fr < fRows; fr++) {
       for (let fc = 0; fc < fCols; fc++) {
-        const idx2 = (fr * fCols + fc) * 4;
-        const lum2 = fragData[idx2] * 0.299 + fragData[idx2+1] * 0.587 + fragData[idx2+2] * 0.114;
+        // Map frag cell to grid cell — only draw over active (image) zones
+        const gCol = Math.min(gcols-1, Math.floor(fc * fragCell / cell));
+        const gRow = Math.min(grows-1, Math.floor(fr * fragCell / cell));
+        if (!isActive(gCol, gRow)) continue;
 
-        // Only affect cells where image is active (dark enough)
-        if (lum2 > densityThresh + 30) continue;
+        const cx2 = fc * fragCell + fragCell/2;
+        const cy2 = fr * fragCell + fragCell/2;
 
-        const cx2 = fc * fCell + fCell / 2;
-        const cy2 = fr * fCell + fCell / 2;
+        // Per-cell random displacement (always applied to text/blocks)
+        const cellSeed = rand(fc*31+fr*17);
+        const dx = (rand(fc*7+fr*3)-0.5) * dispX * 2 * (cellSeed < fragChaos ? 1 : 0.1);
+        const dy = (rand(fc*5+fr*11)-0.5) * dispY * 2 * (cellSeed < fragChaos ? 1 : 0.1);
 
-        // Per-cell displacement — creates the broken/shifted look
-        const cellRand = rand(fc * 31 + fr * 17);
-        const dx = cellRand < fChaos ? (rand(fc * 7 + fr * 3) - 0.5) * dispX * 2 : 0;
-        const dy = cellRand < fChaos ? (rand(fc * 5 + fr * 11) - 0.5) * dispY * 2 : 0;
+        const cellRand = rand(fc*13+fr*7);
+        let cellType = fragMode;
+        if (fragMode === 'mix') {
+          cellType = cellRand < 0.4 ? 'text' : cellRand < 0.75 ? 'blocks' : 'skip';
+        }
 
-        const mode = S.circuitFrag;
-        const cellType = mode === 'mix'
-          ? (rand(fc * 13 + fr * 7) < 0.4 ? 'text' : rand(fc * 19 + fr * 5) < 0.5 ? 'block' : 'skip')
-          : mode;
+        const color = colorAt(fc, fr);
 
-        const color2 = colorAt(fc, fr);
-
-        if (cellType === 'block') {
-          // Solid block with displacement
-          ctx.fillStyle = color2;
-          ctx.globalAlpha = 0.85 + rand(fc + fr) * 0.15;
-          ctx.fillRect(cx2 - fCell/2 + dx, cy2 - fCell/2 + dy, fCell - 1, fCell - 1);
+        if (cellType === 'blocks') {
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.75 + rand(fc+fr)*0.25;
+          ctx.fillRect(cx2-fragCell/2+dx, cy2-fragCell/2+dy, fragCell-1, fragCell-1);
           ctx.globalAlpha = 1;
         } else if (cellType === 'text') {
-          // Random char from charset
-          const char = charset[Math.floor(rand(fc * 23 + fr * 11) * charset.length)];
-          ctx.fillStyle = color2;
-          ctx.globalAlpha = 0.9;
-          ctx.fillText(char, cx2 + dx, cy2 + dy);
+          const char = charset[Math.floor(rand(fc*23+fr*11)*charset.length)];
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.85 + rand(fc*3+fr)*0.15;
+          ctx.fillText(char, cx2+dx, cy2+dy);
           ctx.globalAlpha = 1;
         }
       }
     }
-
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
   }
 
-  // ---- BORDER PADS ----
-  const padW = Math.max(2, traceW * 3);
-  const padH = Math.max(3, Math.round(cell * 0.55));
-  for (let col = 0; col < gcols; col += Math.max(1, Math.round(2 + rand(col) * 3))) {
-    if (isActive(col, 0)) {
-      ctx.fillStyle = colorAt(col, 0);
-      ctx.fillRect(col * cell + cell / 2 - padW / 2, 0, padW, padH);
+  await yieldFrame();
+  if (myID !== currentRenderID) return;
+
+  // ---- STEP 8: BORDER PADS ----
+  const padW = Math.max(2, traceW*3);
+  const padH = Math.max(3, Math.round(cell*0.55));
+  for (let col = 0; col < gcols; col += Math.max(1, Math.round(2+rand(col)*3))) {
+    if (isActive(col,0)) {
+      ctx.fillStyle=colorAt(col,0); ctx.fillRect(col*cell+cell/2-padW/2,0,padW,padH);
     }
-    if (isActive(col, grows - 1)) {
-      ctx.fillStyle = colorAt(col, grows - 1);
-      ctx.fillRect(col * cell + cell / 2 - padW / 2, ch - padH, padW, padH);
+    if (isActive(col,grows-1)) {
+      ctx.fillStyle=colorAt(col,grows-1); ctx.fillRect(col*cell+cell/2-padW/2,ch-padH,padW,padH);
     }
   }
-  for (let row = 0; row < grows; row += Math.max(1, Math.round(2 + rand(row * 7) * 3))) {
-    if (isActive(0, row)) {
-      ctx.fillStyle = colorAt(0, row);
-      ctx.fillRect(0, row * cell + cell / 2 - padW / 2, padH, padW);
+  for (let row = 0; row < grows; row += Math.max(1, Math.round(2+rand(row*7)*3))) {
+    if (isActive(0,row)) {
+      ctx.fillStyle=colorAt(0,row); ctx.fillRect(0,row*cell+cell/2-padW/2,padH,padW);
     }
-    if (isActive(gcols - 1, row)) {
-      ctx.fillStyle = colorAt(gcols - 1, row);
-      ctx.fillRect(cw - padH, row * cell + cell / 2 - padW / 2, padH, padW);
+    if (isActive(gcols-1,row)) {
+      ctx.fillStyle=colorAt(gcols-1,row); ctx.fillRect(cw-padH,row*cell+cell/2-padW/2,padH,padW);
     }
   }
 
