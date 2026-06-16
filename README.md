@@ -12,9 +12,17 @@
 
 -----
 
-I built this because I wanted a tool that didn’t exist yet.
+I built this as an experiment.
 
-Not a filter. Not a preset. A real-time geometric rendering engine that lets you see your image dissolve into dots, grids, characters, and phosphor light — and control exactly how it does it.
+A way to explore what happens when curiosity, play and simple rules are allowed to become tools.
+
+Gioco-Geometry is not just an image processor.
+
+It is a collection of visual systems that transform images into geometry, patterns and structures — while exposing the logic behind them.
+
+Every effect is both a result and a process.
+
+A demonstration that with enough curiosity, anyone can build their own creative environment.
 
 The kind of tool you open to explore, not to execute.
 
