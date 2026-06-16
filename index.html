@@ -149,6 +149,8 @@
   }
   .reset-btn:hover { border-color: var(--text); color: var(--text); }
 
+  .section-title { font-size:10px;color:var(--muted);margin:12px 0 6px;text-transform:uppercase;letter-spacing:0.08em;border-top:1px solid var(--border);padding-top:10px; }
+
   /* Dither preview canvas */
   .dither-preview {
     width: 100%;
@@ -313,6 +315,36 @@
       </div>
       <input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1">
     </div>
+
+    <div class="section-title">Image Transform</div>
+    <div class="row">
+      <div class="row-top">
+        <label>Image Scale %</label>
+        <input type="number" id="num-img-scale" value="100" min="10" max="400" step="1">
+      </div>
+      <input type="range" id="img-scale" min="10" max="400" step="1" value="100">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Position X</label>
+        <input type="number" id="num-img-x" value="0" min="-2000" max="2000" step="1">
+      </div>
+      <input type="range" id="img-x" min="-1000" max="1000" step="1" value="0">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Position Y</label>
+        <input type="number" id="num-img-y" value="0" min="-2000" max="2000" step="1">
+      </div>
+      <input type="range" id="img-y" min="-1000" max="1000" step="1" value="0">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Rotation</label>
+        <input type="number" id="num-img-rotation" value="0" min="-180" max="180" step="1">
+      </div>
+      <input type="range" id="img-rotation" min="-180" max="180" step="1" value="0">
+    </div>
     <div class="toggle-row" id="toggle-invert">
       <div class="tog" id="invert-ind">&nbsp;</div> Invert colors
     </div>
@@ -388,6 +420,26 @@
       </div>
       <input type="range" id="shape-size" min="1" max="30" step="1" value="5">
     </div>
+
+    <div class="toggle-row" id="toggle-luminance-size">
+      <div class="tog" id="luminance-size-ind">&nbsp;</div> Size follows luminance
+    </div>
+    <div id="luminance-size-wrap" style="display:none">
+      <div class="row">
+        <div class="row-top">
+          <label>Min Shape Size</label>
+          <input type="number" id="num-min-shape-size" value="1" min="0.5" max="30" step="0.5">
+        </div>
+        <input type="range" id="min-shape-size" min="0.5" max="30" step="0.5" value="1">
+      </div>
+      <div class="row">
+        <div class="row-top">
+          <label>Max Shape Size</label>
+          <input type="number" id="num-max-shape-size" value="9" min="1" max="40" step="0.5">
+        </div>
+        <input type="range" id="max-shape-size" min="1" max="40" step="0.5" value="9">
+      </div>
+    </div>
     <div class="row">
       <div class="row-top">
         <label>Corner Radius</label>
@@ -432,11 +484,12 @@
 // ---- STATE ----
 const S = {
   canvasW: 800, canvasH: 800, blur: 0, contrast: 1, brightness: 1, gamma: 1,
-  threshold: 128, stepSize: 8, shapeSize: 5, cornerRadius: 1,
+  imgScale: 100, imgX: 0, imgY: 0, imgRotation: 0,
+  threshold: 128, stepSize: 8, shapeSize: 5, cornerRadius: 1, minShapeSize: 1, maxShapeSize: 9,
   gridAngle: 0, noise: 0,
   dither: 'floyd', grid: 'regular', shape: 'square',
   mix: 'ordered', color: 'mono', format: 'png',
-  showEffect: true, invert: false
+  showEffect: true, invert: false, luminanceSize: false
 };
 
 const PALETTE = ['#2e5fa3','#c95f2a','#2a6b3a','#d4a0b0','#7a3b2e','#c8b040','#6b4a8a'];
@@ -454,8 +507,9 @@ const spinner = document.getElementById('spinner');
 // ---- SLIDERS ----
 [
   ['blur','blur'],['contrast','contrast'],
-  ['brightness','brightness'],['gamma','gamma'],['threshold','threshold'],
-  ['step-size','stepSize'],['shape-size','shapeSize'],
+  ['brightness','brightness'],['gamma','gamma'],['img-scale','imgScale'],
+  ['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],['threshold','threshold'],
+  ['step-size','stepSize'],['shape-size','shapeSize'],['min-shape-size','minShapeSize'],['max-shape-size','maxShapeSize'],
   ['corner-radius','cornerRadius'],['grid-angle','gridAngle'],['noise','noise']
 ].forEach(([id, key]) => {
   const slider = document.getElementById(id);
@@ -475,9 +529,9 @@ const spinner = document.getElementById('spinner');
 });
 
 // ---- TABS ----
-document.querySelectorAll('.tab').forEach(tab => {
+document.querySelectorAll('.tab[data-tab]').forEach(tab => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
@@ -534,6 +588,13 @@ document.getElementById('toggle-effect').addEventListener('click', () => {
 document.getElementById('toggle-invert').addEventListener('click', () => {
   S.invert = !S.invert;
   document.getElementById('invert-ind').textContent = S.invert ? '✓' : ' ';
+  scheduleRender();
+});
+
+document.getElementById('toggle-luminance-size').addEventListener('click', () => {
+  S.luminanceSize = !S.luminanceSize;
+  document.getElementById('luminance-size-ind').textContent = S.luminanceSize ? '✓' : ' ';
+  document.getElementById('luminance-size-wrap').style.display = S.luminanceSize ? 'block' : 'none';
   scheduleRender();
 });
 
@@ -630,10 +691,15 @@ function prepareGray(gw, gh) {
   offCtx.filter = `blur(${S.blur}px) contrast(${S.contrast}) brightness(${S.brightness})`;
   // Contain: fit image inside canvas, letterbox with white
   const scX = gw / sourceImg.width, scY = gh / sourceImg.height;
-  const sc = Math.min(scX, scY);
+  const sc = Math.min(scX, scY) * (S.imgScale / 100);
   const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
-  const ox = (gw - sw) / 2, oy = (gh - sh) / 2;
-  offCtx.drawImage(sourceImg, ox, oy, sw, sh);
+  const ox = gw / 2 + S.imgX * (gw / S.canvasW);
+  const oy = gh / 2 + S.imgY * (gh / S.canvasH);
+  offCtx.save();
+  offCtx.translate(ox, oy);
+  offCtx.rotate(S.imgRotation * Math.PI / 180);
+  offCtx.drawImage(sourceImg, -sw/2, -sh/2, sw, sh);
+  offCtx.restore();
   offCtx.filter = 'none';
 
   const d = offCtx.getImageData(0, 0, gw, gh).data;
@@ -722,7 +788,7 @@ function drawShape(ctx, shape, cx, cy, r, cr) {
 }
 
 // ---- COLLECT CELLS (shared between render & SVG export) ----
-function collectCells(mask, gw, gh, cw, ch) {
+function collectCells(mask, gw, gh, cw, ch, gray = null) {
   const size = Math.max(cw,ch);
   const step = S.stepSize, angleRad = S.gridAngle * Math.PI/180;
   // step here matches gw/gh so grid aligns
@@ -737,7 +803,8 @@ function collectCells(mask, gw, gh, cw, ch) {
       // Map draw grid cell → sample grid cell
       const gc = Math.round((col/cols) * (gw-1));
       const gr = Math.round((row/rows) * (gh-1));
-      if (!mask[gr*gw+gc]) continue;
+      const idx = gr*gw+gc;
+      if (!mask[idx]) continue;
 
       let lx = startX + col*step;
       let ly = startY + row*step;
@@ -752,7 +819,8 @@ function collectCells(mask, gw, gh, cw, ch) {
         x: n ? drawX+(Math.random()-.5)*n : drawX,
         y: n ? drawY+(Math.random()-.5)*n : drawY,
         shape: shapeFor(col,row),
-        color: colorFor(col)
+        color: colorFor(col),
+        lum: gray ? gray[idx] : 0
       });
     }
   }
@@ -831,9 +899,13 @@ async function doRender() {
     off.width = S.canvasW; off.height = S.canvasH;
     offCtx.fillStyle = '#fff';
     offCtx.fillRect(0, 0, S.canvasW, S.canvasH);
-    const sc = Math.min(S.canvasW / sourceImg.width, S.canvasH / sourceImg.height);
+    const sc = Math.min(S.canvasW / sourceImg.width, S.canvasH / sourceImg.height) * (S.imgScale / 100);
     const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
-    offCtx.drawImage(sourceImg, (S.canvasW-sw)/2, (S.canvasH-sh)/2, sw, sh);
+    offCtx.save();
+    offCtx.translate(S.canvasW/2 + S.imgX, S.canvasH/2 + S.imgY);
+    offCtx.rotate(S.imgRotation * Math.PI / 180);
+    offCtx.drawImage(sourceImg, -sw/2, -sh/2, sw, sh);
+    offCtx.restore();
     ctx.drawImage(off, 0, 0);
     spinner.classList.remove('visible');
     return;
@@ -845,7 +917,7 @@ async function doRender() {
   const mask = dither(gray, gw, gh);
   await yieldFrame(); if (myID !== currentRenderID) return;
 
-  const cells = collectCells(mask, gw, gh, S.canvasW, S.canvasH);
+  const cells = collectCells(mask, gw, gh, S.canvasW, S.canvasH, gray);
   await yieldFrame(); if (myID !== currentRenderID) return;
 
   const r = S.shapeSize, cr = S.cornerRadius;
@@ -859,7 +931,8 @@ async function doRender() {
       const end = Math.min(i + CHUNK, cells.length);
       for (let j = i; j < end; j++) {
         const c = cells[j];
-        drawShape(ctx, c.shape, c.x, c.y, r, cr);
+        const rr = S.luminanceSize ? Math.max(S.minShapeSize, Math.min(S.maxShapeSize, S.maxShapeSize - (c.lum / 255) * (S.maxShapeSize - S.minShapeSize))) : r;
+        drawShape(ctx, c.shape, c.x, c.y, rr, cr);
       }
       ctx.fill();
       await yieldFrame();
@@ -871,7 +944,10 @@ async function doRender() {
       if (myID !== currentRenderID) return;
       ctx.fillStyle = col;
       ctx.beginPath();
-      group.forEach(c => drawShape(ctx, c.shape, c.x, c.y, r, cr));
+      group.forEach(c => {
+        const rr = S.luminanceSize ? Math.max(S.minShapeSize, Math.min(S.maxShapeSize, S.maxShapeSize - (c.lum / 255) * (S.maxShapeSize - S.minShapeSize))) : r;
+        drawShape(ctx, c.shape, c.x, c.y, rr, cr);
+      });
       ctx.fill();
       await yieldFrame();
     }
@@ -898,12 +974,13 @@ function doExport() {
     const cells = collectCells(mask,gw,gh,S.canvasW,S.canvasH);
     const r = S.shapeSize, cr = S.cornerRadius;
     let s = '';
-    cells.forEach(({shape,x,y,color}) => {
+    cells.forEach(({shape,x,y,color,lum}) => {
+      const rr = S.luminanceSize ? Math.max(S.minShapeSize, Math.min(S.maxShapeSize, S.maxShapeSize - (lum / 255) * (S.maxShapeSize - S.minShapeSize))) : r;
       const fill = S.color==='mono'?'#1a1a1a':color;
-      const rx=Math.min(cr,r);
-      if (shape==='circle') s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${fill}"/>`;
-      else if (shape==='square') s+=`<rect x="${(x-r).toFixed(1)}" y="${(y-r).toFixed(1)}" width="${r*2}" height="${r*2}" rx="${rx}" fill="${fill}"/>`;
-      else s+=`<polygon points="${(x-r).toFixed(1)},${y.toFixed(1)} ${(x+r*.6).toFixed(1)},${(y-r*.9).toFixed(1)} ${(x+r*.6).toFixed(1)},${(y+r*.9).toFixed(1)}" fill="${fill}"/>`;
+      const rx=Math.min(cr,rr);
+      if (shape==='circle') s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rr.toFixed(2)}" fill="${fill}"/>`;
+      else if (shape==='square') s+=`<rect x="${(x-rr).toFixed(1)}" y="${(y-rr).toFixed(1)}" width="${(rr*2).toFixed(2)}" height="${(rr*2).toFixed(2)}" rx="${rx.toFixed(2)}" fill="${fill}"/>`;
+      else s+=`<polygon points="${(x-rr).toFixed(1)},${y.toFixed(1)} ${(x+rr*.6).toFixed(1)},${(y-rr*.9).toFixed(1)} ${(x+rr*.6).toFixed(1)},${(y+rr*.9).toFixed(1)}" fill="${fill}"/>`;
     });
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${S.canvasW}" height="${S.canvasH}"><rect width="${S.canvasW}" height="${S.canvasH}" fill="white"/><g>${s}</g></svg>`;
     const a=document.createElement('a');
@@ -915,10 +992,10 @@ function doExport() {
 
 // ---- RESET ----
 const DEFAULTS = {
-  blur:0, contrast:1, brightness:1, gamma:1, threshold:128,
-  stepSize:8, shapeSize:5, cornerRadius:1, gridAngle:0, noise:0,
+  blur:0, contrast:1, brightness:1, gamma:1, imgScale:100, imgX:0, imgY:0, imgRotation:0, threshold:128,
+  stepSize:8, shapeSize:5, minShapeSize:1, maxShapeSize:9, cornerRadius:1, gridAngle:0, noise:0,
   dither:'floyd', grid:'regular', shape:'square', mix:'ordered',
-  color:'mono', showEffect:true, invert:false
+  color:'mono', showEffect:true, invert:false, luminanceSize:false
 };
 
 document.getElementById('reset-tab').addEventListener('click', () => {
@@ -930,8 +1007,8 @@ document.getElementById('reset-tab').addEventListener('click', () => {
   // Sync sliders + number inputs
   [
     ['blur','blur'],['contrast','contrast'],['brightness','brightness'],
-    ['gamma','gamma'],['threshold','threshold'],['step-size','stepSize'],
-    ['shape-size','shapeSize'],['corner-radius','cornerRadius'],
+    ['gamma','gamma'],['img-scale','imgScale'],['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],['threshold','threshold'],['step-size','stepSize'],
+    ['shape-size','shapeSize'],['min-shape-size','minShapeSize'],['max-shape-size','maxShapeSize'],['corner-radius','cornerRadius'],
     ['grid-angle','gridAngle'],['noise','noise']
   ].forEach(([id, key]) => {
     const sl = document.getElementById(id);
@@ -961,10 +1038,12 @@ document.getElementById('reset-tab').addEventListener('click', () => {
   // Sync toggles
   document.getElementById('effect-ind').textContent = '✓';
   document.getElementById('invert-ind').textContent = ' ';
+  document.getElementById('luminance-size-ind').textContent = ' ';
 
   // Hide conditional panels
   document.getElementById('mix-row').style.display = 'none';
   document.getElementById('palette-wrap').style.display = 'none';
+  document.getElementById('luminance-size-wrap').style.display = 'none';
 
   scheduleRender();
 });
@@ -1012,7 +1091,7 @@ function updateDitherPreview() {
 }
 
 // Update dither preview when effect tab is shown
-document.querySelectorAll('.tab').forEach(tab => {
+document.querySelectorAll('.tab[data-tab]').forEach(tab => {
   tab.addEventListener('click', () => {
     if (tab.dataset.tab === 'effect') setTimeout(updateDitherPreview, 50);
   });
