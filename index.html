@@ -375,7 +375,7 @@ input[type="range"]::-webkit-slider-thumb {
   margin: 6px 0 12px;
 }
 
-/* HOME SCREEN */
+/* HOME SCREEN — base (desktop) */
 #home-screen {
   height: 100vh;
   display: flex;
@@ -383,25 +383,24 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   justify-content: center;
   background: #ffffff;
-  position: relative;
-  padding-bottom: 60px; /* clear space for footer */
+  position: relative; /* desktop: footer absolute */
 }
 
 #home-logo {
-  width: min(720px, 94vw);
-  max-height: 45vh;
+  width: min(720px, 88vw);
+  max-height: 50vh;
   object-fit: contain;
   display: block;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 #home-logo-placeholder {
-  width: min(720px, 94vw);
-  height: 140px;
+  width: min(720px, 88vw);
+  height: 160px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   border: 1px solid var(--border);
   font-size: 22px;
   letter-spacing: 0.18em;
@@ -445,6 +444,7 @@ input[type="range"]::-webkit-slider-thumb {
   text-align: center;
 }
 
+/* DESKTOP footer: absolute, doesn't affect layout */
 #home-footer {
   position: absolute;
   bottom: 0;
@@ -492,31 +492,105 @@ input[type="range"]::-webkit-slider-thumb {
   flex-direction: column;
 }
 
+/* Panel collapse toggle button */
+#panel-toggle {
+  display: none; /* shown only on desktop via media query */
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+  background: var(--border);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  color: var(--text);
+  z-index: 10;
+  line-height: 22px;
+  text-align: center;
+  padding: 0;
+}
+
+.panel.collapsed {
+  width: 28px !important;
+  overflow: hidden;
+}
+
+.panel.collapsed .handle,
+.panel.collapsed .mode-switch,
+.panel.collapsed .tabs,
+.panel.collapsed .tab-content {
+  display: none !important;
+}
+
 @media (min-width: 700px) {
   body { flex-direction: row; }
   #tool-inner { flex-direction: row; }
   .canvas-wrap { flex: 1; }
   .panel {
-    width: 280px;
+    width: 340px;
     height: 100%;
     border-top: none;
     border-left: 1px solid var(--border);
     --panel-h: 100%;
+    position: relative;
+    transition: width 0.2s;
   }
   .handle { display: none; }
+  #panel-toggle { display: block; }
 }
 
+/* MOBILE overrides */
 @media (max-width: 699px) {
+  /* Home screen: flex column, footer in flow */
+  #home-screen {
+    height: auto;
+    min-height: 100dvh;
+    position: static; /* no absolute children on mobile */
+    justify-content: flex-start;
+    padding-top: max(40px, 6vh);
+  }
+
+  #home-logo {
+    max-height: 26vh;
+    margin-bottom: 16px;
+  }
+
+  #home-logo-placeholder {
+    height: 110px;
+    margin-bottom: 16px;
+  }
+
   #home-buttons {
     flex-direction: column;
     width: min(500px, 88vw);
-    gap: 8px;
+    gap: 7px;
+    margin-bottom: 0;
   }
+
   .home-btn {
-    padding: 10px 10px;
+    padding: 10px 14px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 14px;
   }
+
   .home-btn-label {
     font-size: 12px;
+    letter-spacing: 0.18em;
+  }
+
+  .home-btn-sub {
+    text-align: left;
+  }
+
+  /* MOBILE footer: in normal flow at bottom of flex column */
+  #home-footer {
+    position: static;
+    width: 100%;
+    margin-top: auto;
+    padding: 12px 14px;
   }
 }
 </style>
@@ -576,6 +650,7 @@ input[type="range"]::-webkit-slider-thumb {
     </div>
 
     <div class="panel" id="panel">
+      <button id="panel-toggle" title="Ocultar/mostrar panel">&#8250;</button>
       <div class="handle" id="handle"></div>
 
       <div class="mode-switch">
@@ -2675,7 +2750,15 @@ function doExport() {
   a.click();
 }
 
-$('btn-export').addEventListener('click', doExport);
+$('panel-toggle').addEventListener('click', () => {
+  const p = $('panel');
+  const collapsed = p.classList.toggle('collapsed');
+  $('panel-toggle').innerHTML = collapsed ? '&#8249;' : '&#8250;';
+  $('panel-toggle').style.right = collapsed ? '-22px' : '8px';
+  $('panel-toggle').style.borderRadius = collapsed ? '0 2px 2px 0' : '2px';
+});
+
+
 $('btn-solid-use-halftone').addEventListener('click', useSolidResultInHalftone);
 if ($('btn-solid-export-png')) $('btn-solid-export-png').addEventListener('click', exportSolidPNG);
 if ($('btn-solid-export-svg')) $('btn-solid-export-svg').addEventListener('click', exportSolidSVG);
