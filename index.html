@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>GiocoGeometry</title>
-<link rel="icon" href="halftone.png">
+<title>GMG : GiocoMicroGeometry</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9670;</text></svg>">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -15,340 +15,81 @@
   }
   html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
   body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
-
-  /* ---- CANVAS AREA ---- */
-  .canvas-wrap {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    position: relative;
-    background: #d8d4ce;
-    padding: 16px;
-  }
-  .canvas-outer {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-  }
-  #canvas {
-    display: block;
-    /* scale to fit while keeping aspect ratio */
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    box-shadow: 0 2px 20px rgba(0,0,0,0.18);
-  }
+  .canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; background: #d8d4ce; padding: 16px; }
+  .canvas-outer { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+  #canvas { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; box-shadow: 0 2px 20px rgba(0,0,0,0.18); }
   .hint { position: absolute; font-size: 12px; color: var(--muted); text-align: center; pointer-events: none; }
-
-  /* ---- BOTTOM PANEL ---- */
-  .panel {
-    background: var(--panel);
-    border-top: 1px solid var(--border);
-    height: var(--panel-h);
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
-
-  /* ---- BRAND BAR ---- */
-  .brand-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .brand-logo {
-    width: 34px;
-    height: 34px;
-    object-fit: contain;
-    border-radius: 6px;
-    background: #fff;
-    border: 1px solid var(--border);
-  }
-  .brand-copy {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.05;
-  }
-  .brand-title {
-    font-size: 13px;
-    font-weight: bold;
-    letter-spacing: .04em;
-  }
-  .brand-subtitle {
-    margin-top: 3px;
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .08em;
-  }
-
-  /* ---- MODE SWITCH ---- */
-  .mode-switch {
-    display: flex;
-    gap: 6px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .mode-btn {
-    flex: 1;
-    font-family: var(--font);
-    font-size: 10px;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    padding: 8px 6px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    border-radius: 3px;
-    cursor: pointer;
-  }
-  .mode-btn.active {
-    background: var(--text);
-    color: var(--bg);
-    border-color: var(--text);
-  }
-  .tool-note {
-    font-size: 10px;
-    color: var(--muted);
-    line-height: 1.45;
-    margin: 6px 0 12px;
-  }
-
-  /* Drag handle */
-  .handle {
-    width: 36px; height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    margin: 8px auto 4px;
-    flex-shrink: 0;
-    cursor: pointer;
-  }
-
-  /* Tabs */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .tab {
-    flex: 1;
-    font-family: var(--font);
-    font-size: 10px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    padding: 6px 4px;
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.1s;
-  }
+  .panel { background: var(--panel); border-top: 1px solid var(--border); height: var(--panel-h); display: flex; flex-direction: column; position: relative; }
+  .mode-switch { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .mode-btn { flex: 1; font-family: var(--font); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 8px 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 3px; cursor: pointer; }
+  .mode-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .tool-note { font-size: 10px; color: var(--muted); line-height: 1.45; margin: 6px 0 12px; }
+  .handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 8px auto 4px; flex-shrink: 0; cursor: pointer; }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .tab { flex: 1; font-family: var(--font); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; padding: 6px 4px; border: none; background: transparent; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.1s; }
   .tab.active { color: var(--text); border-bottom-color: var(--text); }
-
-  /* Tab content */
   .tab-content { display: none; flex: 1; overflow-y: auto; padding: 10px 14px 20px; }
   .tab-content.active { display: block; }
   .tab-content::-webkit-scrollbar { display: none; }
-
-  /* Controls */
-  .row { margin-bottom: 12px; }
-  .row-label { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
-  .row-label span { color: var(--muted); }
-  input[type="range"] {
-    width: 100%; height: 28px; -webkit-appearance: none;
-    background: transparent; outline: none; cursor: pointer;
-    padding: 0;
-  }
-  input[type="range"]::-webkit-slider-runnable-track {
-    height: 2px; background: var(--border); border-radius: 1px;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 18px; height: 18px;
-    background: var(--text); border-radius: 50%;
-    margin-top: -8px; cursor: pointer;
-  }
-
-  /* Upload button */
-  .upload-btn {
-    width: 100%;
-    font-family: var(--font);
-    font-size: 12px;
-    font-weight: bold;
-    letter-spacing: 0.05em;
-    background: var(--text);
-    color: var(--bg);
-    border: none;
-    padding: 12px;
-    border-radius: 3px;
-    cursor: pointer;
-    margin-bottom: 12px;
-    position: relative;
-  }
-  .upload-btn input {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-  }
-
-  /* Reset button */
-  .reset-btn {
-    font-family: var(--font);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 4px 10px;
-    border-radius: 2px;
-    cursor: pointer;
-    float: right;
-    margin-top: -2px;
-  }
-  .reset-btn:hover { border-color: var(--text); color: var(--text); }
-
-  .section-title { font-size:10px;color:var(--muted);margin:12px 0 6px;text-transform:uppercase;letter-spacing:0.08em;border-top:1px solid var(--border);padding-top:10px; }
-
-  /* Dither preview canvas */
-  .dither-preview {
-    width: 100%;
-    aspect-ratio: 1;
-    display: block;
-    margin: 8px 0;
-    border: 1px solid var(--border);
-    image-rendering: pixelated;
-  }
-
-  /* Slider + number combo */
   .row { margin-bottom: 10px; }
   .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
   .row-top label { font-size: 11px; color: var(--text); }
-  .row-top input[type="number"] {
-    font-family: var(--font);
-    font-size: 11px;
-    width: 52px;
-    padding: 2px 5px;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--text);
-    border-radius: 2px;
-    text-align: right;
-    -moz-appearance: textfield;
-  }
-  .row-top input[type="number"]::-webkit-inner-spin-button,
-  .row-top input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .row-top input[type="number"] { font-family: var(--font); font-size: 11px; width: 52px; padding: 2px 5px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 2px; text-align: right; -moz-appearance: textfield; }
+  .row-top input[type="number"]::-webkit-inner-spin-button, .row-top input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
   .row-top input[type="number"]:focus { outline: none; border-color: var(--text); }
-
-  /* Toggles */
+  input[type="range"] { width: 100%; height: 28px; -webkit-appearance: none; background: transparent; outline: none; cursor: pointer; padding: 0; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--border); border-radius: 1px; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--text); border-radius: 50%; margin-top: -8px; cursor: pointer; }
+  .upload-btn { width: 100%; font-family: var(--font); font-size: 12px; font-weight: bold; letter-spacing: 0.05em; background: var(--text); color: var(--bg); border: none; padding: 12px; border-radius: 3px; cursor: pointer; margin-bottom: 12px; position: relative; }
+  .upload-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .section-title { font-size:10px;color:var(--muted);margin:12px 0 6px;text-transform:uppercase;letter-spacing:0.08em;border-top:1px solid var(--border);padding-top:10px; }
+  .dither-preview { width: 100%; aspect-ratio: 1; display: block; margin: 8px 0; border: 1px solid var(--border); image-rendering: pixelated; }
   .toggle-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 12px; }
   .tog { width: 12px; height: 12px; border: 1.5px solid var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
-
-  /* Switchers */
   .sw-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
   .sw-label { font-size: 11px; min-width: 68px; flex-shrink: 0; }
   .sw-btns { display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
   .sw-btn { font-family: var(--font); font-size: 12px; padding: 5px 10px; background: transparent; border: none; cursor: pointer; color: var(--muted); white-space: nowrap; }
   .sw-btn.active { background: var(--text); color: var(--bg); }
-
-  /* Color palette */
   .palette { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
   .swatch { width: 26px; height: 26px; border-radius: 4px; border: 2px solid transparent; cursor: pointer; }
   .swatch.active { border-color: var(--text); }
-
-  /* Export */
-  .export-btn {
-    width: 100%;
-    font-family: var(--font);
-    font-size: 12px;
-    background: var(--text);
-    color: var(--bg);
-    border: none;
-    padding: 12px;
-    border-radius: 3px;
-    cursor: pointer;
-    margin-top: 4px;
-  }
-
-  /* Loading indicator */
-  .spinner {
-    display: none;
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%,-50%);
-    font-size: 11px;
-    color: var(--muted);
-    pointer-events: none;
-  }
+  .export-btn { width: 100%; font-family: var(--font); font-size: 12px; background: var(--text); color: var(--bg); border: none; padding: 12px; border-radius: 3px; cursor: pointer; margin-top: 4px; }
+  .spinner { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 11px; color: var(--muted); pointer-events: none; }
   .spinner.visible { display: block; }
-
-  /* Desktop layout override */
   @media (min-width: 700px) {
     body { flex-direction: row; }
     .canvas-wrap { flex: 1; }
-    .panel {
-      width: 260px;
-      height: 100%;
-      border-top: none;
-      border-left: 1px solid var(--border);
-      --panel-h: 100%;
-    }
+    .panel { width: 260px; height: 100%; border-top: none; border-left: 1px solid var(--border); --panel-h: 100%; }
     .handle { display: none; }
   }
 </style>
 </head>
 <body>
-
-<!-- CANVAS -->
 <div class="canvas-wrap">
   <div class="canvas-outer"><canvas id="canvas"></canvas></div>
   <div class="hint" id="hint">Tap to upload an image</div>
-  <div class="spinner" id="spinner">rendering…</div>
+  <div class="spinner" id="spinner">rendering&#8230;</div>
 </div>
-
-<!-- BOTTOM PANEL -->
 <div class="panel" id="panel">
   <div class="handle" id="handle"></div>
-
-  <div class="brand-bar">
-    <img src="halftone.png" alt="Gioco Geometry" class="brand-logo">
-    <div class="brand-copy">
-      <div class="brand-title">Gioco Geometry</div>
-      <div class="brand-subtitle">Image System</div>
-    </div>
-  </div>
-
   <div class="mode-switch">
     <button class="mode-btn active" data-mode="halftone">Halftone</button>
     <button class="mode-btn" data-mode="crt">CRT</button>
   </div>
-
   <div class="tabs">
     <button class="tab active" data-tab="upload">Upload</button>
     <button class="tab mode-halftone" data-tab="effect">Effect</button>
     <button class="tab mode-halftone" data-tab="shape">Shape</button>
     <button class="tab mode-crt" data-tab="crt" style="display:none">CRT</button>
     <button class="tab mode-crt" data-tab="bloom" style="display:none">Bloom</button>
+    <button class="tab" data-tab="ascii">ASCII</button>
     <button class="tab" data-tab="export">Export</button>
-    <button class="tab" id="reset-tab" title="Reset all parameters" style="flex:0;padding:6px 10px;font-size:14px">↺</button>
+    <button class="tab" id="reset-tab" title="Reset" style="flex:0;padding:6px 10px;font-size:14px">&#8635;</button>
   </div>
-
-  <!-- TAB: UPLOAD -->
+  <!-- UPLOAD TAB -->
   <div class="tab-content active" id="tab-upload">
-    <button class="upload-btn">
-      📁 Upload image
-      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
-    </button>
-    <!-- Canvas dimensions -->
+    <button class="upload-btn">&#128193; Upload image<input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp"></button>
     <div style="font-size:11px;margin-bottom:6px;color:var(--muted)">Canvas Size</div>
     <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px" id="sw-preset">
       <button class="sw-btn" data-w="1080" data-h="1080" onclick="applyPreset(this)">Instagram</button>
@@ -358,394 +99,117 @@
       <button class="sw-btn" data-w="1200" data-h="628"  onclick="applyPreset(this)">Banner</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-end">
-      <div style="flex:1">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Width px</div>
-        <input type="number" id="input-w" value="800" min="100" max="4000" step="10"
-          style="width:100%;font-family:var(--font);font-size:12px;padding:7px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;color:var(--text)">
-      </div>
-      <div style="font-size:16px;color:var(--muted);padding-bottom:8px">×</div>
-      <div style="flex:1">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Height px</div>
-        <input type="number" id="input-h" value="800" min="100" max="4000" step="10"
-          style="width:100%;font-family:var(--font);font-size:12px;padding:7px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;color:var(--text)">
-      </div>
+      <div style="flex:1"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Width px</div><input type="number" id="input-w" value="800" min="100" max="4000" step="10" style="width:100%;font-family:var(--font);font-size:12px;padding:7px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;color:var(--text)"></div>
+      <div style="font-size:16px;color:var(--muted);padding-bottom:8px">x</div>
+      <div style="flex:1"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Height px</div><input type="number" id="input-h" value="800" min="100" max="4000" step="10" style="width:100%;font-family:var(--font);font-size:12px;padding:7px 8px;border:1px solid var(--border);background:var(--bg);border-radius:3px;color:var(--text)"></div>
     </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Blur</label>
-        <input type="number" id="num-blur" value="0" min="0" max="8" step="1">
-      </div>
-      <input type="range" id="blur" min="0" max="8" step="1" value="0">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Contrast</label>
-        <input type="number" id="num-contrast" value="1" min="0.5" max="3" step="0.1">
-      </div>
-      <input type="range" id="contrast" min="0.5" max="3" step="0.1" value="1">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Brightness</label>
-        <input type="number" id="num-brightness" value="1" min="0.2" max="2" step="0.1">
-      </div>
-      <input type="range" id="brightness" min="0.2" max="2" step="0.1" value="1">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Gamma</label>
-        <input type="number" id="num-gamma" value="1" min="0.1" max="3" step="0.1">
-      </div>
-      <input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1">
-    </div>
-
+    <div class="row"><div class="row-top"><label>Blur</label><input type="number" id="num-blur" value="0" min="0" max="8" step="1"></div><input type="range" id="blur" min="0" max="8" step="1" value="0"></div>
+    <div class="row"><div class="row-top"><label>Contrast</label><input type="number" id="num-contrast" value="1" min="0.5" max="3" step="0.1"></div><input type="range" id="contrast" min="0.5" max="3" step="0.1" value="1"></div>
+    <div class="row"><div class="row-top"><label>Brightness</label><input type="number" id="num-brightness" value="1" min="0.2" max="2" step="0.1"></div><input type="range" id="brightness" min="0.2" max="2" step="0.1" value="1"></div>
+    <div class="row"><div class="row-top"><label>Gamma</label><input type="number" id="num-gamma" value="1" min="0.1" max="3" step="0.1"></div><input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1"></div>
     <div class="section-title">Image Transform</div>
-    <div class="row">
-      <div class="row-top">
-        <label>Image Scale %</label>
-        <input type="number" id="num-img-scale" value="100" min="10" max="400" step="1">
-      </div>
-      <input type="range" id="img-scale" min="10" max="400" step="1" value="100">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Position X</label>
-        <input type="number" id="num-img-x" value="0" min="-2000" max="2000" step="1">
-      </div>
-      <input type="range" id="img-x" min="-1000" max="1000" step="1" value="0">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Position Y</label>
-        <input type="number" id="num-img-y" value="0" min="-2000" max="2000" step="1">
-      </div>
-      <input type="range" id="img-y" min="-1000" max="1000" step="1" value="0">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Rotation</label>
-        <input type="number" id="num-img-rotation" value="0" min="-180" max="180" step="1">
-      </div>
-      <input type="range" id="img-rotation" min="-180" max="180" step="1" value="0">
-    </div>
-    <div class="toggle-row" id="toggle-invert">
-      <div class="tog" id="invert-ind">&nbsp;</div> Invert colors
-    </div>
+    <div class="row"><div class="row-top"><label>Scale %</label><input type="number" id="num-img-scale" value="100" min="10" max="400" step="1"></div><input type="range" id="img-scale" min="10" max="400" step="1" value="100"></div>
+    <div class="row"><div class="row-top"><label>Position X</label><input type="number" id="num-img-x" value="0" min="-2000" max="2000" step="1"></div><input type="range" id="img-x" min="-1000" max="1000" step="1" value="0"></div>
+    <div class="row"><div class="row-top"><label>Position Y</label><input type="number" id="num-img-y" value="0" min="-2000" max="2000" step="1"></div><input type="range" id="img-y" min="-1000" max="1000" step="1" value="0"></div>
+    <div class="row"><div class="row-top"><label>Rotation</label><input type="number" id="num-img-rotation" value="0" min="-180" max="180" step="1"></div><input type="range" id="img-rotation" min="-180" max="180" step="1" value="0"></div>
+    <div class="toggle-row" id="toggle-invert"><div class="tog" id="invert-ind">&nbsp;</div> Invert colors</div>
   </div>
-
-  <!-- TAB: EFFECT -->
+  <!-- EFFECT TAB -->
   <div class="tab-content" id="tab-effect">
     <div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">Dither Preview</div>
     <canvas id="dither-preview" class="dither-preview"></canvas>
-    <div class="toggle-row" id="toggle-effect">
-      <div class="tog" id="effect-ind">✓</div> Show Effect
-    </div>
-    <div class="sw-row">
-      <span class="sw-label">Dithering</span>
-      <div class="sw-btns" id="sw-dither">
-        <button class="sw-btn" data-val="none">None</button>
-        <button class="sw-btn active" data-val="floyd">Floyd</button>
-        <button class="sw-btn" data-val="ordered">Bayer</button>
-      </div>
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Threshold</label>
-        <input type="number" id="num-threshold" value="128" min="0" max="255" step="1">
-      </div>
-      <input type="range" id="threshold" min="0" max="255" step="1" value="128">
-    </div>
-
+    <div class="toggle-row" id="toggle-effect"><div class="tog" id="effect-ind">&#10003;</div> Show Effect</div>
+    <div class="sw-row"><span class="sw-label">Dithering</span><div class="sw-btns" id="sw-dither"><button class="sw-btn" data-val="none">None</button><button class="sw-btn active" data-val="floyd">Floyd</button><button class="sw-btn" data-val="ordered">Bayer</button></div></div>
+    <div class="row"><div class="row-top"><label>Threshold</label><input type="number" id="num-threshold" value="128" min="0" max="255" step="1"></div><input type="range" id="threshold" min="0" max="255" step="1" value="128"></div>
     <div class="section-title">Relief</div>
-    <div class="toggle-row" id="toggle-relief">
-      <div class="tog" id="relief-ind">&nbsp;</div> Enable Relief
-    </div>
+    <div class="toggle-row" id="toggle-relief"><div class="tog" id="relief-ind">&nbsp;</div> Enable Relief</div>
     <div id="relief-wrap" style="display:none">
-      <div class="row">
-        <div class="row-top">
-          <label>Depth</label>
-          <input type="number" id="num-relief-depth" value="120" min="0" max="500" step="1">
-        </div>
-        <input type="range" id="relief-depth" min="0" max="500" step="1" value="120">
-      </div>
-      <div class="row">
-        <div class="row-top">
-          <label>Light Angle</label>
-          <input type="number" id="num-relief-angle" value="135" min="0" max="360" step="1">
-        </div>
-        <input type="range" id="relief-angle" min="0" max="360" step="1" value="135">
-      </div>
-      <div class="row">
-        <div class="row-top">
-          <label>Relief Threshold</label>
-          <input type="number" id="num-relief-threshold" value="0.15" min="0" max="4" step="0.01">
-        </div>
-        <input type="range" id="relief-threshold" min="0" max="4" step="0.01" value="0.15">
-      </div>
-      <div class="sw-row">
-        <span class="sw-label">Blend</span>
-        <div class="sw-btns" id="sw-relief-blend">
-          <button class="sw-btn" data-val="replace">Replace</button>
-          <button class="sw-btn active" data-val="overlay">Overlay</button>
-          <button class="sw-btn" data-val="multiply">Multiply</button>
-          <button class="sw-btn" data-val="add">Add</button>
-        </div>
-      </div>
+      <div class="row"><div class="row-top"><label>Depth</label><input type="number" id="num-relief-depth" value="120" min="0" max="500" step="1"></div><input type="range" id="relief-depth" min="0" max="500" step="1" value="120"></div>
+      <div class="row"><div class="row-top"><label>Light Angle</label><input type="number" id="num-relief-angle" value="135" min="0" max="360" step="1"></div><input type="range" id="relief-angle" min="0" max="360" step="1" value="135"></div>
+      <div class="row"><div class="row-top"><label>Relief Threshold</label><input type="number" id="num-relief-threshold" value="0.15" min="0" max="4" step="0.01"></div><input type="range" id="relief-threshold" min="0" max="4" step="0.01" value="0.15"></div>
+      <div class="sw-row"><span class="sw-label">Blend</span><div class="sw-btns" id="sw-relief-blend"><button class="sw-btn" data-val="replace">Replace</button><button class="sw-btn active" data-val="overlay">Overlay</button><button class="sw-btn" data-val="multiply">Multiply</button><button class="sw-btn" data-val="add">Add</button></div></div>
     </div>
-
-    <div class="sw-row">
-      <span class="sw-label">Grid Type</span>
-      <div class="sw-btns" id="sw-grid">
-        <button class="sw-btn active" data-val="regular">Regular</button>
-        <button class="sw-btn" data-val="benday">Benday</button>
-      </div>
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Step Size</label>
-        <input type="number" id="num-step-size" value="8" min="2" max="40" step="1">
-      </div>
-      <input type="range" id="step-size" min="2" max="40" step="1" value="8">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Grid Angle</label>
-        <input type="number" id="num-grid-angle" value="0" min="-45" max="45" step="1">
-      </div>
-      <input type="range" id="grid-angle" min="-45" max="45" step="1" value="0">
-    </div>
+    <div class="sw-row"><span class="sw-label">Grid Type</span><div class="sw-btns" id="sw-grid"><button class="sw-btn active" data-val="regular">Regular</button><button class="sw-btn" data-val="benday">Benday</button></div></div>
+    <div class="row"><div class="row-top"><label>Step Size</label><input type="number" id="num-step-size" value="8" min="2" max="40" step="1"></div><input type="range" id="step-size" min="2" max="40" step="1" value="8"></div>
+    <div class="row"><div class="row-top"><label>Grid Angle</label><input type="number" id="num-grid-angle" value="0" min="-45" max="45" step="1"></div><input type="range" id="grid-angle" min="-45" max="45" step="1" value="0"></div>
   </div>
-
-  <!-- TAB: SHAPE -->
+  <!-- SHAPE TAB -->
   <div class="tab-content" id="tab-shape">
-    <div class="sw-row">
-      <span class="sw-label">Shape</span>
-      <div class="sw-btns" id="sw-shape">
-        <button class="sw-btn active" data-val="square">■</button>
-        <button class="sw-btn" data-val="circle">●</button>
-        <button class="sw-btn" data-val="arrow">◀</button>
-        <button class="sw-btn" data-val="mix">✦</button>
-        <button class="sw-btn" data-val="custom">Custom</button>
-      </div>
-    </div>
-    <div class="sw-row" id="mix-row" style="display:none">
-      <span class="sw-label">Pattern</span>
-      <div class="sw-btns" id="sw-mix">
-        <button class="sw-btn active" data-val="ordered">Ordered</button>
-        <button class="sw-btn" data-val="random">Random</button>
-      </div>
-    </div>
+    <div class="sw-row"><span class="sw-label">Shape</span><div class="sw-btns" id="sw-shape"><button class="sw-btn active" data-val="square">&#9632;</button><button class="sw-btn" data-val="circle">&#9679;</button><button class="sw-btn" data-val="arrow">&#9664;</button><button class="sw-btn" data-val="mix">&#10022;</button><button class="sw-btn" data-val="custom">Custom</button></div></div>
+    <div class="sw-row" id="mix-row" style="display:none"><span class="sw-label">Pattern</span><div class="sw-btns" id="sw-mix"><button class="sw-btn active" data-val="ordered">Ordered</button><button class="sw-btn" data-val="random">Random</button></div></div>
     <div id="custom-mix-row" style="display:none">
       <div class="section-title">Custom Mix</div>
-      <div class="toggle-row custom-shape-toggle" data-shape="square">
-        <div class="tog" id="custom-square-ind">✓</div> Square
-      </div>
-      <div class="toggle-row custom-shape-toggle" data-shape="circle">
-        <div class="tog" id="custom-circle-ind">&nbsp;</div> Circle
-      </div>
-      <div class="toggle-row custom-shape-toggle" data-shape="arrow">
-        <div class="tog" id="custom-arrow-ind">✓</div> Arrow
-      </div>
+      <div class="toggle-row custom-shape-toggle" data-shape="square"><div class="tog" id="custom-square-ind">&#10003;</div> Square</div>
+      <div class="toggle-row custom-shape-toggle" data-shape="circle"><div class="tog" id="custom-circle-ind">&nbsp;</div> Circle</div>
+      <div class="toggle-row custom-shape-toggle" data-shape="arrow"><div class="tog" id="custom-arrow-ind">&#10003;</div> Arrow</div>
     </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Shape Size</label>
-        <input type="number" id="num-shape-size" value="5" min="1" max="30" step="1">
-      </div>
-      <input type="range" id="shape-size" min="1" max="30" step="1" value="5">
-    </div>
-
-    <div class="toggle-row" id="toggle-luminance-size">
-      <div class="tog" id="luminance-size-ind">&nbsp;</div> Size follows luminance
-    </div>
+    <div class="row"><div class="row-top"><label>Shape Size</label><input type="number" id="num-shape-size" value="5" min="1" max="30" step="1"></div><input type="range" id="shape-size" min="1" max="30" step="1" value="5"></div>
+    <div class="toggle-row" id="toggle-luminance-size"><div class="tog" id="luminance-size-ind">&nbsp;</div> Size follows luminance</div>
     <div id="luminance-size-wrap" style="display:none">
-      <div class="row">
-        <div class="row-top">
-          <label>Min Shape Size</label>
-          <input type="number" id="num-min-shape-size" value="1" min="0.5" max="30" step="0.5">
-        </div>
-        <input type="range" id="min-shape-size" min="0.5" max="30" step="0.5" value="1">
-      </div>
-      <div class="row">
-        <div class="row-top">
-          <label>Max Shape Size</label>
-          <input type="number" id="num-max-shape-size" value="9" min="1" max="40" step="0.5">
-        </div>
-        <input type="range" id="max-shape-size" min="1" max="40" step="0.5" value="9">
-      </div>
+      <div class="row"><div class="row-top"><label>Min Size</label><input type="number" id="num-min-shape-size" value="1" min="0.5" max="30" step="0.5"></div><input type="range" id="min-shape-size" min="0.5" max="30" step="0.5" value="1"></div>
+      <div class="row"><div class="row-top"><label>Max Size</label><input type="number" id="num-max-shape-size" value="9" min="1" max="40" step="0.5"></div><input type="range" id="max-shape-size" min="1" max="40" step="0.5" value="9"></div>
     </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Corner Radius</label>
-        <input type="number" id="num-corner-radius" value="1" min="0" max="20" step="1">
-      </div>
-      <input type="range" id="corner-radius" min="0" max="20" step="1" value="1">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Noise</label>
-        <input type="number" id="num-noise" value="0" min="0" max="10" step="1">
-      </div>
-      <input type="range" id="noise" min="0" max="10" step="1" value="0">
-    </div>
-    <div class="sw-row">
-      <span class="sw-label">Color</span>
-      <div class="sw-btns" id="sw-color">
-        <button class="sw-btn active" data-val="mono">Mono</button>
-        <button class="sw-btn" data-val="multi">Multi</button>
-      </div>
-    </div>
-    <div id="palette-wrap" style="display:none">
-      <div style="font-size:11px;margin-bottom:6px">Palette</div>
-      <div class="palette" id="palette"></div>
-    </div>
+    <div class="row"><div class="row-top"><label>Corner Radius</label><input type="number" id="num-corner-radius" value="1" min="0" max="20" step="1"></div><input type="range" id="corner-radius" min="0" max="20" step="1" value="1"></div>
+    <div class="row"><div class="row-top"><label>Noise</label><input type="number" id="num-noise" value="0" min="0" max="10" step="1"></div><input type="range" id="noise" min="0" max="10" step="1" value="0"></div>
+    <div class="sw-row"><span class="sw-label">Color</span><div class="sw-btns" id="sw-color"><button class="sw-btn active" data-val="mono">Mono</button><button class="sw-btn" data-val="multi">Multi</button></div></div>
+    <div id="palette-wrap" style="display:none"><div style="font-size:11px;margin-bottom:6px">Palette</div><div class="palette" id="palette"></div></div>
   </div>
-
-  <!-- TAB: CRT -->
+  <!-- CRT TAB -->
   <div class="tab-content" id="tab-crt">
-    <div class="tool-note">CRT is a separate render mode. It uses the same uploaded image and image transform, but renders a screen simulation instead of halftone geometry.</div>
-    <div class="toggle-row" id="toggle-crt-effect">
-      <div class="tog" id="crt-effect-ind">✓</div> Show CRT Effect
-    </div>
-    <div class="sw-row">
-      <span class="sw-label">Type</span>
-      <div class="sw-btns" id="sw-crt-pattern">
-        <button class="sw-btn active" data-val="monitor">Monitor</button>
-        <button class="sw-btn" data-val="tv">TV</button>
-        <button class="sw-btn" data-val="lcd">LCD</button>
-      </div>
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Distortion</label>
-        <input type="number" id="num-crt-distortion" value="0.02" min="0" max="0.08" step="0.01">
-      </div>
-      <input type="range" id="crt-distortion" min="0" max="0.08" step="0.01" value="0.02">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Dot Scale</label>
-        <input type="number" id="num-crt-dot-scale" value="1" min="0.05" max="2" step="0.01">
-      </div>
-      <input type="range" id="crt-dot-scale" min="0.05" max="2" step="0.01" value="1">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Dot Pitch</label>
-        <input type="number" id="num-crt-dot-pitch" value="6" min="1" max="30" step="0.1">
-      </div>
-      <input type="range" id="crt-dot-pitch" min="1" max="30" step="0.1" value="6">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Falloff</label>
-        <input type="number" id="num-crt-falloff" value="0.45" min="0.01" max="1" step="0.01">
-      </div>
-      <input type="range" id="crt-falloff" min="0.01" max="1" step="0.01" value="0.45">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Brightness</label>
-        <input type="number" id="num-crt-brightness" value="1.35" min="0.2" max="3" step="0.01">
-      </div>
-      <input type="range" id="crt-brightness" min="0.2" max="3" step="0.01" value="1.35">
-    </div>
-
+    <div class="tool-note">CRT renders a screen simulation instead of halftone geometry.</div>
+    <div class="toggle-row" id="toggle-crt-effect"><div class="tog" id="crt-effect-ind">&#10003;</div> Show CRT Effect</div>
+    <div class="sw-row"><span class="sw-label">Type</span><div class="sw-btns" id="sw-crt-pattern"><button class="sw-btn active" data-val="monitor">Monitor</button><button class="sw-btn" data-val="tv">TV</button><button class="sw-btn" data-val="lcd">LCD</button></div></div>
+    <div class="row"><div class="row-top"><label>Distortion</label><input type="number" id="num-crt-distortion" value="0.02" min="0" max="0.08" step="0.01"></div><input type="range" id="crt-distortion" min="0" max="0.08" step="0.01" value="0.02"></div>
+    <div class="row"><div class="row-top"><label>Dot Scale</label><input type="number" id="num-crt-dot-scale" value="1" min="0.05" max="2" step="0.01"></div><input type="range" id="crt-dot-scale" min="0.05" max="2" step="0.01" value="1"></div>
+    <div class="row"><div class="row-top"><label>Dot Pitch</label><input type="number" id="num-crt-dot-pitch" value="6" min="1" max="30" step="0.1"></div><input type="range" id="crt-dot-pitch" min="1" max="30" step="0.1" value="6"></div>
+    <div class="row"><div class="row-top"><label>Falloff</label><input type="number" id="num-crt-falloff" value="0.45" min="0.01" max="1" step="0.01"></div><input type="range" id="crt-falloff" min="0.01" max="1" step="0.01" value="0.45"></div>
+    <div class="row"><div class="row-top"><label>Brightness</label><input type="number" id="num-crt-brightness" value="1.35" min="0.2" max="3" step="0.01"></div><input type="range" id="crt-brightness" min="0.2" max="3" step="0.01" value="1.35"></div>
     <div class="section-title">RGB Convergence</div>
-    <div class="row">
-      <div class="row-top">
-        <label>Red X</label>
-        <input type="number" id="num-crt-red-x" value="0.7" min="-2" max="2" step="0.01">
-      </div>
-      <input type="range" id="crt-red-x" min="-2" max="2" step="0.01" value="0.7">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Red Y</label>
-        <input type="number" id="num-crt-red-y" value="0" min="-2" max="2" step="0.01">
-      </div>
-      <input type="range" id="crt-red-y" min="-2" max="2" step="0.01" value="0">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Blue X</label>
-        <input type="number" id="num-crt-blue-x" value="-0.7" min="-2" max="2" step="0.01">
-      </div>
-      <input type="range" id="crt-blue-x" min="-2" max="2" step="0.01" value="-0.7">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Blue Y</label>
-        <input type="number" id="num-crt-blue-y" value="0" min="-2" max="2" step="0.01">
-      </div>
-      <input type="range" id="crt-blue-y" min="-2" max="2" step="0.01" value="0">
-    </div>
+    <div class="row"><div class="row-top"><label>Red X</label><input type="number" id="num-crt-red-x" value="0.7" min="-2" max="2" step="0.01"></div><input type="range" id="crt-red-x" min="-2" max="2" step="0.01" value="0.7"></div>
+    <div class="row"><div class="row-top"><label>Red Y</label><input type="number" id="num-crt-red-y" value="0" min="-2" max="2" step="0.01"></div><input type="range" id="crt-red-y" min="-2" max="2" step="0.01" value="0"></div>
+    <div class="row"><div class="row-top"><label>Blue X</label><input type="number" id="num-crt-blue-x" value="-0.7" min="-2" max="2" step="0.01"></div><input type="range" id="crt-blue-x" min="-2" max="2" step="0.01" value="-0.7"></div>
+    <div class="row"><div class="row-top"><label>Blue Y</label><input type="number" id="num-crt-blue-y" value="0" min="-2" max="2" step="0.01"></div><input type="range" id="crt-blue-y" min="-2" max="2" step="0.01" value="0"></div>
   </div>
-
-  <!-- TAB: BLOOM -->
+  <!-- BLOOM TAB -->
   <div class="tab-content" id="tab-bloom">
-    <div class="tool-note">Bloom and glow are applied after the CRT screen pattern.</div>
-    <div class="row">
-      <div class="row-top">
-        <label>Glow Radius</label>
-        <input type="number" id="num-crt-glow-radius" value="0.18" min="0" max="0.5" step="0.01">
-      </div>
-      <input type="range" id="crt-glow-radius" min="0" max="0.5" step="0.01" value="0.18">
+    <div class="tool-note">Bloom and glow applied after the CRT screen pattern.</div>
+    <div class="row"><div class="row-top"><label>Glow Radius</label><input type="number" id="num-crt-glow-radius" value="0.18" min="0" max="0.5" step="0.01"></div><input type="range" id="crt-glow-radius" min="0" max="0.5" step="0.01" value="0.18"></div>
+    <div class="row"><div class="row-top"><label>Glow Intensity</label><input type="number" id="num-crt-glow-intensity" value="0.35" min="0" max="1" step="0.01"></div><input type="range" id="crt-glow-intensity" min="0" max="1" step="0.01" value="0.35"></div>
+    <div class="sw-row"><span class="sw-label">Bloom</span><div class="sw-btns" id="sw-crt-bloom-blend"><button class="sw-btn active" data-val="screen">Screen</button><button class="sw-btn" data-val="light">Light</button><button class="sw-btn" data-val="hdr">HDR</button></div></div>
+    <div class="row"><div class="row-top"><label>Bloom Threshold</label><input type="number" id="num-crt-bloom-threshold" value="0.55" min="0" max="1" step="0.01"></div><input type="range" id="crt-bloom-threshold" min="0" max="1" step="0.01" value="0.55"></div>
+    <div class="row"><div class="row-top"><label>Bloom Intensity</label><input type="number" id="num-crt-bloom-intensity" value="0.8" min="0" max="5" step="0.01"></div><input type="range" id="crt-bloom-intensity" min="0" max="5" step="0.01" value="0.8"></div>
+    <div class="row"><div class="row-top"><label>Bloom Radius</label><input type="number" id="num-crt-bloom-radius" value="5" min="0" max="12" step="0.1"></div><input type="range" id="crt-bloom-radius" min="0" max="12" step="0.1" value="5"></div>
+  </div>
+  <!-- TAB: ASCII -->
+  <div class="tab-content" id="tab-ascii">
+    <div id="ascii-output" style="font-family:'Courier New',monospace;font-size:7px;line-height:1.1;white-space:pre;overflow:auto;background:#f0ede8;color:#1a1a1a;padding:8px;border:1px solid var(--border);min-height:120px;max-height:300px;margin-bottom:10px;word-break:break-all;">upload an image and click render</div>
+    <div class="row"><div class="row-top"><label>Columns</label><input type="number" id="num-ascii-cols" value="80" min="20" max="200" step="1"></div><input type="range" id="ascii-cols" min="20" max="200" step="1" value="80"></div>
+    <div class="row"><div class="row-top"><label>Rows</label><input type="number" id="num-ascii-rows" value="40" min="10" max="150" step="1"></div><input type="range" id="ascii-rows" min="10" max="150" step="1" value="40"></div>
+    <div class="row-top" style="margin-bottom:4px"><label style="font-size:11px">Charset</label></div>
+    <input type="text" id="ascii-charset" value=" .:-=+*#%@" style="width:100%;font-family:'Courier New',monospace;font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px 6px;outline:none;margin-bottom:10px;">
+    <div class="toggle-row" id="toggle-ascii-borders"><div class="tog" id="ascii-borders-ind">&nbsp;</div> Show Borders</div>
+    <div id="ascii-border-opts" style="display:none">
+      <div class="sw-row"><span class="sw-label">Style</span><div class="sw-btns" id="sw-ascii-border">
+        <button class="sw-btn active" data-val="single">single</button>
+        <button class="sw-btn" data-val="double">double</button>
+        <button class="sw-btn" data-val="rounded">rounded</button>
+      </div></div>
     </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Glow Intensity</label>
-        <input type="number" id="num-crt-glow-intensity" value="0.35" min="0" max="1" step="0.01">
-      </div>
-      <input type="range" id="crt-glow-intensity" min="0" max="1" step="0.01" value="0.35">
-    </div>
-    <div class="sw-row">
-      <span class="sw-label">Bloom</span>
-      <div class="sw-btns" id="sw-crt-bloom-blend">
-        <button class="sw-btn active" data-val="screen">Screen</button>
-        <button class="sw-btn" data-val="light">Light</button>
-        <button class="sw-btn" data-val="hdr">HDR</button>
-      </div>
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Bloom Threshold</label>
-        <input type="number" id="num-crt-bloom-threshold" value="0.55" min="0" max="1" step="0.01">
-      </div>
-      <input type="range" id="crt-bloom-threshold" min="0" max="1" step="0.01" value="0.55">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Bloom Intensity</label>
-        <input type="number" id="num-crt-bloom-intensity" value="0.8" min="0" max="5" step="0.01">
-      </div>
-      <input type="range" id="crt-bloom-intensity" min="0" max="5" step="0.01" value="0.8">
-    </div>
-    <div class="row">
-      <div class="row-top">
-        <label>Bloom Radius</label>
-        <input type="number" id="num-crt-bloom-radius" value="5" min="0" max="12" step="0.1">
-      </div>
-      <input type="range" id="crt-bloom-radius" min="0" max="12" step="0.1" value="5">
-    </div>
+    <div class="toggle-row" id="toggle-ascii-comments"><div class="tog" id="ascii-comments-ind">&nbsp;</div> Wrap in /* */</div>
+    <button class="export-btn" id="btn-ascii-render" style="margin-bottom:6px">Render ASCII</button>
+    <button class="export-btn" id="btn-ascii-copy">Copy to clipboard</button>
+    <button class="export-btn" id="btn-ascii-txt" style="margin-top:6px">Export .txt</button>
   </div>
 
-  <!-- TAB: EXPORT -->
+  <!-- EXPORT TAB -->
   <div class="tab-content" id="tab-export">
-    <div class="sw-row">
-      <span class="sw-label">Format</span>
-      <div class="sw-btns" id="sw-format">
-        <button class="sw-btn active" data-val="png">PNG</button>
-        <button class="sw-btn" data-val="svg">SVG</button>
-      </div>
-    </div>
-    <div class="tool-note">SVG export is available for Halftone. CRT exports as PNG because it is a raster screen simulation.</div>
+    <div class="sw-row"><span class="sw-label">Format</span><div class="sw-btns" id="sw-format"><button class="sw-btn active" data-val="png">PNG</button><button class="sw-btn" data-val="svg">SVG</button></div></div>
+    <div class="tool-note">SVG: Halftone only. CRT exports as PNG.</div>
     <button class="export-btn" id="btn-export">Export canvas</button>
   </div>
 </div>
 
 <script>
-// ---- STATE ----
 const S = {
   mode: 'halftone',
   canvasW: 800, canvasH: 800, blur: 0, contrast: 1, brightness: 1, gamma: 1,
@@ -766,9 +230,7 @@ const S = {
 
 const PALETTE = ['#2e5fa3','#c95f2a','#2a6b3a','#d4a0b0','#7a3b2e','#c8b040','#6b4a8a'];
 let activeColors = [...PALETTE];
-let sourceImg = null;
-let renderJob = null;
-let lastRenderTime = 0;
+let sourceImg = null, renderJob = null;
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -776,103 +238,65 @@ const off = document.createElement('canvas');
 const offCtx = off.getContext('2d', { willReadFrequently: true });
 const spinner = document.getElementById('spinner');
 
-// ---- SLIDERS ----
 [
-  ['blur','blur'],['contrast','contrast'],
-  ['brightness','brightness'],['gamma','gamma'],['img-scale','imgScale'],
-  ['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],['threshold','threshold'],
-  ['relief-depth','reliefDepth'],['relief-angle','reliefAngle'],['relief-threshold','reliefThreshold'],
-  ['step-size','stepSize'],['shape-size','shapeSize'],['min-shape-size','minShapeSize'],['max-shape-size','maxShapeSize'],
+  ['blur','blur'],['contrast','contrast'],['brightness','brightness'],['gamma','gamma'],
+  ['img-scale','imgScale'],['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],
+  ['threshold','threshold'],['relief-depth','reliefDepth'],['relief-angle','reliefAngle'],
+  ['relief-threshold','reliefThreshold'],['step-size','stepSize'],['shape-size','shapeSize'],
+  ['min-shape-size','minShapeSize'],['max-shape-size','maxShapeSize'],
   ['corner-radius','cornerRadius'],['grid-angle','gridAngle'],['noise','noise'],
-  ['crt-distortion','crtDistortion'],['crt-dot-scale','crtDotScale'],['crt-dot-pitch','crtDotPitch'],['crt-falloff','crtFalloff'],
-  ['crt-brightness','crtBrightness'],['crt-glow-radius','crtGlowRadius'],['crt-glow-intensity','crtGlowIntensity'],
-  ['crt-bloom-threshold','crtBloomThreshold'],['crt-bloom-intensity','crtBloomIntensity'],['crt-bloom-radius','crtBloomRadius'],
-  ['crt-red-x','crtRedX'],['crt-red-y','crtRedY'],['crt-blue-x','crtBlueX'],['crt-blue-y','crtBlueY']
+  ['crt-distortion','crtDistortion'],['crt-dot-scale','crtDotScale'],['crt-dot-pitch','crtDotPitch'],
+  ['crt-falloff','crtFalloff'],['crt-brightness','crtBrightness'],
+  ['crt-glow-radius','crtGlowRadius'],['crt-glow-intensity','crtGlowIntensity'],
+  ['crt-bloom-threshold','crtBloomThreshold'],['crt-bloom-intensity','crtBloomIntensity'],
+  ['crt-bloom-radius','crtBloomRadius'],['crt-red-x','crtRedX'],['crt-red-y','crtRedY'],
+  ['crt-blue-x','crtBlueX'],['crt-blue-y','crtBlueY']
 ].forEach(([id, key]) => {
   const slider = document.getElementById(id);
   const numIn  = document.getElementById('num-'+id);
+  if (!slider) return;
   function update(val) {
     val = Math.min(parseFloat(slider.max), Math.max(parseFloat(slider.min), parseFloat(val)||0));
-    S[key] = val;
-    slider.value = val;
-    if (numIn) numIn.value = val;
-    scheduleRender();
+    S[key] = val; slider.value = val; if (numIn) numIn.value = val; scheduleRender();
   }
   slider.addEventListener('input', () => update(slider.value));
-  if (numIn) {
-    numIn.addEventListener('change', () => update(numIn.value));
-    numIn.addEventListener('keydown', e => { if (e.key==='Enter') update(numIn.value); });
-  }
+  if (numIn) { numIn.addEventListener('change', () => update(numIn.value)); numIn.addEventListener('keydown', e => { if (e.key==='Enter') update(numIn.value); }); }
 });
 
-// ---- MODE SWITCH ----
 function setMode(mode) {
   S.mode = mode;
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === mode);
-  });
-
-  document.querySelectorAll('.mode-halftone').forEach(el => {
-    el.style.display = mode === 'halftone' ? '' : 'none';
-  });
-  document.querySelectorAll('.mode-crt').forEach(el => {
-    el.style.display = mode === 'crt' ? '' : 'none';
-  });
-
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+  document.querySelectorAll('.mode-halftone').forEach(el => el.style.display = mode === 'halftone' ? '' : 'none');
+  document.querySelectorAll('.mode-crt').forEach(el => el.style.display = mode === 'crt' ? '' : 'none');
   const activeTab = document.querySelector('.tab[data-tab].active');
   const activeTabName = activeTab ? activeTab.dataset.tab : 'upload';
-  const invalidForCRT = mode === 'crt' && ['effect','shape'].includes(activeTabName);
-  const invalidForHalftone = mode === 'halftone' && ['crt','bloom'].includes(activeTabName);
-  if (invalidForCRT || invalidForHalftone) activateTab('upload');
-
+  if ((mode === 'crt' && ['effect','shape'].includes(activeTabName)) || (mode === 'halftone' && ['crt','bloom'].includes(activeTabName))) activateTab('upload');
   scheduleRender();
 }
-
 function activateTab(tabName) {
   document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+  const tab = document.querySelector('.tab[data-tab="'+tabName+'"]');
   const content = document.getElementById('tab-' + tabName);
   if (tab) tab.classList.add('active');
   if (content) content.classList.add('active');
 }
+document.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+document.querySelectorAll('.tab[data-tab]').forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.tab)));
 
-document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', () => setMode(btn.dataset.mode));
-});
-
-// ---- TABS ----
-document.querySelectorAll('.tab[data-tab]').forEach(tab => {
-  tab.addEventListener('click', () => activateTab(tab.dataset.tab));
-});
-
-// ---- PANEL DRAG (mobile) ----
 const panel = document.getElementById('panel');
-let panelOpen = true;
 let dragStart = null, panelStartH = null;
 const PANEL_MIN = 52, PANEL_MAX = window.innerHeight * 0.85;
-
-document.getElementById('handle').addEventListener('touchstart', e => {
-  dragStart = e.touches[0].clientY;
-  panelStartH = panel.offsetHeight;
-}, { passive: true });
-document.addEventListener('touchmove', e => {
-  if (dragStart === null) return;
-  const dy = dragStart - e.touches[0].clientY;
-  const newH = Math.min(PANEL_MAX, Math.max(PANEL_MIN, panelStartH + dy));
-  panel.style.height = newH + 'px';
-}, { passive: true });
+document.getElementById('handle').addEventListener('touchstart', e => { dragStart = e.touches[0].clientY; panelStartH = panel.offsetHeight; }, { passive: true });
+document.addEventListener('touchmove', e => { if (dragStart === null) return; panel.style.height = Math.min(PANEL_MAX, Math.max(PANEL_MIN, panelStartH + (dragStart - e.touches[0].clientY))) + 'px'; }, { passive: true });
 document.addEventListener('touchend', () => { dragStart = null; });
 
-// ---- SWITCHERS ----
 function makeSwitcher(id, key, extra) {
-  document.getElementById(id).querySelectorAll('.sw-btn').forEach(btn => {
+  document.getElementById(id)?.querySelectorAll('.sw-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.getElementById(id).querySelectorAll('.sw-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      S[key] = btn.dataset.val;
-      if (extra) extra(btn.dataset.val);
-      scheduleRender();
+      btn.classList.add('active'); S[key] = btn.dataset.val;
+      if (extra) extra(btn.dataset.val); scheduleRender();
     });
   });
 }
@@ -887,854 +311,378 @@ makeSwitcher('sw-shape', 'shape', val => {
   document.getElementById('custom-mix-row').style.display = val === 'custom' ? 'block' : 'none';
 });
 makeSwitcher('sw-mix', 'mix');
-makeSwitcher('sw-color', 'color', val => {
-  document.getElementById('palette-wrap').style.display = val === 'multi' ? 'block' : 'none';
-});
+makeSwitcher('sw-color', 'color', val => { document.getElementById('palette-wrap').style.display = val === 'multi' ? 'block' : 'none'; });
 
-// ---- TOGGLES ----
-document.getElementById('toggle-effect').addEventListener('click', () => {
-  S.showEffect = !S.showEffect;
-  document.getElementById('effect-ind').textContent = S.showEffect ? '✓' : ' ';
-  scheduleRender();
-});
-document.getElementById('toggle-crt-effect').addEventListener('click', () => {
-  S.crtShowEffect = !S.crtShowEffect;
-  document.getElementById('crt-effect-ind').textContent = S.crtShowEffect ? '✓' : ' ';
-  scheduleRender();
-});
+document.getElementById('toggle-effect').addEventListener('click', () => { S.showEffect=!S.showEffect; document.getElementById('effect-ind').innerHTML=S.showEffect?'&#10003;':' '; scheduleRender(); });
+document.getElementById('toggle-crt-effect').addEventListener('click', () => { S.crtShowEffect=!S.crtShowEffect; document.getElementById('crt-effect-ind').innerHTML=S.crtShowEffect?'&#10003;':' '; scheduleRender(); });
+document.getElementById('toggle-relief').addEventListener('click', () => { S.relief=!S.relief; document.getElementById('relief-ind').innerHTML=S.relief?'&#10003;':' '; document.getElementById('relief-wrap').style.display=S.relief?'block':'none'; scheduleRender(); });
+document.getElementById('toggle-invert').addEventListener('click', () => { S.invert=!S.invert; document.getElementById('invert-ind').innerHTML=S.invert?'&#10003;':' '; scheduleRender(); });
+document.getElementById('toggle-luminance-size').addEventListener('click', () => { S.luminanceSize=!S.luminanceSize; document.getElementById('luminance-size-ind').innerHTML=S.luminanceSize?'&#10003;':' '; document.getElementById('luminance-size-wrap').style.display=S.luminanceSize?'block':'none'; scheduleRender(); });
 
-document.getElementById('toggle-relief').addEventListener('click', () => {
-  S.relief = !S.relief;
-  document.getElementById('relief-ind').textContent = S.relief ? '✓' : ' ';
-  document.getElementById('relief-wrap').style.display = S.relief ? 'block' : 'none';
-  scheduleRender();
-});
-document.getElementById('toggle-invert').addEventListener('click', () => {
-  S.invert = !S.invert;
-  document.getElementById('invert-ind').textContent = S.invert ? '✓' : ' ';
-  scheduleRender();
-});
-
-document.getElementById('toggle-luminance-size').addEventListener('click', () => {
-  S.luminanceSize = !S.luminanceSize;
-  document.getElementById('luminance-size-ind').textContent = S.luminanceSize ? '✓' : ' ';
-  document.getElementById('luminance-size-wrap').style.display = S.luminanceSize ? 'block' : 'none';
-  scheduleRender();
-});
-
-// ---- CUSTOM MIX SHAPES ----
-function getCustomMixPool() {
-  const pool = Object.entries(S.customMix)
-    .filter(([, enabled]) => enabled)
-    .map(([shape]) => shape);
-  return pool.length ? pool : ['square'];
-}
-
-function syncCustomMixUI() {
-  ['square', 'circle', 'arrow'].forEach(shape => {
-    const ind = document.getElementById(`custom-${shape}-ind`);
-    if (ind) ind.textContent = S.customMix[shape] ? '✓' : ' ';
-  });
-}
-
+function getCustomMixPool() { const pool=Object.entries(S.customMix).filter(([,e])=>e).map(([s])=>s); return pool.length?pool:['square']; }
+function syncCustomMixUI() { ['square','circle','arrow'].forEach(s=>{ const el=document.getElementById('custom-'+s+'-ind'); if(el) el.innerHTML=S.customMix[s]?'&#10003;':' '; }); }
 document.querySelectorAll('.custom-shape-toggle').forEach(row => {
   row.addEventListener('click', () => {
-    const shape = row.dataset.shape;
-    const selectedCount = Object.values(S.customMix).filter(Boolean).length;
-    if (S.customMix[shape] && selectedCount <= 1) return;
-    S.customMix[shape] = !S.customMix[shape];
-    syncCustomMixUI();
-    scheduleRender();
+    const shape=row.dataset.shape, count=Object.values(S.customMix).filter(Boolean).length;
+    if (S.customMix[shape] && count<=1) return;
+    S.customMix[shape]=!S.customMix[shape]; syncCustomMixUI(); scheduleRender();
   });
 });
 
-// ---- PALETTE ----
 function buildPalette() {
-  const c = document.getElementById('palette');
+  const c=document.getElementById('palette');
   PALETTE.forEach(color => {
-    const sw = document.createElement('div');
-    sw.className = 'swatch active';
-    sw.style.background = color;
-    sw.dataset.color = color;
-    sw.addEventListener('click', () => {
-      sw.classList.toggle('active');
-      activeColors = [...c.querySelectorAll('.swatch.active')].map(s => s.dataset.color);
-      if (!activeColors.length) { sw.classList.add('active'); activeColors = [color]; }
-      scheduleRender();
-    });
+    const sw=document.createElement('div'); sw.className='swatch active'; sw.style.background=color; sw.dataset.color=color;
+    sw.addEventListener('click',()=>{ sw.classList.toggle('active'); activeColors=[...c.querySelectorAll('.swatch.active')].map(s=>s.dataset.color); if(!activeColors.length){sw.classList.add('active');activeColors=[color];} scheduleRender(); });
     c.appendChild(sw);
   });
 }
 buildPalette();
 
-// ---- FILE INPUT ----
-document.getElementById('fileInput').addEventListener('change', e => {
-  if (e.target.files[0]) loadFile(e.target.files[0]);
-});
-document.querySelector('.canvas-wrap').addEventListener('click', () => {
-  if (!sourceImg) document.getElementById('fileInput').click();
-});
-['dragover','drop'].forEach(ev => {
-  document.querySelector('.canvas-wrap').addEventListener(ev, e => {
-    e.preventDefault();
-    if (ev === 'drop' && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
-  });
-});
-function loadFile(file) {
-  const r = new FileReader();
-  r.onload = ev => {
-    const img = new Image();
-    img.onload = () => {
-      sourceImg = img;
-      document.getElementById('hint').style.display = 'none';
-      scheduleRender();
-    };
-    img.src = ev.target.result;
-  };
-  r.readAsDataURL(file);
-}
+document.getElementById('fileInput').addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
+document.querySelector('.canvas-wrap').addEventListener('click', () => { if(!sourceImg) document.getElementById('fileInput').click(); });
+['dragover','drop'].forEach(ev => document.querySelector('.canvas-wrap').addEventListener(ev, e => { e.preventDefault(); if(ev==='drop'&&e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); }));
+function loadFile(file) { const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>{ sourceImg=img; document.getElementById('hint').style.display='none'; scheduleRender(); }; img.src=ev.target.result; }; r.readAsDataURL(file); }
+document.addEventListener('keydown', e => { const m=e.metaKey||e.ctrlKey; if(m&&e.key==='o'){e.preventDefault();document.getElementById('fileInput').click();} if(m&&e.key==='s'){e.preventDefault();doExport();} });
 
-// ---- KEYBOARD ----
-document.addEventListener('keydown', e => {
-  const mod = e.metaKey || e.ctrlKey;
-  if (mod && e.key === 'o') { e.preventDefault(); document.getElementById('fileInput').click(); }
-  if (mod && e.key === 's') { e.preventDefault(); doExport(); }
-});
+let isDragging=false;
+document.addEventListener('mousedown', e=>{ if(e.target.type==='range') isDragging=true; });
+document.addEventListener('mouseup', ()=>{ if(isDragging){isDragging=false;scheduleRender();} });
+document.addEventListener('touchend', ()=>{ if(isDragging){isDragging=false;scheduleRender();} });
 
-// ---- RENDER SCHEDULING (throttled) ----
-let isDragging = false;
-document.addEventListener('mousedown', e => { if(e.target.type==='range') isDragging=true; });
-document.addEventListener('mouseup', () => {
-  if (isDragging) { isDragging=false; scheduleRender(); }
-});
-document.addEventListener('touchend', () => {
-  if (isDragging) { isDragging=false; scheduleRender(); }
-});
-
-function scheduleRender() {
-  clearTimeout(renderJob);
-  // While dragging: preview at low res every 200ms, full render on release
-  const delay = isDragging ? 200 : 60;
-  renderJob = setTimeout(isDragging ? doPreview : doRender, delay);
-}
-
+function scheduleRender() { clearTimeout(renderJob); renderJob=setTimeout(isDragging?doPreview:doRender, isDragging?200:60); }
 function doPreview() {
-  // Fast preview: render at reduced resolution while dragging
-  if (!sourceImg) return;
-  const origW = S.canvasW, origH = S.canvasH, origStep = S.stepSize;
-  // Scale down to max 400px equivalent for preview
-  const previewScale = Math.min(1, 400 / Math.max(origW, origH));
-  S.canvasW = Math.round(origW * previewScale);
-  S.canvasH = Math.round(origH * previewScale);
-  S.stepSize = Math.max(2, Math.round(origStep * previewScale));
-  doRender();
-  S.canvasW = origW;
-  S.canvasH = origH;
-  S.stepSize = origStep;
+  if(!sourceImg) return;
+  const origW=S.canvasW, origH=S.canvasH, origStep=S.stepSize;
+  const ps=Math.min(1,400/Math.max(origW,origH));
+  S.canvasW=Math.round(origW*ps); S.canvasH=Math.round(origH*ps); S.stepSize=Math.max(2,Math.round(origStep*ps));
+  doRender(); S.canvasW=origW; S.canvasH=origH; S.stepSize=origStep;
 }
 
-// ---- GRAYSCALE PREPARE ----
 function prepareGray(gw, gh) {
-  off.width = gw; off.height = gh;
-  offCtx.fillStyle = '#fff';
-  offCtx.fillRect(0, 0, gw, gh);
-  offCtx.filter = `blur(${S.blur}px) contrast(${S.contrast}) brightness(${S.brightness})`;
-  // Contain: fit image inside canvas, letterbox with white
-  const scX = gw / sourceImg.width, scY = gh / sourceImg.height;
-  const sc = Math.min(scX, scY) * (S.imgScale / 100);
-  const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
-  const ox = gw / 2 + S.imgX * (gw / S.canvasW);
-  const oy = gh / 2 + S.imgY * (gh / S.canvasH);
-  offCtx.save();
-  offCtx.translate(ox, oy);
-  offCtx.rotate(S.imgRotation * Math.PI / 180);
-  offCtx.drawImage(sourceImg, -sw/2, -sh/2, sw, sh);
-  offCtx.restore();
-  offCtx.filter = 'none';
-
-  const d = offCtx.getImageData(0, 0, gw, gh).data;
-  const gray = new Float32Array(gw * gh);
-  for (let i = 0; i < gray.length; i++) {
-    const p = i*4;
-    let l = d[p]*.299 + d[p+1]*.587 + d[p+2]*.114;
-    if (S.gamma !== 1) l = 255 * Math.pow(l/255, S.gamma);
-    gray[i] = S.invert ? 255-l : l;
-  }
+  off.width=gw; off.height=gh; offCtx.fillStyle='#fff'; offCtx.fillRect(0,0,gw,gh);
+  offCtx.filter='blur('+S.blur+'px) contrast('+S.contrast+') brightness('+S.brightness+')';
+  const scX=gw/sourceImg.width, scY=gh/sourceImg.height;
+  const sc=Math.min(scX,scY)*(S.imgScale/100);
+  const sw=sourceImg.width*sc, sh=sourceImg.height*sc;
+  const ox=gw/2+S.imgX*(gw/S.canvasW), oy=gh/2+S.imgY*(gh/S.canvasH);
+  offCtx.save(); offCtx.translate(ox,oy); offCtx.rotate(S.imgRotation*Math.PI/180);
+  offCtx.drawImage(sourceImg,-sw/2,-sh/2,sw,sh); offCtx.restore(); offCtx.filter='none';
+  const d=offCtx.getImageData(0,0,gw,gh).data;
+  const gray=new Float32Array(gw*gh);
+  for(let i=0;i<gray.length;i++){const p=i*4;let l=d[p]*.299+d[p+1]*.587+d[p+2]*.114;if(S.gamma!==1)l=255*Math.pow(l/255,S.gamma);gray[i]=S.invert?255-l:l;}
   return gray;
 }
 
-
-function clamp255(v) {
-  return Math.max(0, Math.min(255, v));
+function clamp255(v){return Math.max(0,Math.min(255,v));}
+function blendReliefValue(base,relief){
+  if(S.reliefBlend==='replace')return relief;
+  if(S.reliefBlend==='multiply')return clamp255(base*(relief/255));
+  if(S.reliefBlend==='add')return clamp255(base+(relief-128));
+  const nr=(relief-128)/128,str=Math.abs(nr),ov=base<128?(2*base*relief/255):(255-2*(255-base)*(255-relief)/255);
+  return clamp255(base*(1-str)+ov*str);
+}
+function applyRelief(gray,gw,gh){
+  if(!S.relief||S.reliefDepth<=0)return gray;
+  const out=new Float32Array(gray.length),angle=S.reliefAngle*Math.PI/180;
+  const sx=Math.round(Math.cos(angle)),sy=Math.round(Math.sin(angle)),depth=S.reliefDepth,thr=S.reliefThreshold;
+  for(let y=0;y<gh;y++){for(let x=0;x<gw;x++){
+    const i=y*gw+x,nx=Math.max(0,Math.min(gw-1,x+sx)),ny=Math.max(0,Math.min(gh-1,y+sy)),ni=ny*gw+nx;
+    const delta=gray[ni]-gray[i];
+    let rv=128;if(Math.abs(delta)>thr)rv=clamp255(128+delta*depth/255);
+    out[i]=blendReliefValue(gray[i],rv);
+  }}return out;
 }
 
-function blendReliefValue(base, relief) {
-  if (S.reliefBlend === 'replace') return relief;
-  if (S.reliefBlend === 'multiply') return clamp255(base * (relief / 255));
-  if (S.reliefBlend === 'add') return clamp255(base + (relief - 128));
-  // Overlay-style: keeps original tonal range but injects depth around edges.
-  const normalizedRelief = (relief - 128) / 128;
-  const strength = Math.abs(normalizedRelief);
-  const overlay = base < 128
-    ? (2 * base * relief / 255)
-    : (255 - 2 * (255 - base) * (255 - relief) / 255);
-  return clamp255(base * (1 - strength) + overlay * strength);
-}
-
-function applyRelief(gray, gw, gh) {
-  if (!S.relief || S.reliefDepth <= 0) return gray;
-
-  const out = new Float32Array(gray.length);
-  const angle = S.reliefAngle * Math.PI / 180;
-  const sx = Math.round(Math.cos(angle));
-  const sy = Math.round(Math.sin(angle));
-  const depth = S.reliefDepth;
-  const threshold = S.reliefThreshold;
-
-  for (let y = 0; y < gh; y++) {
-    for (let x = 0; x < gw; x++) {
-      const i = y * gw + x;
-      const nx = Math.max(0, Math.min(gw - 1, x + sx));
-      const ny = Math.max(0, Math.min(gh - 1, y + sy));
-      const ni = ny * gw + nx;
-      const delta = gray[ni] - gray[i];
-
-      let reliefValue = 128;
-      if (Math.abs(delta) > threshold) {
-        reliefValue = clamp255(128 + delta * depth / 255);
-      }
-
-      out[i] = blendReliefValue(gray[i], reliefValue);
-    }
-  }
+function dither(gray,gw,gh){
+  const out=new Uint8Array(gw*gh),buf=new Float32Array(gray),t=S.threshold;
+  if(S.dither==='none'){for(let i=0;i<buf.length;i++)out[i]=buf[i]<t?1:0;return out;}
+  if(S.dither==='ordered'){const bayer=[0,128,32,160,192,64,224,96,48,176,16,144,240,112,208,80];for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){const i=y*gw+x;out[i]=(buf[i]+bayer[(y%4)*4+(x%4)]*.5-64)<t?1:0;}return out;}
+  for(let y=0;y<gh;y++){for(let x=0;x<gw;x++){const i=y*gw+x,nw=buf[i]<t?0:255;out[i]=nw===0?1:0;const err=buf[i]-nw;if(x+1<gw)buf[i+1]+=err*7/16;if(y+1<gh){if(x>0)buf[i+gw-1]+=err*3/16;buf[i+gw]+=err*5/16;if(x+1<gw)buf[i+gw+1]+=err/16;}}}
   return out;
 }
 
-// ---- DITHERING ----
-function dither(gray, gw, gh) {
-  const out = new Uint8Array(gw * gh);
-  const buf = new Float32Array(gray);
-  const t = S.threshold;
-
-  if (S.dither === 'none') {
-    for (let i = 0; i < buf.length; i++) out[i] = buf[i] < t ? 1 : 0;
-    return out;
-  }
-  if (S.dither === 'ordered') {
-    const bayer = [0,128,32,160,192,64,224,96,48,176,16,144,240,112,208,80];
-    for (let y = 0; y < gh; y++)
-      for (let x = 0; x < gw; x++) {
-        const i = y*gw+x;
-        out[i] = (buf[i] + bayer[(y%4)*4+(x%4)]*.5-64) < t ? 1 : 0;
-      }
-    return out;
-  }
-  // Floyd-Steinberg
-  for (let y = 0; y < gh; y++) {
-    for (let x = 0; x < gw; x++) {
-      const i = y*gw+x;
-      const nw = buf[i] < t ? 0 : 255;
-      out[i] = nw === 0 ? 1 : 0;
-      const err = buf[i] - nw;
-      if (x+1 < gw)              buf[i+1]    += err*7/16;
-      if (y+1 < gh) {
-        if (x > 0)               buf[i+gw-1] += err*3/16;
-                                  buf[i+gw]   += err*5/16;
-        if (x+1 < gw)            buf[i+gw+1] += err/16;
-      }
-    }
-  }
-  return out;
+const MIX=['square','circle','arrow'];
+function shapeFor(col,row){
+  if(S.shape!=='mix'&&S.shape!=='custom')return S.shape;
+  const pool=S.shape==='custom'?getCustomMixPool():MIX;
+  if(S.mix==='random'){const s=((col*2654435761)^(row*2246822519))>>>0;return pool[s%pool.length];}
+  return pool[(col+row)%pool.length];
 }
-
-// ---- SHAPE ----
-const MIX = ['square','circle','arrow'];
-function shapeFor(col, row) {
-  if (S.shape !== 'mix' && S.shape !== 'custom') return S.shape;
-
-  const pool = S.shape === 'custom' ? getCustomMixPool() : MIX;
-
-  if (S.mix === 'random') {
-    const s = ((col*2654435761)^(row*2246822519))>>>0;
-    return pool[s % pool.length];
-  }
-  return pool[(col + row) % pool.length];
-}
-function colorFor(col) {
-  if (S.color === 'mono' || !activeColors.length) return '#1a1a1a';
-  return activeColors[col % activeColors.length];
-}
-
-function drawShape(ctx, shape, cx, cy, r, cr) {
-  switch(shape) {
-    case 'circle':
-      ctx.moveTo(cx+r,cy); ctx.arc(cx,cy,r,0,Math.PI*2); break;
-    case 'square': {
-      const rx = Math.min(cr,r), x=cx-r, y=cy-r, w=r*2;
-      if (!rx) { ctx.rect(x,y,w,w); break; }
-      ctx.moveTo(x+rx,y);
-      ctx.lineTo(x+w-rx,y); ctx.arcTo(x+w,y,x+w,y+rx,rx);
-      ctx.lineTo(x+w,y+w-rx); ctx.arcTo(x+w,y+w,x+w-rx,y+w,rx);
-      ctx.lineTo(x+rx,y+w); ctx.arcTo(x,y+w,x,y+w-rx,rx);
-      ctx.lineTo(x,y+rx); ctx.arcTo(x,y,x+rx,y,rx);
-      ctx.closePath(); break;
-    }
-    case 'arrow':
-      ctx.moveTo(cx-r,cy);
-      ctx.lineTo(cx+r*.6,cy-r*.9);
-      ctx.lineTo(cx+r*.6,cy+r*.9);
-      ctx.closePath(); break;
+function colorFor(col){if(S.color==='mono'||!activeColors.length)return'#1a1a1a';return activeColors[col%activeColors.length];}
+function drawShape(ctx,shape,cx,cy,r,cr){
+  switch(shape){
+    case'circle':ctx.moveTo(cx+r,cy);ctx.arc(cx,cy,r,0,Math.PI*2);break;
+    case'square':{const rx=Math.min(cr,r),x=cx-r,y=cy-r,w=r*2;if(!rx){ctx.rect(x,y,w,w);break;}ctx.moveTo(x+rx,y);ctx.lineTo(x+w-rx,y);ctx.arcTo(x+w,y,x+w,y+rx,rx);ctx.lineTo(x+w,y+w-rx);ctx.arcTo(x+w,y+w,x+w-rx,y+w,rx);ctx.lineTo(x+rx,y+w);ctx.arcTo(x,y+w,x,y+w-rx,rx);ctx.lineTo(x,y+rx);ctx.arcTo(x,y,x+rx,y,rx);ctx.closePath();break;}
+    case'arrow':ctx.moveTo(cx-r,cy);ctx.lineTo(cx+r*.6,cy-r*.9);ctx.lineTo(cx+r*.6,cy+r*.9);ctx.closePath();break;
   }
 }
 
-// ---- COLLECT CELLS (shared between render & SVG export) ----
-function collectCells(mask, gw, gh, cw, ch, gray = null) {
-  const size = Math.max(cw,ch);
-  const step = S.stepSize, angleRad = S.gridAngle * Math.PI/180;
-  // step here matches gw/gh so grid aligns
-  const cx = cw/2, cy = ch/2;
-  const diag = Math.ceil(Math.sqrt(2)*size) + step*4;
-  const startX = cx - diag/2, startY = cy - diag/2;
-  const cols = Math.ceil(diag/step)+1, rows = Math.ceil(diag/step)+1;
-  const cells = [];
-
-  for (let row = 0; row <= rows; row++) {
-    for (let col = 0; col <= cols; col++) {
-      // Map draw grid cell → sample grid cell
-      const gc = Math.round((col/cols) * (gw-1));
-      const gr = Math.round((row/rows) * (gh-1));
-      const idx = gr*gw+gc;
-      if (!mask[idx]) continue;
-
-      let lx = startX + col*step;
-      let ly = startY + row*step;
-      if (S.grid === 'benday' && row%2===1) lx += step/2;
-      const dx=lx-cx, dy=ly-cy;
-      const a=angleRad;
-      const drawX = cx + dx*Math.cos(a) - dy*Math.sin(a);
-      const drawY = cy + dx*Math.sin(a) + dy*Math.cos(a);
-      const n = S.noise;
-      cells.push({
-        col, row,
-        x: n ? drawX+(Math.random()-.5)*n : drawX,
-        y: n ? drawY+(Math.random()-.5)*n : drawY,
-        shape: shapeFor(col,row),
-        color: colorFor(col),
-        lum: gray ? gray[idx] : 0
-      });
-    }
-  }
+function collectCells(mask,gw,gh,cw,ch,gray){
+  const size=Math.max(cw,ch),step=S.stepSize,angleRad=S.gridAngle*Math.PI/180;
+  const cx=cw/2,cy=ch/2,diag=Math.ceil(Math.sqrt(2)*size)+step*4;
+  const startX=cx-diag/2,startY=cy-diag/2,cols=Math.ceil(diag/step)+1,rows=Math.ceil(diag/step)+1,cells=[];
+  for(let row=0;row<=rows;row++){for(let col=0;col<=cols;col++){
+    const gc=Math.round((col/cols)*(gw-1)),gr=Math.round((row/rows)*(gh-1)),idx=gr*gw+gc;
+    if(!mask[idx])continue;
+    let lx=startX+col*step,ly=startY+row*step;
+    if(S.grid==='benday'&&row%2===1)lx+=step/2;
+    const dx=lx-cx,dy=ly-cy,a=angleRad;
+    const drawX=cx+dx*Math.cos(a)-dy*Math.sin(a),drawY=cy+dx*Math.sin(a)+dy*Math.cos(a),n=S.noise;
+    cells.push({col,row,x:n?drawX+(Math.random()-.5)*n:drawX,y:n?drawY+(Math.random()-.5)*n:drawY,shape:shapeFor(col,row),color:colorFor(col),lum:gray?gray[idx]:0});
+  }}
   return cells;
 }
 
+function applyPreset(btn){document.querySelectorAll('#sw-preset .sw-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');S.canvasW=parseInt(btn.dataset.w);S.canvasH=parseInt(btn.dataset.h);document.getElementById('input-w').value=S.canvasW;document.getElementById('input-h').value=S.canvasH;scheduleRender();}
+document.getElementById('input-w').addEventListener('change',e=>{S.canvasW=Math.max(100,Math.min(4000,parseInt(e.target.value)||800));e.target.value=S.canvasW;document.querySelectorAll('#sw-preset .sw-btn').forEach(b=>b.classList.remove('active'));scheduleRender();});
+document.getElementById('input-h').addEventListener('change',e=>{S.canvasH=Math.max(100,Math.min(4000,parseInt(e.target.value)||800));e.target.value=S.canvasH;document.querySelectorAll('#sw-preset .sw-btn').forEach(b=>b.classList.remove('active'));scheduleRender();});
 
-// ---- CANVAS DIMENSIONS ----
-function applyPreset(btn) {
-  document.querySelectorAll('#sw-preset .sw-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  S.canvasW = parseInt(btn.dataset.w);
-  S.canvasH = parseInt(btn.dataset.h);
-  document.getElementById('input-w').value = S.canvasW;
-  document.getElementById('input-h').value = S.canvasH;
-  scheduleRender();
-}
-document.getElementById('input-w').addEventListener('change', e => {
-  S.canvasW = Math.max(100, Math.min(4000, parseInt(e.target.value)||800));
-  e.target.value = S.canvasW;
-  document.querySelectorAll('#sw-preset .sw-btn').forEach(b => b.classList.remove('active'));
-  scheduleRender();
-});
-document.getElementById('input-h').addEventListener('change', e => {
-  S.canvasH = Math.max(100, Math.min(4000, parseInt(e.target.value)||800));
-  e.target.value = S.canvasH;
-  document.querySelectorAll('#sw-preset .sw-btn').forEach(b => b.classList.remove('active'));
-  scheduleRender();
-});
-
-
-// ---- CRT RENDERING ----
-function drawSourceToCanvas(targetCanvas, targetCtx, cw, ch) {
-  targetCanvas.width = cw;
-  targetCanvas.height = ch;
-  targetCtx.save();
-  targetCtx.fillStyle = '#fff';
-  targetCtx.fillRect(0, 0, cw, ch);
-  targetCtx.filter = `blur(${S.blur}px) contrast(${S.contrast}) brightness(${S.brightness})`;
-  const sc = Math.min(cw / sourceImg.width, ch / sourceImg.height) * (S.imgScale / 100);
-  const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
-  targetCtx.translate(cw/2 + S.imgX, ch/2 + S.imgY);
-  targetCtx.rotate(S.imgRotation * Math.PI / 180);
-  targetCtx.drawImage(sourceImg, -sw/2, -sh/2, sw, sh);
-  targetCtx.restore();
-  targetCtx.filter = 'none';
+function drawSourceToCanvas(tc,tx,cw,ch){tc.width=cw;tc.height=ch;tx.save();tx.fillStyle='#fff';tx.fillRect(0,0,cw,ch);tx.filter='blur('+S.blur+'px) contrast('+S.contrast+') brightness('+S.brightness+')';const sc=Math.min(cw/sourceImg.width,ch/sourceImg.height)*(S.imgScale/100);const sw=sourceImg.width*sc,sh=sourceImg.height*sc;tx.translate(cw/2+S.imgX,ch/2+S.imgY);tx.rotate(S.imgRotation*Math.PI/180);tx.drawImage(sourceImg,-sw/2,-sh/2,sw,sh);tx.restore();tx.filter='none';}
+function smoothstep(e0,e1,x){if(e0===e1)return x<e0?0:1;let t=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return t*t*(3-2*t);}
+function getPixelNearest(data,w,h,x,y,ch){const ix=Math.max(0,Math.min(w-1,Math.round(x))),iy=Math.max(0,Math.min(h-1,Math.round(y)));return data[(iy*w+ix)*4+ch];}
+function crtPatternValue(x,y,channel,pitch,scale,falloff,type){
+  const dotScale=Math.max(0.01,scale),dotSize=pitch*dotScale*0.5,softEdge=dotSize*Math.max(0.001,1-falloff);
+  if(type==='lcd'){const ew=pitch/3,eh=pitch,ep=Math.floor(x/ew)%3;if(ep!==channel)return 0;const cx2=(Math.floor(x/ew)+.5)*ew,cy2=(Math.floor(y/eh)+.5)*eh,dx=Math.abs(x-cx2)/Math.max(0.001,ew*.31),dy=Math.abs(y-cy2)/Math.max(0.001,eh),rd=Math.max(dx,dy)*dotSize;return 1-smoothstep(softEdge,dotSize,rd);}
+  if(type==='tv'){const ew=pitch/3,eh=pitch,gi=Math.floor(x/(ew*3)),yo=(gi%2)*(eh*.5),yy=y-yo,ep=Math.floor(x/ew)%3;if(ep!==channel)return 0;const cx2=(Math.floor(x/ew)+.5)*ew,cy2=(Math.floor(yy/eh)+.5)*eh+yo,dx=Math.abs(x-cx2)/Math.max(0.001,ew*.31),dy=Math.abs(y-cy2)/Math.max(0.001,eh),rd=Math.max(dx,dy)*dotSize;return 1-smoothstep(softEdge,dotSize,rd);}
+  const col=Math.floor(x/pitch),yo=(col%2)*pitch*.5,yy=y-yo,row=Math.floor(yy/pitch),ci=((row%3)+3)%3;
+  if(ci!==channel)return 0;const cx2=(col+.5)*pitch,cy2=(row+.5)*pitch+yo,dist=Math.hypot(x-cx2,y-cy2);
+  return 1-smoothstep(softEdge,dotSize,dist);
 }
 
-function smoothstep(edge0, edge1, x) {
-  if (edge0 === edge1) return x < edge0 ? 0 : 1;
-  let t = (x - edge0) / (edge1 - edge0);
-  t = Math.max(0, Math.min(1, t));
-  return t * t * (3 - 2 * t);
-}
-
-function getPixelNearest(data, w, h, x, y, channel) {
-  const ix = Math.max(0, Math.min(w - 1, Math.round(x)));
-  const iy = Math.max(0, Math.min(h - 1, Math.round(y)));
-  return data[(iy * w + ix) * 4 + channel];
-}
-
-function crtPatternValue(x, y, channel, pitch, scale, falloff, type) {
-  const dotScale = Math.max(0.01, scale);
-  const dotSize = pitch * dotScale * 0.5;
-  const softEdge = dotSize * Math.max(0.001, 1 - falloff);
-
-  if (type === 'lcd') {
-    const elementW = pitch / 3;
-    const elementH = pitch;
-    const elementPos = Math.floor(x / elementW) % 3;
-    if (elementPos !== channel) return 0;
-
-    const cx = (Math.floor(x / elementW) + 0.5) * elementW;
-    const cy = (Math.floor(y / elementH) + 0.5) * elementH;
-    const dx = Math.abs(x - cx) / Math.max(0.001, elementW * 0.31);
-    const dy = Math.abs(y - cy) / Math.max(0.001, elementH);
-    const rectDistance = Math.max(dx, dy) * dotSize;
-    return 1 - smoothstep(softEdge, dotSize, rectDistance);
-  }
-
-  if (type === 'tv') {
-    const elementW = pitch / 3;
-    const elementH = pitch;
-    const groupIndex = Math.floor(x / (elementW * 3));
-    const yOffset = (groupIndex % 2) * (elementH * 0.5);
-    const yy = y - yOffset;
-    const elementPos = Math.floor(x / elementW) % 3;
-    if (elementPos !== channel) return 0;
-
-    const cx = (Math.floor(x / elementW) + 0.5) * elementW;
-    const cy = (Math.floor(yy / elementH) + 0.5) * elementH + yOffset;
-    const dx = Math.abs(x - cx) / Math.max(0.001, elementW * 0.31);
-    const dy = Math.abs(y - cy) / Math.max(0.001, elementH);
-    const rectDistance = Math.max(dx, dy) * dotSize;
-    return 1 - smoothstep(softEdge, dotSize, rectDistance);
-  }
-
-  // Monitor: staggered circular RGB dots.
-  const col = Math.floor(x / pitch);
-  const yOffset = (col % 2) * pitch * 0.5;
-  const yy = y - yOffset;
-  const row = Math.floor(yy / pitch);
-  const colorIndex = ((row % 3) + 3) % 3;
-  if (colorIndex !== channel) return 0;
-
-  const cx = (col + 0.5) * pitch;
-  const cy = (row + 0.5) * pitch + yOffset;
-  const dist = Math.hypot(x - cx, y - cy);
-  return 1 - smoothstep(softEdge, dotSize, dist);
-}
-
-function renderCRT() {
-  const cw = S.canvasW, ch = S.canvasH;
-  canvas.width = cw;
-  canvas.height = ch;
-
-  drawSourceToCanvas(off, offCtx, cw, ch);
-
-  if (!S.crtShowEffect) {
-    ctx.drawImage(off, 0, 0);
-    spinner.classList.remove('visible');
-    return;
-  }
-
-  const source = offCtx.getImageData(0, 0, cw, ch);
-  const src = source.data;
-  const output = ctx.createImageData(cw, ch);
-  const dst = output.data;
-
-  const pitch = Math.max(1, S.crtDotPitch);
-  const strength = Math.max(0, Math.min(2, pitch / 8));
-  const rx = S.crtRedX * strength, ry = S.crtRedY * strength;
-  const bx = S.crtBlueX * strength, by = S.crtBlueY * strength;
-  const distortion = S.crtDistortion;
-  const brightness = S.crtBrightness;
-  const patternType = S.crtPattern;
-
-  for (let y = 0; y < ch; y++) {
-    for (let x = 0; x < cw; x++) {
-      const u = x / Math.max(1, cw - 1);
-      const v = y / Math.max(1, ch - 1);
-      const cx = u - 0.5;
-      const cy = v - 0.5;
-      const d = (cx * cx + cy * cy) * distortion;
-      const du = u + cx * (1 + d) * d;
-      const dv = v + cy * (1 + d) * d;
-
-      const sx = du * (cw - 1);
-      const sy = dv * (ch - 1);
-      const o = (y * cw + x) * 4;
-
-      if (du < 0 || du > 1 || dv < 0 || dv > 1) {
-        dst[o] = dst[o + 1] = dst[o + 2] = 0;
-        dst[o + 3] = 255;
-        continue;
-      }
-
-      const pr = crtPatternValue(x, y, 0, pitch, S.crtDotScale, S.crtFalloff, patternType);
-      const pg = crtPatternValue(x, y, 1, pitch, S.crtDotScale, S.crtFalloff, patternType);
-      const pb = crtPatternValue(x, y, 2, pitch, S.crtDotScale, S.crtFalloff, patternType);
-
-      let r = getPixelNearest(src, cw, ch, sx + rx, sy + ry, 0) * pr * brightness;
-      let g = getPixelNearest(src, cw, ch, sx, sy, 1) * pg * brightness;
-      let b = getPixelNearest(src, cw, ch, sx + bx, sy + by, 2) * pb * brightness;
-
-      // Simple output gamma.
-      r = 255 * Math.pow(Math.max(0, Math.min(255, r)) / 255, 1 / 2.2);
-      g = 255 * Math.pow(Math.max(0, Math.min(255, g)) / 255, 1 / 2.2);
-      b = 255 * Math.pow(Math.max(0, Math.min(255, b)) / 255, 1 / 2.2);
-
-      dst[o] = r;
-      dst[o + 1] = g;
-      dst[o + 2] = b;
-      dst[o + 3] = 255;
+function renderCRT(){
+  const cw=S.canvasW,ch=S.canvasH;canvas.width=cw;canvas.height=ch;
+  drawSourceToCanvas(off,offCtx,cw,ch);
+  if(!S.crtShowEffect){ctx.drawImage(off,0,0);spinner.classList.remove('visible');return;}
+  const source=offCtx.getImageData(0,0,cw,ch),src=source.data,output=ctx.createImageData(cw,ch),dst=output.data;
+  const pitch=Math.max(1,S.crtDotPitch),strength=Math.max(0,Math.min(2,pitch/8));
+  const rx=S.crtRedX*strength,ry=S.crtRedY*strength,bx=S.crtBlueX*strength,by=S.crtBlueY*strength;
+  const distortion=S.crtDistortion,brightness=S.crtBrightness,patternType=S.crtPattern;
+  for(let y=0;y<ch;y++){for(let x=0;x<cw;x++){
+    const u=x/Math.max(1,cw-1),v=y/Math.max(1,ch-1),cx2=u-.5,cy2=v-.5,d2=(cx2*cx2+cy2*cy2)*distortion;
+    const du=u+cx2*(1+d2)*d2,dv=v+cy2*(1+d2)*d2,sx=du*(cw-1),sy=dv*(ch-1),o=(y*cw+x)*4;
+    if(du<0||du>1||dv<0||dv>1){dst[o]=dst[o+1]=dst[o+2]=0;dst[o+3]=255;continue;}
+    const pr=crtPatternValue(x,y,0,pitch,S.crtDotScale,S.crtFalloff,patternType);
+    const pg=crtPatternValue(x,y,1,pitch,S.crtDotScale,S.crtFalloff,patternType);
+    const pb=crtPatternValue(x,y,2,pitch,S.crtDotScale,S.crtFalloff,patternType);
+    let r2=getPixelNearest(src,cw,ch,sx+rx,sy+ry,0)*pr*brightness;
+    let g2=getPixelNearest(src,cw,ch,sx,sy,1)*pg*brightness;
+    let b2=getPixelNearest(src,cw,ch,sx+bx,sy+by,2)*pb*brightness;
+    r2=255*Math.pow(Math.max(0,Math.min(255,r2))/255,1/2.2);
+    g2=255*Math.pow(Math.max(0,Math.min(255,g2))/255,1/2.2);
+    b2=255*Math.pow(Math.max(0,Math.min(255,b2))/255,1/2.2);
+    dst[o]=r2;dst[o+1]=g2;dst[o+2]=b2;dst[o+3]=255;
+  }}
+  ctx.putImageData(output,0,0);
+  if(S.crtGlowIntensity>0||S.crtBloomIntensity>0){
+    const bloom=document.createElement('canvas');bloom.width=cw;bloom.height=ch;
+    const bctx=bloom.getContext('2d');bctx.putImageData(output,0,0);
+    ctx.save();ctx.globalAlpha=Math.min(1,S.crtGlowIntensity);ctx.filter='blur('+Math.max(0,S.crtGlowRadius*S.crtDotPitch*4)+'px)';ctx.globalCompositeOperation='screen';ctx.drawImage(bloom,0,0);ctx.restore();
+    if(S.crtBloomIntensity>0&&S.crtBloomRadius>0){
+      const bright=document.createElement('canvas');bright.width=cw;bright.height=ch;const brightCtx=bright.getContext('2d');
+      const brightData=brightCtx.createImageData(cw,ch),bd=brightData.data,threshold2=S.crtBloomThreshold*255;
+      for(let i=0;i<dst.length;i+=4){const lum=dst[i]*.2126+dst[i+1]*.7152+dst[i+2]*.0722,k=Math.max(0,Math.min(1,(lum-threshold2)/Math.max(1,255-threshold2)));bd[i]=dst[i]*k;bd[i+1]=dst[i+1]*k;bd[i+2]=dst[i+2]*k;bd[i+3]=255;}
+      brightCtx.putImageData(brightData,0,0);
+      ctx.save();ctx.globalAlpha=Math.min(1,S.crtBloomIntensity/2);ctx.filter='blur('+S.crtBloomRadius+'px)';ctx.globalCompositeOperation=S.crtBloomBlend==='light'?'lighten':'screen';if(S.crtBloomBlend==='hdr')ctx.globalCompositeOperation='lighter';ctx.drawImage(bright,0,0);ctx.restore();
     }
   }
-
-  ctx.putImageData(output, 0, 0);
-
-  if (S.crtGlowIntensity > 0 || S.crtBloomIntensity > 0) {
-    const bloom = document.createElement('canvas');
-    bloom.width = cw;
-    bloom.height = ch;
-    const bctx = bloom.getContext('2d');
-    bctx.putImageData(output, 0, 0);
-
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, S.crtGlowIntensity);
-    ctx.filter = `blur(${Math.max(0, S.crtGlowRadius * S.crtDotPitch * 4)}px)`;
-    ctx.globalCompositeOperation = 'screen';
-    ctx.drawImage(bloom, 0, 0);
-    ctx.restore();
-
-    if (S.crtBloomIntensity > 0 && S.crtBloomRadius > 0) {
-      const bright = document.createElement('canvas');
-      bright.width = cw;
-      bright.height = ch;
-      const brightCtx = bright.getContext('2d');
-      const brightData = brightCtx.createImageData(cw, ch);
-      const bd = brightData.data;
-      const threshold = S.crtBloomThreshold * 255;
-
-      for (let i = 0; i < dst.length; i += 4) {
-        const lum = dst[i] * 0.2126 + dst[i+1] * 0.7152 + dst[i+2] * 0.0722;
-        const k = Math.max(0, Math.min(1, (lum - threshold) / Math.max(1, 255 - threshold)));
-        bd[i] = dst[i] * k;
-        bd[i+1] = dst[i+1] * k;
-        bd[i+2] = dst[i+2] * k;
-        bd[i+3] = 255;
-      }
-      brightCtx.putImageData(brightData, 0, 0);
-
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, S.crtBloomIntensity / 2);
-      ctx.filter = `blur(${S.crtBloomRadius}px)`;
-      ctx.globalCompositeOperation = S.crtBloomBlend === 'light' ? 'lighten' : 'screen';
-      if (S.crtBloomBlend === 'hdr') ctx.globalCompositeOperation = 'lighter';
-      ctx.drawImage(bright, 0, 0);
-      ctx.restore();
-    }
-  }
-
   spinner.classList.remove('visible');
 }
 
+let currentRenderID=0;
+function yieldFrame(){return new Promise(r=>setTimeout(r,0));}
+function getSafeStep(cw,ch,step){const size=Math.max(cw,ch),diag=Math.ceil(Math.sqrt(2)*size)+step*4,MAX=60000;let s=step;while(true){const g=Math.ceil(diag/s)+2;if(g*g<=MAX)break;s++;}if(s!==step){S.stepSize=s;const sl=document.getElementById('step-size'),ni=document.getElementById('num-step-size');if(sl)sl.value=s;if(ni)ni.value=s;}const d2=Math.ceil(Math.sqrt(2)*size)+s*4;return{gw:Math.ceil(d2/s)+2,gh:Math.ceil(d2/s)+2};}
 
-// ---- MAIN RENDER ----
-let currentRenderID = 0;
-
-function yieldFrame() {
-  return new Promise(resolve => setTimeout(resolve, 0));
-}
-
-function getSafeStep(cw, ch, step) {
-  const size = Math.max(cw, ch);
-  const diag = Math.ceil(Math.sqrt(2) * size) + step * 4;
-  const MAX_CELLS = 60000;
-  let s = step;
-  while (true) {
-    const gw = Math.ceil(diag / s) + 2;
-    const gh = Math.ceil(diag / s) + 2;
-    if (gw * gh <= MAX_CELLS) break;
-    s++;
-  }
-  if (s !== step) {
-    S.stepSize = s;
-    const sl = document.getElementById('step-size');
-    const ni = document.getElementById('num-step-size');
-    if (sl) sl.value = s;
-    if (ni) ni.value = s;
-  }
-  const diag2 = Math.ceil(Math.sqrt(2) * size) + s * 4;
-  return { gw: Math.ceil(diag2/s)+2, gh: Math.ceil(diag2/s)+2, step: s };
-}
-
-async function doRender() {
-  if (!sourceImg) return;
-  const myID = ++currentRenderID;
-  spinner.classList.add('visible');
-
-  await yieldFrame();
-  if (myID !== currentRenderID) return;
-
-  const { gw, gh } = getSafeStep(S.canvasW, S.canvasH, S.stepSize);
-
-  canvas.width = S.canvasW;
-  canvas.height = S.canvasH;
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, S.canvasW, S.canvasH);
-
-  if (S.mode === 'crt') {
-    renderCRT();
-    return;
-  }
-
-  if (!S.showEffect) {
-    off.width = S.canvasW; off.height = S.canvasH;
-    offCtx.fillStyle = '#fff';
-    offCtx.fillRect(0, 0, S.canvasW, S.canvasH);
-    const sc = Math.min(S.canvasW / sourceImg.width, S.canvasH / sourceImg.height) * (S.imgScale / 100);
-    const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
-    offCtx.save();
-    offCtx.translate(S.canvasW/2 + S.imgX, S.canvasH/2 + S.imgY);
-    offCtx.rotate(S.imgRotation * Math.PI / 180);
-    offCtx.drawImage(sourceImg, -sw/2, -sh/2, sw, sh);
-    offCtx.restore();
-    ctx.drawImage(off, 0, 0);
-    spinner.classList.remove('visible');
-    return;
-  }
-
-  let gray = prepareGray(gw, gh);
-  gray = applyRelief(gray, gw, gh);
-  await yieldFrame(); if (myID !== currentRenderID) return;
-
-  const mask = dither(gray, gw, gh);
-  await yieldFrame(); if (myID !== currentRenderID) return;
-
-  const cells = collectCells(mask, gw, gh, S.canvasW, S.canvasH, gray);
-  await yieldFrame(); if (myID !== currentRenderID) return;
-
-  const r = S.shapeSize, cr = S.cornerRadius;
-  const CHUNK = 1500;
-
-  if (S.color === 'mono') {
-    for (let i = 0; i < cells.length; i += CHUNK) {
-      if (myID !== currentRenderID) return;
-      ctx.fillStyle = '#1a1a1a';
-      ctx.beginPath();
-      const end = Math.min(i + CHUNK, cells.length);
-      for (let j = i; j < end; j++) {
-        const c = cells[j];
-        const rr = S.luminanceSize ? Math.max(S.minShapeSize, Math.min(S.maxShapeSize, S.maxShapeSize - (c.lum / 255) * (S.maxShapeSize - S.minShapeSize))) : r;
-        drawShape(ctx, c.shape, c.x, c.y, rr, cr);
-      }
-      ctx.fill();
-      await yieldFrame();
-    }
+async function doRender(){
+  if(!sourceImg)return;const myID=++currentRenderID;spinner.classList.add('visible');
+  await yieldFrame();if(myID!==currentRenderID)return;
+  const{gw,gh}=getSafeStep(S.canvasW,S.canvasH,S.stepSize);
+  canvas.width=S.canvasW;canvas.height=S.canvasH;ctx.fillStyle='#fff';ctx.fillRect(0,0,S.canvasW,S.canvasH);
+  if(S.mode==='crt'){renderCRT();return;}
+  if(!S.showEffect){off.width=S.canvasW;off.height=S.canvasH;offCtx.fillStyle='#fff';offCtx.fillRect(0,0,S.canvasW,S.canvasH);const sc=Math.min(S.canvasW/sourceImg.width,S.canvasH/sourceImg.height)*(S.imgScale/100);const sw=sourceImg.width*sc,sh=sourceImg.height*sc;offCtx.save();offCtx.translate(S.canvasW/2+S.imgX,S.canvasH/2+S.imgY);offCtx.rotate(S.imgRotation*Math.PI/180);offCtx.drawImage(sourceImg,-sw/2,-sh/2,sw,sh);offCtx.restore();ctx.drawImage(off,0,0);spinner.classList.remove('visible');return;}
+  let gray=prepareGray(gw,gh);gray=applyRelief(gray,gw,gh);
+  await yieldFrame();if(myID!==currentRenderID)return;
+  const mask=dither(gray,gw,gh);
+  await yieldFrame();if(myID!==currentRenderID)return;
+  const cells=collectCells(mask,gw,gh,S.canvasW,S.canvasH,gray);
+  await yieldFrame();if(myID!==currentRenderID)return;
+  const r=S.shapeSize,cr=S.cornerRadius,CHUNK=1500;
+  if(S.color==='mono'){
+    for(let i=0;i<cells.length;i+=CHUNK){if(myID!==currentRenderID)return;ctx.fillStyle='#1a1a1a';ctx.beginPath();const end=Math.min(i+CHUNK,cells.length);for(let j=i;j<end;j++){const c=cells[j];const rr=S.luminanceSize?Math.max(S.minShapeSize,Math.min(S.maxShapeSize,S.maxShapeSize-(c.lum/255)*(S.maxShapeSize-S.minShapeSize))):r;drawShape(ctx,c.shape,c.x,c.y,rr,cr);}ctx.fill();await yieldFrame();}
   } else {
-    const byColor = {};
-    cells.forEach(c => { (byColor[c.color] = byColor[c.color] || []).push(c); });
-    for (const [col, group] of Object.entries(byColor)) {
-      if (myID !== currentRenderID) return;
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      group.forEach(c => {
-        const rr = S.luminanceSize ? Math.max(S.minShapeSize, Math.min(S.maxShapeSize, S.maxShapeSize - (c.lum / 255) * (S.maxShapeSize - S.minShapeSize))) : r;
-        drawShape(ctx, c.shape, c.x, c.y, rr, cr);
-      });
-      ctx.fill();
-      await yieldFrame();
-    }
+    const byColor={};cells.forEach(c=>{(byColor[c.color]=byColor[c.color]||[]).push(c);});
+    for(const[col,group]of Object.entries(byColor)){if(myID!==currentRenderID)return;ctx.fillStyle=col;ctx.beginPath();group.forEach(c=>{const rr=S.luminanceSize?Math.max(S.minShapeSize,Math.min(S.maxShapeSize,S.maxShapeSize-(c.lum/255)*(S.maxShapeSize-S.minShapeSize))):r;drawShape(ctx,c.shape,c.x,c.y,rr,cr);});ctx.fill();await yieldFrame();}
   }
-
-  if (myID === currentRenderID) spinner.classList.remove('visible');
+  if(myID===currentRenderID)spinner.classList.remove('visible');
 }
 
-// ---- EXPORT ----
-document.getElementById('btn-export').addEventListener('click', doExport);
-function doExport() {
-  if (!sourceImg) return;
-  if (S.mode === 'crt' && S.format === 'svg') {
-    alert('CRT is a raster effect. Switch format to PNG to export CRT.');
-    return;
-  }
-  if (S.format === 'png') {
-    const a = document.createElement('a');
-    a.download = S.mode === 'crt' ? 'crt.png' : 'halftone.png';
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-  } else {
-    const size = Math.max(S.canvasW,S.canvasH), step = S.stepSize;
-    const diag = Math.ceil(Math.sqrt(2)*size)+step*4;
-    const gw = Math.ceil(diag/step)+2, gh = Math.ceil(diag/step)+2;
-    let gray = prepareGray(gw,gh);
-    gray = applyRelief(gray,gw,gh);
-    const mask = dither(gray,gw,gh);
-    const cells = collectCells(mask,gw,gh,S.canvasW,S.canvasH,gray);
-    const r = S.shapeSize, cr = S.cornerRadius;
-    let s = '';
-    cells.forEach(({shape,x,y,color,lum}) => {
-      const rr = S.luminanceSize ? Math.max(S.minShapeSize, Math.min(S.maxShapeSize, S.maxShapeSize - (lum / 255) * (S.maxShapeSize - S.minShapeSize))) : r;
-      const fill = S.color==='mono'?'#1a1a1a':color;
-      const rx=Math.min(cr,rr);
-      if (shape==='circle') s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rr.toFixed(2)}" fill="${fill}"/>`;
-      else if (shape==='square') s+=`<rect x="${(x-rr).toFixed(1)}" y="${(y-rr).toFixed(1)}" width="${(rr*2).toFixed(2)}" height="${(rr*2).toFixed(2)}" rx="${rx.toFixed(2)}" fill="${fill}"/>`;
-      else s+=`<polygon points="${(x-rr).toFixed(1)},${y.toFixed(1)} ${(x+rr*.6).toFixed(1)},${(y-rr*.9).toFixed(1)} ${(x+rr*.6).toFixed(1)},${(y+rr*.9).toFixed(1)}" fill="${fill}"/>`;
-    });
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${S.canvasW}" height="${S.canvasH}"><rect width="${S.canvasW}" height="${S.canvasH}" fill="white"/><g>${s}</g></svg>`;
-    const a=document.createElement('a');
-    a.download='halftone.svg';
-    a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
-    a.click();
-  }
+document.getElementById('btn-export').addEventListener('click',doExport);
+function doExport(){
+  if(!sourceImg)return;
+  if(S.mode==='crt'&&S.format==='svg'){alert('CRT exports as PNG.');return;}
+  if(S.format==='png'){const a=document.createElement('a');a.download=S.mode==='crt'?'crt.png':'halftone.png';a.href=canvas.toDataURL('image/png');a.click();return;}
+  const size=Math.max(S.canvasW,S.canvasH),step=S.stepSize,diag=Math.ceil(Math.sqrt(2)*size)+step*4;
+  const gw=Math.ceil(diag/step)+2,gh=Math.ceil(diag/step)+2;
+  let gray=prepareGray(gw,gh);gray=applyRelief(gray,gw,gh);
+  const mask=dither(gray,gw,gh),cells=collectCells(mask,gw,gh,S.canvasW,S.canvasH,gray);
+  const r=S.shapeSize,cr=S.cornerRadius;let s='';
+  cells.forEach(({shape,x,y,color,lum})=>{
+    const rr=S.luminanceSize?Math.max(S.minShapeSize,Math.min(S.maxShapeSize,S.maxShapeSize-(lum/255)*(S.maxShapeSize-S.minShapeSize))):r;
+    const fill=S.color==='mono'?'#1a1a1a':color,rx=Math.min(cr,rr);
+    if(shape==='circle')s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+rr.toFixed(2)+'" fill="'+fill+'"/>';
+    else if(shape==='square')s+='<rect x="'+(x-rr).toFixed(1)+'" y="'+(y-rr).toFixed(1)+'" width="'+(rr*2).toFixed(2)+'" height="'+(rr*2).toFixed(2)+'" rx="'+rx.toFixed(2)+'" fill="'+fill+'"/>';
+    else s+='<polygon points="'+(x-rr).toFixed(1)+','+y.toFixed(1)+' '+(x+rr*.6).toFixed(1)+','+(y-rr*.9).toFixed(1)+' '+(x+rr*.6).toFixed(1)+','+(y+rr*.9).toFixed(1)+'" fill="'+fill+'"/>';
+  });
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+S.canvasW+'" height="'+S.canvasH+'"><rect width="'+S.canvasW+'" height="'+S.canvasH+'" fill="white"/><g>'+s+'</g></svg>';
+  const a=document.createElement('a');a.download='halftone.svg';a.href=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));a.click();
 }
 
-// ---- RESET ----
-const DEFAULTS = {
-  mode:'halftone',
-  blur:0, contrast:1, brightness:1, gamma:1, imgScale:100, imgX:0, imgY:0, imgRotation:0, threshold:128,
-  relief:false, reliefDepth:120, reliefAngle:135, reliefThreshold:0.15, reliefBlend:'overlay',
-  stepSize:8, shapeSize:5, minShapeSize:1, maxShapeSize:9, cornerRadius:1, gridAngle:0, noise:0,
-  dither:'floyd', grid:'regular', shape:'square', mix:'ordered',
-  color:'mono', showEffect:true, invert:false, luminanceSize:false,
-  customMix:{ square:true, circle:false, arrow:true },
-  crtShowEffect:true, crtPattern:'monitor',
-  crtDistortion:0.02, crtDotScale:1, crtDotPitch:6, crtFalloff:0.45, crtBrightness:1.35,
-  crtGlowRadius:0.18, crtGlowIntensity:0.35,
-  crtBloomBlend:'screen', crtBloomThreshold:0.55, crtBloomIntensity:0.8, crtBloomRadius:5,
-  crtRedX:0.7, crtRedY:0, crtBlueX:-0.7, crtBlueY:0
+const ditherCanvas=document.getElementById('dither-preview'),ditherCtx=ditherCanvas.getContext('2d');
+function updateDitherPreview(){
+  if(!sourceImg)return;const size=200;ditherCanvas.width=size;ditherCanvas.height=size;
+  const tempOff=document.createElement('canvas');tempOff.width=size;tempOff.height=size;
+  const tempCtx=tempOff.getContext('2d',{willReadFrequently:true});
+  tempCtx.fillStyle='#fff';tempCtx.fillRect(0,0,size,size);
+  tempCtx.filter='contrast('+S.contrast+') brightness('+S.brightness+')';
+  const sc=Math.min(size/sourceImg.width,size/sourceImg.height);
+  tempCtx.drawImage(sourceImg,(size-sourceImg.width*sc)/2,(size-sourceImg.height*sc)/2,sourceImg.width*sc,sourceImg.height*sc);
+  tempCtx.filter='none';
+  const d=tempCtx.getImageData(0,0,size,size);
+  const gray=new Float32Array(size*size);
+  for(let i=0;i<gray.length;i++){const p=i*4;let l=d.data[p]*.299+d.data[p+1]*.587+d.data[p+2]*.114;if(S.gamma!==1)l=255*Math.pow(l/255,S.gamma);gray[i]=S.invert?255-l:l;}
+  const pg=applyRelief(gray,size,size),mask=dither(pg,size,size);
+  const out=ditherCtx.createImageData(size,size);
+  for(let i=0;i<mask.length;i++){const v=mask[i]?255:0;out.data[i*4]=out.data[i*4+1]=out.data[i*4+2]=v;out.data[i*4+3]=255;}
+  ditherCtx.putImageData(out,0,0);
+}
+document.querySelectorAll('.tab[data-tab]').forEach(tab=>{tab.addEventListener('click',()=>{if(tab.dataset.tab==='effect')setTimeout(updateDitherPreview,50);});});
+['threshold','blur','contrast','brightness','gamma','relief-depth','relief-angle','relief-threshold'].forEach(id=>{document.getElementById(id)?.addEventListener('input',()=>{if(document.getElementById('tab-effect').classList.contains('active'))updateDitherPreview();});});
+
+// ---- ASCII ----
+var asciiState = { cols: 80, rows: 40, charset: ' .:-=+*#%@', borders: false, borderStyle: 'single', comments: false };
+var asciiContent = [];
+var BORDER_CHARS = {
+  single:  { tl:'┌',tr:'┐',bl:'└',br:'┘',h:'─',v:'│' },
+  double:  { tl:'╔',tr:'╗',bl:'╚',br:'╝',h:'═',v:'║' },
+  rounded: { tl:'╭',tr:'╮',bl:'╰',br:'╯',h:'─',v:'│' }
 };
 
-document.getElementById('reset-tab').addEventListener('click', () => {
-  if (!confirm('Reset all parameters to defaults?')) return;
-
-  Object.assign(S, DEFAULTS, { customMix: { ...DEFAULTS.customMix } });
-  S.canvasW = 800; S.canvasH = 800;
-
-  // Sync sliders + number inputs
-  [
-    ['blur','blur'],['contrast','contrast'],['brightness','brightness'],
-    ['gamma','gamma'],['img-scale','imgScale'],['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],['threshold','threshold'],
-    ['relief-depth','reliefDepth'],['relief-angle','reliefAngle'],['relief-threshold','reliefThreshold'],['step-size','stepSize'],
-    ['shape-size','shapeSize'],['min-shape-size','minShapeSize'],['max-shape-size','maxShapeSize'],['corner-radius','cornerRadius'],
-    ['grid-angle','gridAngle'],['noise','noise'],
-    ['crt-distortion','crtDistortion'],['crt-dot-scale','crtDotScale'],['crt-dot-pitch','crtDotPitch'],['crt-falloff','crtFalloff'],
-    ['crt-brightness','crtBrightness'],['crt-glow-radius','crtGlowRadius'],['crt-glow-intensity','crtGlowIntensity'],
-    ['crt-bloom-threshold','crtBloomThreshold'],['crt-bloom-intensity','crtBloomIntensity'],['crt-bloom-radius','crtBloomRadius'],
-    ['crt-red-x','crtRedX'],['crt-red-y','crtRedY'],['crt-blue-x','crtBlueX'],['crt-blue-y','crtBlueY']
-  ].forEach(([id, key]) => {
-    const sl = document.getElementById(id);
-    const ni = document.getElementById('num-'+id);
-    if (sl) sl.value = S[key];
-    if (ni) ni.value = S[key];
+document.getElementById('ascii-cols').addEventListener('input', function() { asciiState.cols = parseInt(this.value); document.getElementById('num-ascii-cols').value = this.value; });
+document.getElementById('num-ascii-cols').addEventListener('change', function() { asciiState.cols = parseInt(this.value); document.getElementById('ascii-cols').value = this.value; });
+document.getElementById('ascii-rows').addEventListener('input', function() { asciiState.rows = parseInt(this.value); document.getElementById('num-ascii-rows').value = this.value; });
+document.getElementById('num-ascii-rows').addEventListener('change', function() { asciiState.rows = parseInt(this.value); document.getElementById('ascii-rows').value = this.value; });
+document.getElementById('ascii-charset').addEventListener('input', function() { asciiState.charset = this.value; });
+document.getElementById('toggle-ascii-borders').addEventListener('click', function() {
+  asciiState.borders = !asciiState.borders;
+  document.getElementById('ascii-borders-ind').innerHTML = asciiState.borders ? '&#10003;' : '&nbsp;';
+  document.getElementById('ascii-border-opts').style.display = asciiState.borders ? 'block' : 'none';
+});
+document.getElementById('toggle-ascii-comments').addEventListener('click', function() {
+  asciiState.comments = !asciiState.comments;
+  document.getElementById('ascii-comments-ind').innerHTML = asciiState.comments ? '&#10003;' : '&nbsp;';
+});
+document.getElementById('sw-ascii-border').querySelectorAll('.sw-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.getElementById('sw-ascii-border').querySelectorAll('.sw-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active'); asciiState.borderStyle = btn.dataset.val;
   });
-
-  // Sync dimension inputs
-  const iw = document.getElementById('input-w');
-  const ih = document.getElementById('input-h');
-  if (iw) iw.value = 800;
-  if (ih) ih.value = 800;
-
-  // Sync switchers
-  function resetSwitcher(id, val) {
-    document.getElementById(id)?.querySelectorAll('.sw-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.val === val);
-    });
-  }
-  resetSwitcher('sw-dither', 'floyd');
-  resetSwitcher('sw-relief-blend', 'overlay');
-  resetSwitcher('sw-crt-pattern', 'monitor');
-  resetSwitcher('sw-crt-bloom-blend', 'screen');
-  resetSwitcher('sw-grid', 'regular');
-  resetSwitcher('sw-shape', 'square');
-  resetSwitcher('sw-mix', 'ordered');
-  resetSwitcher('sw-color', 'mono');
-
-  // Sync toggles
-  document.getElementById('effect-ind').textContent = '✓';
-  document.getElementById('crt-effect-ind').textContent = '✓';
-  document.getElementById('relief-ind').textContent = ' ';
-  document.getElementById('invert-ind').textContent = ' ';
-  document.getElementById('luminance-size-ind').textContent = ' ';
-
-  // Hide conditional panels
-  document.getElementById('mix-row').style.display = 'none';
-  document.getElementById('custom-mix-row').style.display = 'none';
-  syncCustomMixUI();
-  document.getElementById('palette-wrap').style.display = 'none';
-  document.getElementById('relief-wrap').style.display = 'none';
-  document.getElementById('luminance-size-wrap').style.display = 'none';
-
-  setMode('halftone');
-  scheduleRender();
 });
 
-// ---- DITHER PREVIEW ----
-const ditherCanvas = document.getElementById('dither-preview');
-const ditherCtx = ditherCanvas.getContext('2d');
-
-function updateDitherPreview() {
-  if (!sourceImg || !ditherCanvas) return;
-  const size = 200; // small preview
-  ditherCanvas.width = size;
-  ditherCanvas.height = size;
-
-  // Draw grayscale + dither at small size
-  const tempOff = document.createElement('canvas');
-  tempOff.width = size; tempOff.height = size;
-  const tempCtx = tempOff.getContext('2d', { willReadFrequently: true });
-  tempCtx.fillStyle = '#fff';
-  tempCtx.fillRect(0, 0, size, size);
-  tempCtx.filter = `contrast(${S.contrast}) brightness(${S.brightness})`;
-  const sc = Math.min(size / sourceImg.width, size / sourceImg.height);
-  const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
-  tempCtx.drawImage(sourceImg, (size-sw)/2, (size-sh)/2, sw, sh);
-  tempCtx.filter = 'none';
-
-  const d = tempCtx.getImageData(0, 0, size, size);
-  const gray = new Float32Array(size * size);
-  for (let i = 0; i < gray.length; i++) {
-    const p = i*4;
-    let l = d.data[p]*.299 + d.data[p+1]*.587 + d.data[p+2]*.114;
-    if (S.gamma !== 1) l = 255 * Math.pow(l/255, S.gamma);
-    gray[i] = S.invert ? 255-l : l;
-  }
-  const processedGray = applyRelief(gray, size, size);
-  const mask = dither(processedGray, size, size);
-
-  // Draw B&W result
-  const out = ditherCtx.createImageData(size, size);
-  for (let i = 0; i < mask.length; i++) {
-    const v = mask[i] ? 255 : 0;
-    out.data[i*4]=out.data[i*4+1]=out.data[i*4+2]=v;
-    out.data[i*4+3]=255;
-  }
-  ditherCtx.putImageData(out, 0, 0);
+var charCache = new Map();
+function analyzeCharset(cs) {
+  var key = cs;
+  if (charCache.has(key)) return charCache.get(key);
+  var tc = document.createElement('canvas'); tc.width = 24; tc.height = 24;
+  var tx = tc.getContext('2d'); tx.font = '12px monospace'; tx.textAlign = 'center'; tx.textBaseline = 'middle';
+  var chars = [...new Set(cs)];
+  var sorted = chars.map(function(ch) {
+    tx.clearRect(0,0,24,24); tx.fillStyle='white'; tx.fillRect(0,0,24,24);
+    tx.fillStyle='black'; tx.fillText(ch,12,12);
+    var d2=tx.getImageData(0,0,24,24).data, s=0, n=0;
+    for (var i=0;i<d2.length;i+=4) { if(d2[i+3]>0){s+=(255-d2[i])/255;n++;} }
+    return {ch:ch, b:n>0?s/n:0};
+  }).sort(function(a,b){return a.b-b.b;}).map(function(a){return a.ch;}).join('');
+  charCache.set(key, sorted);
+  return sorted;
 }
 
-// Update dither preview when effect tab is shown
-document.querySelectorAll('.tab[data-tab]').forEach(tab => {
-  tab.addEventListener('click', () => {
-    if (tab.dataset.tab === 'effect') setTimeout(updateDitherPreview, 50);
+function renderASCII() {
+  if (!sourceImg) { document.getElementById('ascii-output').textContent = 'upload an image first'; return; }
+  var cols2 = asciiState.cols, rows2 = asciiState.rows;
+  var cs = asciiState.charset || ' .:-=+*#%@';
+  var sorted = analyzeCharset(cs);
+
+  // Draw image to offscreen at cols x rows resolution
+  var W = cols2, H = rows2;
+  off.width = W; off.height = H;
+  offCtx.fillStyle = '#fff'; offCtx.fillRect(0,0,W,H);
+  offCtx.filter = 'contrast('+S.contrast+') brightness('+S.brightness+')';
+  var sc = Math.min(W/sourceImg.width, H/sourceImg.height) * (S.imgScale/100);
+  var sw = sourceImg.width*sc, sh = sourceImg.height*sc;
+  offCtx.save(); offCtx.translate(W/2+S.imgX*(W/S.canvasW), H/2+S.imgY*(H/S.canvasH));
+  offCtx.rotate(S.imgRotation*Math.PI/180);
+  offCtx.drawImage(sourceImg,-sw/2,-sh/2,sw,sh);
+  offCtx.restore(); offCtx.filter='none';
+
+  var px = offCtx.getImageData(0,0,W,H).data;
+  var grid = [];
+  for (var r=0; r<rows2; r++) {
+    var row = [];
+    for (var c=0; c<cols2; c++) {
+      var idx = (r*W+c)*4;
+      var a = px[idx+3]/255;
+      var lum = (px[idx]*a+255*(1-a) + px[idx+1]*a+255*(1-a) + px[idx+2]*a+255*(1-a))/3;
+      var inv = S.invert ? lum/255 : 1-lum/255;
+      var ci = Math.max(0, Math.min(sorted.length-1, Math.floor(inv*(sorted.length-1))));
+      row.push(sorted[ci] || ' ');
+    }
+    grid.push(row);
+  }
+
+  if (asciiState.borders) {
+    var B = BORDER_CHARS[asciiState.borderStyle] || BORDER_CHARS.single;
+    var top = [B.tl], bot = [B.bl];
+    for (var i=0;i<cols2;i++) { top.push(B.h); bot.push(B.h); }
+    top.push(B.tr); bot.push(B.br);
+    var bordered = [top];
+    grid.forEach(function(row) { bordered.push([B.v].concat(row).concat([B.v])); });
+    bordered.push(bot);
+    asciiContent = bordered;
+  } else {
+    asciiContent = grid;
+  }
+
+  var text = asciiContent.map(function(r){return r.join('');}).join('\n');
+  if (asciiState.comments) text = '/*\n' + text + '\n*/';
+  document.getElementById('ascii-output').textContent = text;
+}
+
+document.getElementById('btn-ascii-render').addEventListener('click', renderASCII);
+document.getElementById('btn-ascii-copy').addEventListener('click', function() {
+  var text = asciiContent.map(function(r){return r.join('');}).join('\n');
+  if (asciiState.comments) text = '/*\n'+text+'\n*/';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.getElementById('btn-ascii-copy');
+      btn.textContent = 'Copied!';
+      setTimeout(function(){btn.textContent='Copy to clipboard';},2000);
+    });
+  }
+});
+document.getElementById('btn-ascii-txt').addEventListener('click', function() {
+  var text = asciiContent.map(function(r){return r.join('');}).join('\n');
+  if (asciiState.comments) text = '/*\n'+text+'\n*/';
+  var a = document.createElement('a'); a.download='ascii.txt';
+  a.href = URL.createObjectURL(new Blob([text],{type:'text/plain'})); a.click();
+});
+
+// Auto-render when switching to ASCII tab
+document.querySelectorAll('.tab[data-tab]').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    if (tab.dataset.tab === 'ascii' && sourceImg) setTimeout(renderASCII, 50);
   });
 });
 
-// Also update on relevant param changes
-['threshold','blur','contrast','brightness','gamma','relief-depth','relief-angle','relief-threshold'].forEach(id => {
-  document.getElementById(id)?.addEventListener('input', () => {
-    if (document.getElementById('tab-effect').classList.contains('active')) {
-      updateDitherPreview();
-    }
-  });
-});
 </script>
 </body>
 </html>
