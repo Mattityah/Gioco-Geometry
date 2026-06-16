@@ -557,37 +557,42 @@ input[type="range"]::-webkit-slider-thumb {
     min-height: 100dvh;
     position: static;
     justify-content: flex-start;
-    padding-top: max(28px, 3vh);
+    padding-top: 0;
     overflow-y: auto;
   }
 
   #home-logo {
-    max-height: 22vh;
-    margin-bottom: 12px;
+    max-height: 35vh;
+    width: 92vw;
+    margin-bottom: 20px;
+    margin-top: 28px;
   }
 
   #home-logo-placeholder {
-    height: 90px;
-    margin-bottom: 12px;
+    height: 140px;
+    width: 92vw;
+    margin-bottom: 20px;
+    margin-top: 28px;
   }
 
   #home-buttons {
     flex-direction: column;
-    width: min(500px, 88vw);
-    gap: 6px;
+    width: 88vw;
+    gap: 8px;
     margin-bottom: 0;
   }
 
   .home-btn {
-    padding: 9px 14px;
+    padding: 12px 18px;
     flex-direction: row;
     justify-content: flex-start;
-    gap: 14px;
+    align-items: center;
+    gap: 16px;
   }
 
   .home-btn-label {
-    font-size: 11px;
-    letter-spacing: 0.16em;
+    font-size: 13px;
+    letter-spacing: 0.2em;
   }
 
   .home-btn-sub {
@@ -598,8 +603,8 @@ input[type="range"]::-webkit-slider-thumb {
   #home-footer {
     position: static;
     width: 100%;
-    margin-top: 18px;
-    padding: 12px 14px;
+    margin-top: 28px;
+    padding: 14px 14px;
   }
 }
 </style>
@@ -995,10 +1000,26 @@ input[type="range"]::-webkit-slider-thumb {
             <button class="sw-btn" data-val="square">&#9632;</button>
             <button class="sw-btn" data-val="cross">+</button>
             <button class="sw-btn" data-val="diamond">&#9670;</button>
+            <button class="sw-btn" data-val="donut">&#9711;</button>
+            <button class="sw-btn" data-val="target">&#9678;</button>
+            <button class="sw-btn" data-val="via">Via</button>
             <button class="sw-btn" data-val="mix">Mix</button>
           </div>
         </div>
         <div class="row"><div class="row-top"><label>Node Size</label><input type="number" id="num-circuit-node" value="3" min="0" max="12" step="1"></div><input type="range" id="circuit-node" min="0" max="12" step="1" value="3"></div>
+
+        <div class="section-title">Bus Lines</div>
+        <div class="sw-row">
+          <span class="sw-label">Bus</span>
+          <div class="sw-btns" id="sw-circuit-bus">
+            <button class="sw-btn active" data-val="none">None</button>
+            <button class="sw-btn" data-val="h">Horiz</button>
+            <button class="sw-btn" data-val="v">Vert</button>
+            <button class="sw-btn" data-val="both">Both</button>
+          </div>
+        </div>
+        <div class="row"><div class="row-top"><label>Bus Width</label><input type="number" id="num-circuit-bus-width" value="4" min="2" max="16" step="1"></div><input type="range" id="circuit-bus-width" min="2" max="16" step="1" value="4"></div>
+        <div class="row"><div class="row-top"><label>Break %</label><input type="number" id="num-circuit-break" value="20" min="0" max="80" step="1"></div><input type="range" id="circuit-break" min="0" max="80" step="1" value="20"></div>
 
         <div class="section-title">Componentes</div>
         <div class="sw-row">
@@ -1008,6 +1029,8 @@ input[type="range"]::-webkit-slider-thumb {
             <button class="sw-btn" data-val="resistor">R</button>
             <button class="sw-btn" data-val="cap">C</button>
             <button class="sw-btn" data-val="ic">IC</button>
+            <button class="sw-btn" data-val="diode">D</button>
+            <button class="sw-btn" data-val="gnd">GND</button>
             <button class="sw-btn" data-val="all">All</button>
           </div>
         </div>
@@ -1124,6 +1147,9 @@ const S = {
   circuitNodeShape: 'circle',
   circuitSymbols: 'none',
   circuitSymfreq: 15,
+  circuitBus: 'none',
+  circuitBusWidth: 4,
+  circuitBreak: 20,
   circuitColor: 'mono',
   gfxMode: 'destroy',
   gfxBlur: 4,
@@ -1179,6 +1205,7 @@ const CONTROL_MAP = [
   ['circuit-cell','circuitCell'], ['circuit-density','circuitDensity'],
   ['circuit-width','circuitWidth'], ['circuit-chaos','circuitChaos'],
   ['circuit-node','circuitNode'], ['circuit-symfreq','circuitSymfreq'],
+  ['circuit-bus-width','circuitBusWidth'], ['circuit-break','circuitBreak'],
   ['jpg-quality','jpgQuality']
 ];
 
@@ -1250,6 +1277,7 @@ makeSwitcher('sw-circuit-color', 'circuitColor', val => {
 });
 makeSwitcher('sw-circuit-node-shape', 'circuitNodeShape');
 makeSwitcher('sw-circuit-symbols', 'circuitSymbols');
+makeSwitcher('sw-circuit-bus', 'circuitBus');
 makeSwitcher('sw-gfx-mode', 'gfxMode', val => {
   $('gfx-destroy-params').style.display = val === 'destroy' ? 'block' : 'none';
   $('gfx-blob-params').style.display = val === 'blob' ? 'block' : 'none';
@@ -2926,13 +2954,16 @@ async function renderCircuit(myID) {
     if (r <= 0) return;
     ctx.fillStyle = color;
     ctx.strokeStyle = color;
+    ctx.lineCap = 'round';
 
-    const shapes = ['circle','square','cross','diamond'];
-    const s = shape === 'mix' ? shapes[Math.floor(rand(x * 0.1 + y * 0.07) * shapes.length)] : shape;
+    const shapes = ['circle','square','cross','diamond','donut','target','via'];
+    const s = shape === 'mix'
+      ? shapes[Math.floor(rand(x * 13.7 + y * 7.3 + 1) * shapes.length)]
+      : shape;
 
-    ctx.beginPath();
     switch(s) {
       case 'circle':
+        ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
         break;
@@ -2940,24 +2971,51 @@ async function renderCircuit(myID) {
         ctx.fillRect(x - r, y - r, r * 2, r * 2);
         break;
       case 'cross':
-        ctx.lineWidth = Math.max(1, r * 0.6);
+        ctx.lineWidth = Math.max(1, r * 0.65);
         ctx.lineCap = 'square';
+        ctx.beginPath();
         ctx.moveTo(x - r, y); ctx.lineTo(x + r, y);
         ctx.moveTo(x, y - r); ctx.lineTo(x, y + r);
         ctx.stroke();
-        // Ring around cross
+        ctx.lineWidth = Math.max(1, traceW * 0.7);
         ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.lineWidth = Math.max(1, traceW * 0.8);
+        ctx.arc(x, y, r * 1.1, 0, Math.PI * 2);
         ctx.stroke();
         break;
       case 'diamond':
+        ctx.beginPath();
         ctx.moveTo(x, y - r);
         ctx.lineTo(x + r, y);
         ctx.lineTo(x, y + r);
         ctx.lineTo(x - r, y);
         ctx.closePath();
         ctx.fill();
+        break;
+      case 'donut':
+        // Filled ring — outer filled, inner bg
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = ctx.fillStyle === color ? (S.circuitColor === 'invert' ? '#1a1a1a' : '#ffffff') : color;
+        ctx.fillStyle = S.circuitColor === 'invert' ? '#1a1a1a' : '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, r * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = color;
+        break;
+      case 'target':
+        // Concentric circles
+        ctx.lineWidth = Math.max(1, traceW * 0.7);
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, r * 0.55, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, r * 0.2, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'via':
+        // Square pad with circle hole — standard PCB via
+        ctx.fillRect(x - r * 1.2, y - r * 1.2, r * 2.4, r * 2.4);
+        ctx.fillStyle = S.circuitColor === 'invert' ? '#1a1a1a' : '#ffffff';
+        ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = color;
         break;
     }
   }
@@ -2974,93 +3032,155 @@ async function renderCircuit(myID) {
     }
   }
 
+  const busMode = S.circuitBus;
+  const busW = Math.max(2, Math.round(S.circuitBusWidth));
+  const breakPct = S.circuitBreak / 100;
+
+  if (busMode !== 'none') {
+    ctx.lineCap = 'butt';
+    const busColor = fg[0];
+
+    if (busMode === 'h' || busMode === 'both') {
+      // Horizontal bus lines every ~8 rows, guided by image
+      const busStep = Math.max(4, Math.round(grows / 6));
+      for (let row = busStep; row < grows - 1; row += busStep) {
+        const y = row * cell + cell / 2;
+        let x = 0;
+        while (x < cw) {
+          // Break segments randomly
+          const segLen = cell * (3 + Math.floor(rand(x * 0.01 + row * 0.3) * 8));
+          const doBreak = rand(x * 0.02 + row * 0.5) < breakPct;
+          if (!doBreak) {
+            ctx.strokeStyle = busColor;
+            ctx.lineWidth = busW;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(Math.min(x + segLen, cw), y);
+            ctx.stroke();
+            // Arrow marks on bus
+            if (rand(x * 0.03 + row) > 0.6) {
+              const ax = x + segLen * 0.5;
+              ctx.beginPath();
+              ctx.moveTo(ax - cell * 0.3, y - busW); ctx.lineTo(ax, y); ctx.lineTo(ax - cell * 0.3, y + busW);
+              ctx.stroke();
+            }
+          }
+          x += segLen + cell * (1 + rand(x * 0.04) * 2);
+        }
+      }
+    }
+
+    if (busMode === 'v' || busMode === 'both') {
+      const busStep = Math.max(4, Math.round(gcols / 6));
+      for (let col = busStep; col < gcols - 1; col += busStep) {
+        const x = col * cell + cell / 2;
+        let y = 0;
+        while (y < ch) {
+          const segLen = cell * (3 + Math.floor(rand(y * 0.01 + col * 0.3) * 8));
+          const doBreak = rand(y * 0.02 + col * 0.5) < breakPct;
+          if (!doBreak) {
+            ctx.strokeStyle = busColor;
+            ctx.lineWidth = busW;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, Math.min(y + segLen, ch));
+            ctx.stroke();
+          }
+          y += segLen + cell * (1 + rand(y * 0.04) * 2);
+        }
+      }
+    }
+  }
+
   await yieldFrame();
   if (myID !== currentRenderID) return;
-
-  // ---- COMPONENT SYMBOLS ----
   function drawResistor(x, y, w, h, color) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1, traceW * 0.8);
-    ctx.lineCap = 'square';
-    // Lead lines
+    ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, traceW * 0.8); ctx.lineCap = 'square';
     ctx.beginPath();
-    ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w * 0.2, y + h / 2);
-    ctx.moveTo(x + w * 0.8, y + h / 2); ctx.lineTo(x + w, y + h / 2);
+    ctx.moveTo(x, y+h/2); ctx.lineTo(x+w*0.2, y+h/2);
+    ctx.moveTo(x+w*0.8, y+h/2); ctx.lineTo(x+w, y+h/2);
     ctx.stroke();
-    // Body rectangle
-    ctx.strokeRect(x + w * 0.2, y + h * 0.2, w * 0.6, h * 0.6);
+    ctx.strokeRect(x+w*0.2, y+h*0.2, w*0.6, h*0.6);
   }
 
   function drawCapacitor(x, y, w, h, color) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1, traceW * 0.8);
-    const mx = x + w / 2;
-    const gap = w * 0.08;
+    ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, traceW * 0.8);
+    const mx = x+w/2, gap = w*0.08;
     ctx.beginPath();
-    ctx.moveTo(x, y + h / 2); ctx.lineTo(mx - gap, y + h / 2);
-    ctx.moveTo(x + w, y + h / 2); ctx.lineTo(mx + gap, y + h / 2);
+    ctx.moveTo(x, y+h/2); ctx.lineTo(mx-gap, y+h/2);
+    ctx.moveTo(x+w, y+h/2); ctx.lineTo(mx+gap, y+h/2);
+    ctx.moveTo(mx-gap, y+h*0.15); ctx.lineTo(mx-gap, y+h*0.85);
+    ctx.moveTo(mx+gap, y+h*0.15); ctx.lineTo(mx+gap, y+h*0.85);
+    ctx.stroke();
+  }
+
+  function drawDiode(x, y, w, h, color) {
+    ctx.strokeStyle = color; ctx.fillStyle = color;
+    ctx.lineWidth = Math.max(1, traceW * 0.8); ctx.lineCap = 'square';
+    const mx = x+w/2, cy2 = y+h/2, tr = h*0.35;
+    ctx.beginPath();
+    ctx.moveTo(x, cy2); ctx.lineTo(mx-tr, cy2);
+    ctx.moveTo(mx+tr, cy2); ctx.lineTo(x+w, cy2);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(mx - gap, y + h * 0.15); ctx.lineTo(mx - gap, y + h * 0.85);
-    ctx.moveTo(mx + gap, y + h * 0.15); ctx.lineTo(mx + gap, y + h * 0.85);
-    ctx.stroke();
+    ctx.moveTo(mx-tr, cy2-tr); ctx.lineTo(mx-tr, cy2+tr); ctx.lineTo(mx+tr, cy2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(mx+tr, cy2-tr); ctx.lineTo(mx+tr, cy2+tr); ctx.stroke();
+  }
+
+  function drawGND(x, y, w, h, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, traceW * 0.8); ctx.lineCap = 'square';
+    const mx = x+w/2;
+    ctx.beginPath(); ctx.moveTo(mx, y+h*0.1); ctx.lineTo(mx, y+h*0.45); ctx.stroke();
+    [0,1,2].forEach(b => {
+      const bw = w*(0.8-b*0.22), by = y+h*(0.45+b*0.17);
+      ctx.beginPath(); ctx.moveTo(mx-bw/2, by); ctx.lineTo(mx+bw/2, by); ctx.stroke();
+    });
   }
 
   function drawIC(x, y, w, h, color) {
-    ctx.strokeStyle = color;
-    ctx.fillStyle = bg;
-    ctx.lineWidth = Math.max(1, traceW * 0.8);
-    ctx.strokeRect(x, y, w, h);
-    ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
-    // Pins left & right
-    const pins = Math.max(2, Math.round(h / cell));
-    const pinSpacing = h / (pins + 1);
+    ctx.strokeStyle = color; ctx.fillStyle = bg; ctx.lineWidth = Math.max(1, traceW * 0.8);
+    ctx.strokeRect(x, y, w, h); ctx.fillRect(x+1, y+1, w-2, h-2);
+    const pins = Math.max(2, Math.round(h/cell)), ps = h/(pins+1);
     ctx.strokeStyle = color;
     for (let p = 1; p <= pins; p++) {
-      const py = y + p * pinSpacing;
+      const py = y+p*ps;
       ctx.beginPath();
-      ctx.moveTo(x - cell * 0.5, py); ctx.lineTo(x, py);
-      ctx.moveTo(x + w, py); ctx.lineTo(x + w + cell * 0.5, py);
+      ctx.moveTo(x-cell*0.5, py); ctx.lineTo(x, py);
+      ctx.moveTo(x+w, py); ctx.lineTo(x+w+cell*0.5, py);
       ctx.stroke();
-      // Small pad
       ctx.fillStyle = color;
-      ctx.fillRect(x - cell * 0.5 - 1, py - 1, 3, 3);
-      ctx.fillRect(x + w + cell * 0.5 - 1, py - 1, 3, 3);
+      ctx.fillRect(x-cell*0.5-1, py-1, 3, 3);
+      ctx.fillRect(x+w+cell*0.5-1, py-1, 3, 3);
     }
-    // Notch
     ctx.strokeStyle = color;
-    ctx.beginPath();
-    ctx.arc(x + w / 2, y, cell * 0.25, 0, Math.PI);
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(x+w/2, y, cell*0.25, 0, Math.PI); ctx.stroke();
   }
 
   if (symbols !== 'none') {
-    const symTypes = symbols === 'all' ? ['resistor','cap','ic'] : [symbols];
+    const symTypes = symbols === 'all'
+      ? ['resistor','cap','ic','diode','gnd']
+      : [symbols];
 
     for (let row = 1; row < grows - 1; row++) {
       for (let col = 1; col < gcols - 1; col++) {
         const idx = row * gcols + col;
         if (!isActive(col, row)) continue;
         if (rand(idx * 17 + 9) > (1 / symFreq)) continue;
-
-        const x = col * cell;
-        const y = row * cell;
+        const x = col * cell, y = row * cell;
         const symType = symTypes[Math.floor(rand(idx * 3) * symTypes.length)];
         const color = colorAt(col, row);
-
-        if (symType === 'resistor') {
-          drawResistor(x - cell * 0.5, y, cell * 2, cell, color);
-        } else if (symType === 'cap') {
-          drawCapacitor(x - cell * 0.5, y, cell * 2, cell, color);
-        } else if (symType === 'ic') {
-          const icW = cell * (2 + Math.floor(rand(idx) * 2));
-          const icH = cell * (2 + Math.floor(rand(idx * 2) * 3));
+        if (symType === 'resistor') drawResistor(x-cell*0.5, y, cell*2, cell, color);
+        else if (symType === 'cap') drawCapacitor(x-cell*0.5, y, cell*2, cell, color);
+        else if (symType === 'diode') drawDiode(x-cell*0.5, y, cell*2, cell, color);
+        else if (symType === 'gnd') drawGND(x, y, cell, cell*1.5, color);
+        else if (symType === 'ic') {
+          const icW = cell*(2+Math.floor(rand(idx)*2));
+          const icH = cell*(2+Math.floor(rand(idx*2)*3));
           drawIC(x, y, icW, icH, color);
         }
       }
     }
   }
-
   await yieldFrame();
   if (myID !== currentRenderID) return;
 
