@@ -635,6 +635,11 @@ input[type="range"]::-webkit-slider-thumb {
       <span class="home-btn-label">GIOCOEFFECT</span>
       <span class="home-btn-sub">destroy · organic · smash</span>
     </button>
+
+    <button class="home-btn" id="btn-circuit" onclick="enterTool('circuit')">
+      <span class="home-btn-label">CIRCUIT</span>
+      <span class="home-btn-sub">pcb · traces · nodes · chip</span>
+    </button>
   </div>
 
   <div id="home-footer">
@@ -667,6 +672,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="mode-btn" data-mode="dots">Dots</button>
         <button class="mode-btn" data-mode="solid">Solid</button>
         <button class="mode-btn" data-mode="giocoeffect">GiocoFX</button>
+        <button class="mode-btn" data-mode="circuit">Circuit</button>
       </div>
 
       <div class="tabs">
@@ -676,6 +682,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="tab mode-dots" data-tab="dots" style="display:none">Dots</button>
         <button class="tab mode-solid" data-tab="solid" style="display:none">Solid</button>
         <button class="tab mode-giocoeffect" data-tab="giocoeffect" style="display:none">GiocoFX</button>
+        <button class="tab mode-circuit" data-tab="circuit" style="display:none">Circuit</button>
         <button class="tab" data-tab="tone">Tone</button>
         <button class="tab" data-tab="export">Export</button>
       </div>
@@ -965,6 +972,37 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="export-btn" id="btn-gfx-use-halftone" style="margin-top:12px">Use result in Halftone</button>
       </div>
 
+      <div class="tab-content" id="tab-circuit">
+        <div class="tool-note">Circuit genera un patrón de PCB sobre tu imagen. La densidad de trazas sigue la luminosidad.</div>
+
+        <div class="toggle-row" id="toggle-circuit-effect"><div class="tog" id="circuit-effect-ind">&#10003;</div> Show Effect</div>
+
+        <div class="section-title">Grid</div>
+        <div class="row"><div class="row-top"><label>Cell Size</label><input type="number" id="num-circuit-cell" value="12" min="4" max="60" step="1"></div><input type="range" id="circuit-cell" min="4" max="60" step="1" value="12"></div>
+
+        <div class="section-title">Trazas</div>
+        <div class="row"><div class="row-top"><label>Density</label><input type="number" id="num-circuit-density" value="128" min="0" max="255" step="1"></div><input type="range" id="circuit-density" min="0" max="255" step="1" value="128"></div>
+        <div class="row"><div class="row-top"><label>Trace Width</label><input type="number" id="num-circuit-width" value="2" min="1" max="8" step="1"></div><input type="range" id="circuit-width" min="1" max="8" step="1" value="2"></div>
+        <div class="row"><div class="row-top"><label>Chaos</label><input type="number" id="num-circuit-chaos" value="30" min="0" max="100" step="1"></div><input type="range" id="circuit-chaos" min="0" max="100" step="1" value="30"></div>
+
+        <div class="section-title">Nodos</div>
+        <div class="row"><div class="row-top"><label>Node Size</label><input type="number" id="num-circuit-node" value="3" min="0" max="12" step="1"></div><input type="range" id="circuit-node" min="0" max="12" step="1" value="3"></div>
+
+        <div class="section-title">Color</div>
+        <div class="sw-row">
+          <span class="sw-label">Color</span>
+          <div class="sw-btns" id="sw-circuit-color">
+            <button class="sw-btn active" data-val="mono">Mono</button>
+            <button class="sw-btn" data-val="invert">Invert</button>
+            <button class="sw-btn" data-val="multi">Multi</button>
+          </div>
+        </div>
+        <div id="circuit-palette-wrap" style="display:none">
+          <div style="font-size:11px;margin-bottom:6px">Palette</div>
+          <div class="palette" id="circuit-palette"></div>
+        </div>
+      </div>
+
       <div class="tab-content" id="tab-export">
         <div class="sw-row">
           <span class="sw-label">Format</span>
@@ -1051,6 +1089,14 @@ const S = {
   solidMode: 'fill',
   solidTolerance: 60,
   solidPickColor: null,
+
+  circuitShowEffect: true,
+  circuitCell: 12,
+  circuitDensity: 128,
+  circuitWidth: 2,
+  circuitChaos: 30,
+  circuitNode: 3,
+  circuitColor: 'mono',
   gfxMode: 'destroy',
   gfxBlur: 4,
   gfxLevels: 100,
@@ -1102,6 +1148,9 @@ const CONTROL_MAP = [
   ['gfx-blob-size','gfxBlobSize'], ['gfx-blob-threshold','gfxBlobThreshold'],
   ['gfx-blob-smooth','gfxBlobSmooth'], ['gfx-blob-despeckle','gfxBlobDespeckle'],
   ['gfx-blob-expand','gfxBlobExpand'],
+  ['circuit-cell','circuitCell'], ['circuit-density','circuitDensity'],
+  ['circuit-width','circuitWidth'], ['circuit-chaos','circuitChaos'],
+  ['circuit-node','circuitNode'],
   ['jpg-quality','jpgQuality']
 ];
 
@@ -1167,7 +1216,10 @@ makeSwitcher('sw-dither-pixel-shape', 'ditherPixelShape');
 makeSwitcher('sw-dither-color', 'ditherColor');
 makeSwitcher('sw-dots-mode', 'dotsMode');
 makeSwitcher('sw-solid-mode', 'solidMode');
-makeSwitcher('sw-gfx-color', 'gfxColor', val => { scheduleRender(); });
+makeSwitcher('sw-circuit-color', 'circuitColor', val => {
+  $('circuit-palette-wrap').style.display = val === 'multi' ? 'block' : 'none';
+  scheduleRender();
+});
 makeSwitcher('sw-gfx-mode', 'gfxMode', val => {
   $('gfx-destroy-params').style.display = val === 'destroy' ? 'block' : 'none';
   $('gfx-blob-params').style.display = val === 'blob' ? 'block' : 'none';
@@ -1214,7 +1266,7 @@ function setMode(mode) {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
 
-  ['halftone','dithering','dots','solid','giocoeffect'].forEach(m => {
+  ['halftone','dithering','dots','solid','giocoeffect','circuit'].forEach(m => {
     document.querySelectorAll('.mode-' + m).forEach(el => {
       el.style.display = mode === m ? '' : 'none';
     });
@@ -1222,7 +1274,7 @@ function setMode(mode) {
 
   const active = document.querySelector('.tab.active[data-tab]');
   const current = active ? active.dataset.tab : 'upload';
-  const modeTabs = ['halftone','dithering','dots','solid','giocoeffect'];
+  const modeTabs = ['halftone','dithering','dots','solid','giocoeffect','circuit'];
 
   if (modeTabs.includes(mode) && modeTabs.filter(t => t !== mode).includes(current)) {
     activateTab('upload');
@@ -1310,6 +1362,29 @@ $('toggle-gfx-effect').addEventListener('click', () => {
   $('gfx-effect-ind').innerHTML = S.gfxShowEffect ? '&#10003;' : '&nbsp;';
   scheduleRender();
 });
+
+$('toggle-circuit-effect').addEventListener('click', () => {
+  S.circuitShowEffect = !S.circuitShowEffect;
+  $('circuit-effect-ind').innerHTML = S.circuitShowEffect ? '&#10003;' : '&nbsp;';
+  scheduleRender();
+});
+
+// Build circuit palette (reuses same PALETTE colors)
+function buildCircuitPalette() {
+  const c = $('circuit-palette');
+  PALETTE.forEach(color => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch active';
+    sw.style.background = color;
+    sw.dataset.color = color;
+    sw.addEventListener('click', () => {
+      sw.classList.toggle('active');
+      scheduleRender();
+    });
+    c.appendChild(sw);
+  });
+}
+buildCircuitPalette();
 
 $('fileInput').addEventListener('change', e => {
   if (e.target.files[0]) loadFile(e.target.files[0]);
@@ -2462,6 +2537,11 @@ async function doRender() {
     renderGiocoEffect(myID);
     return;
   }
+
+  if (S.mode === 'circuit') {
+    renderCircuit(myID);
+    return;
+  }
 }
 
 async function renderGiocoEffect(myID) {
@@ -2701,6 +2781,169 @@ function svgForDithering() {
 }
 
 // ---- EXPORT (FIX: always composite over white canvas) ----
+function getCircuitColors() {
+  if (S.circuitColor === 'invert') return { bg: '#1a1a1a', fg: '#ccff00' };
+  if (S.circuitColor === 'multi') {
+    const swatches = [...document.querySelectorAll('#circuit-palette .swatch.active')];
+    const cols = swatches.map(s => s.dataset.color);
+    return { bg: '#ffffff', fg: cols.length ? cols : ['#1a1a1a'] };
+  }
+  return { bg: '#ffffff', fg: ['#1a1a1a'] };
+}
+
+async function renderCircuit(myID) {
+  const cw = S.canvasW;
+  const ch = S.canvasH;
+  canvas.width = cw;
+  canvas.height = ch;
+
+  const { bg, fg } = getCircuitColors();
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, cw, ch);
+
+  if (!S.circuitShowEffect) {
+    drawSourceToCanvas(canvas, ctx, cw, ch);
+    spinner.classList.remove('visible');
+    return;
+  }
+
+  const cell = Math.max(4, Math.round(S.circuitCell));
+  const cols = Math.ceil(cw / cell);
+  const rows = Math.ceil(ch / cell);
+
+  // Sample image at grid resolution
+  const prep = prepareGray(cols, rows);
+  const gray = prep.gray;
+
+  const traceW = Math.max(1, Math.round(S.circuitWidth));
+  const nodeR = Math.max(0, Math.round(S.circuitNode));
+  const chaos = S.circuitChaos / 100;
+  const densityThresh = S.circuitDensity;
+
+  // Seeded pseudo-random for deterministic output
+  function rand(seed) {
+    const x = Math.sin(seed + 1) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  function colorAt(col, row) {
+    if (Array.isArray(fg)) {
+      return fg[Math.abs(col * 7 + row * 13) % fg.length];
+    }
+    return fg;
+  }
+
+  // Draw horizontal traces
+  ctx.lineCap = 'square';
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols - 1; col++) {
+      const idx = row * cols + col;
+      const lum = gray[idx];
+      if (lum > densityThresh) continue;
+
+      // Chaos: skip some traces randomly
+      if (rand(idx * 3 + 1) < chaos * 0.6) continue;
+
+      const x1 = col * cell + cell / 2;
+      const x2 = (col + 1) * cell + cell / 2;
+      const y = row * cell + cell / 2;
+
+      // Occasional L-bend: go partway, jog vertically, continue
+      const doBend = rand(idx * 5 + 2) < chaos * 0.4;
+
+      ctx.strokeStyle = colorAt(col, row);
+      ctx.lineWidth = traceW;
+      ctx.beginPath();
+
+      if (doBend && row + 1 < rows) {
+        const midX = x1 + (x2 - x1) * (0.3 + rand(idx) * 0.4);
+        const jog = (rand(idx * 2) > 0.5 ? 1 : -1) * cell;
+        ctx.moveTo(x1, y);
+        ctx.lineTo(midX, y);
+        ctx.lineTo(midX, y + jog);
+        ctx.lineTo(x2, y + jog);
+      } else {
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // Draw vertical traces
+  for (let row = 0; row < rows - 1; row++) {
+    for (let col = 0; col < cols; col++) {
+      const idx = row * cols + col;
+      const lum = gray[idx];
+      if (lum > densityThresh) continue;
+      if (rand(idx * 3 + 7) < chaos * 0.5 + 0.2) continue; // vertical traces sparser
+
+      const x = col * cell + cell / 2;
+      const y1 = row * cell + cell / 2;
+      const y2 = (row + 1) * cell + cell / 2;
+
+      ctx.strokeStyle = colorAt(col, row);
+      ctx.lineWidth = traceW;
+      ctx.beginPath();
+      ctx.moveTo(x, y1);
+      ctx.lineTo(x, y2);
+      ctx.stroke();
+    }
+  }
+
+  await yieldFrame();
+  if (myID !== currentRenderID) return;
+
+  // Draw nodes at intersections where traces meet
+  if (nodeR > 0) {
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const idx = row * cols + col;
+        const lum = gray[idx];
+        if (lum > densityThresh) continue;
+        if (rand(idx * 11 + 3) > 0.45) continue; // ~45% of dark cells get a node
+
+        const x = col * cell + cell / 2;
+        const y = row * cell + cell / 2;
+
+        ctx.fillStyle = colorAt(col, row);
+        ctx.beginPath();
+        ctx.arc(x, y, nodeR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Pads on border cells — small rectangles on edges
+  ctx.fillStyle = Array.isArray(fg) ? fg[0] : fg;
+  const padW = Math.max(2, traceW * 3);
+  const padH = Math.max(4, cell * 0.6);
+  for (let col = 0; col < cols; col += Math.max(1, Math.round(3 + rand(col) * 3))) {
+    // top border pad
+    if (gray[col] <= densityThresh) {
+      ctx.fillRect(col * cell + cell / 2 - padW / 2, 0, padW, padH);
+    }
+    // bottom border pad
+    const bidx = (rows - 1) * cols + col;
+    if (gray[bidx] <= densityThresh) {
+      ctx.fillRect(col * cell + cell / 2 - padW / 2, ch - padH, padW, padH);
+    }
+  }
+  for (let row = 0; row < rows; row += Math.max(1, Math.round(3 + rand(row * 7) * 3))) {
+    // left pad
+    if (gray[row * cols] <= densityThresh) {
+      ctx.fillRect(0, row * cell + cell / 2 - padW / 2, padH, padW);
+    }
+    // right pad
+    if (gray[row * cols + cols - 1] <= densityThresh) {
+      ctx.fillRect(cw - padH, row * cell + cell / 2 - padW / 2, padH, padW);
+    }
+  }
+
+  spinner.classList.remove('visible');
+}
+
 function doExport() {
   if (!sourceImg) return;
 
@@ -2799,6 +3042,7 @@ window.enterTool = function(mode) {
   if (mode === 'dots') activateTab('dots');
   if (mode === 'solid') activateTab('solid');
   if (mode === 'giocoeffect') activateTab('giocoeffect');
+  if (mode === 'circuit') activateTab('circuit');
 };
 
 window.goHome = function() {
