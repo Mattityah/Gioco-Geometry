@@ -226,8 +226,11 @@
 
   <!-- EXPORT TAB -->
   <div class="tab-content" id="tab-export">
-    <div class="sw-row"><span class="sw-label">Format</span><div class="sw-btns" id="sw-format"><button class="sw-btn active" data-val="png">PNG</button><button class="sw-btn" data-val="svg">SVG</button></div></div>
-    <div class="tool-note">SVG: Halftone only. CRT exports as PNG.</div>
+    <div class="sw-row"><span class="sw-label">Format</span><div class="sw-btns" id="sw-format"><button class="sw-btn active" data-val="png">PNG</button><button class="sw-btn" data-val="jpg">JPG</button><button class="sw-btn" data-val="svg">SVG</button></div></div>
+    <div class="tool-note">SVG: Halftone only. CRT exports as PNG/JPG.</div>
+    <div id="jpg-quality-wrap" style="display:none">
+      <div class="row"><div class="row-top"><label>JPG Quality</label><input type="number" id="num-jpg-quality" value="92" min="10" max="100" step="1"></div><input type="range" id="jpg-quality" min="10" max="100" step="1" value="92"></div>
+    </div>
     <button class="export-btn" id="btn-export">Export canvas</button>
   </div>
 </div>
@@ -340,7 +343,12 @@ makeSwitcher('sw-relief-blend', 'reliefBlend');
 makeSwitcher('sw-crt-pattern', 'crtPattern');
 makeSwitcher('sw-crt-bloom-blend', 'crtBloomBlend');
 makeSwitcher('sw-grid', 'grid');
-makeSwitcher('sw-format', 'format');
+makeSwitcher('sw-format', 'format', function(val) {
+  document.getElementById('jpg-quality-wrap').style.display = val === 'jpg' ? 'block' : 'none';
+});
+S.jpgQuality = 92;
+document.getElementById('jpg-quality').addEventListener('input', function() { S.jpgQuality = parseInt(this.value); document.getElementById('num-jpg-quality').value = this.value; });
+document.getElementById('num-jpg-quality').addEventListener('change', function() { S.jpgQuality = parseInt(this.value); document.getElementById('jpg-quality').value = this.value; });
 makeSwitcher('sw-shape', 'shape', val => {
   document.getElementById('mix-row').style.display = (val === 'mix' || val === 'custom') ? 'flex' : 'none';
   document.getElementById('custom-mix-row').style.display = val === 'custom' ? 'block' : 'none';
@@ -734,7 +742,16 @@ document.getElementById('btn-export').addEventListener('click',doExport);
 function doExport(){
   if(!sourceImg)return;
   if(S.mode==='crt'&&S.format==='svg'){alert('CRT exports as PNG.');return;}
-  if(S.format==='png'){const a=document.createElement('a');a.download=S.mode==='crt'?'crt.png':'halftone.png';a.href=canvas.toDataURL('image/png');a.click();return;}
+  if(S.format==='png'||S.format==='jpg'){
+    var ext=S.format==='jpg'?'jpg':'png';
+    var mime=S.format==='jpg'?'image/jpeg':'image/png';
+    var quality=S.format==='jpg'?(S.jpgQuality||92)/100:undefined;
+    // For JPG, composite on white background first (canvas may have transparency)
+    var exportCanvas=canvas;
+    if(S.format==='jpg'){exportCanvas=document.createElement('canvas');exportCanvas.width=canvas.width;exportCanvas.height=canvas.height;var ec=exportCanvas.getContext('2d');ec.fillStyle='#ffffff';ec.fillRect(0,0,exportCanvas.width,exportCanvas.height);ec.drawImage(canvas,0,0);}
+    var prefix=S.mode==='crt'?'crt':'halftone';
+    const a=document.createElement('a');a.download=prefix+'.'+ext;a.href=exportCanvas.toDataURL(mime,quality);a.click();return;
+  }
   const size=Math.max(S.canvasW,S.canvasH),step=S.stepSize,diag=Math.ceil(Math.sqrt(2)*size)+step*4;
   const gw=Math.ceil(diag/step)+2,gh=Math.ceil(diag/step)+2;
   let gray=prepareGray(gw,gh);gray=applyRelief(gray,gw,gh);
