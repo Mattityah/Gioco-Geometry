@@ -673,6 +673,7 @@ input[type="range"]::-webkit-slider-thumb {
           <span class="sw-label">Color</span>
           <div class="sw-btns" id="sw-color">
             <button class="sw-btn active" data-val="mono">Mono</button>
+            <button class="sw-btn" data-val="invert">Invert</button>
             <button class="sw-btn" data-val="multi">Multi</button>
           </div>
         </div>
@@ -969,6 +970,7 @@ makeSwitcher('sw-shape', 'shape', val => {
 makeSwitcher('sw-mix', 'mix');
 makeSwitcher('sw-color', 'color', val => {
   $('palette-wrap').style.display = val === 'multi' ? 'block' : 'none';
+  scheduleRender();
 });
 makeSwitcher('sw-texture', 'texture', val => {
   const params = $('texture-params');
@@ -1353,6 +1355,7 @@ function shapeFor(col, row) {
 }
 
 function colorFor(col, row) {
+  if (S.color === 'invert') return '#ffffff';
   if (S.color !== 'multi' || !activeColors.length) return '#1a1a1a';
   return activeColors[Math.abs(col * 31 + row * 17) % activeColors.length];
 }
@@ -1488,7 +1491,7 @@ async function renderHalftone(myID) {
   canvas.width = cw;
   canvas.height = ch;
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = S.color === 'invert' ? '#000000' : '#ffffff';
   ctx.fillRect(0, 0, cw, ch);
 
   if (!S.showHalftoneEffect) {
@@ -1522,9 +1525,9 @@ async function renderHalftone(myID) {
 
   const isMulti = S.color === 'multi' && activeColors.length > 0;
 
-  // For mono: single path fill (fast). For multi: fill per shape.
+  // For mono/invert: single path fill (fast). For multi: fill per shape.
   if (!isMulti) {
-    ctx.fillStyle = '#1a1a1a';
+    ctx.fillStyle = colorFor(0, 0); // '#1a1a1a' for mono, '#ffffff' for invert
     ctx.beginPath();
   }
 
@@ -1574,7 +1577,7 @@ async function renderHalftone(myID) {
       await yieldFrame();
       if (myID !== currentRenderID) return;
       if (!isMulti) {
-        ctx.fillStyle = '#1a1a1a';
+        ctx.fillStyle = colorFor(0, 0);
         ctx.beginPath();
       }
     }
@@ -2099,20 +2102,22 @@ function doExport() {
     ec.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
     ec.drawImage(canvas, 0, 0);
   } else {
-    // PNG: fondo transparente — extraer solo las formas oscuras como alfa
-    // 1. Dibujar el canvas actual
+    // PNG: fondo transparente — extraer solo las formas como alfa
     ec.drawImage(canvas, 0, 0);
-    // 2. Leer los píxeles y convertir la luminosidad en canal alfa
-    //    Píxel blanco (255,255,255) → alfa 0 (transparente)
-    //    Píxel negro (0,0,0) → alfa 255 (opaco)
-    //    Colores intermedios y de paleta → alfa según luminosidad invertida
     const imgData = ec.getImageData(0, 0, exportCanvas.width, exportCanvas.height);
     const d = imgData.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-      const alpha = 255 - lum; // blanco → 0, negro → 255
-      // Preservar el color RGB original, solo ajustar alfa
-      d[i + 3] = Math.round(alpha);
+    if (S.color === 'invert') {
+      // Fondo negro, formas blancas → blanco opaco, negro transparente
+      for (let i = 0; i < d.length; i += 4) {
+        const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+        d[i + 3] = Math.round(lum); // negro→0 (transparente), blanco→255 (opaco)
+      }
+    } else {
+      // Fondo blanco, formas oscuras/color → blanco transparente, formas opacas
+      for (let i = 0; i < d.length; i += 4) {
+        const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+        d[i + 3] = Math.round(255 - lum); // blanco→0 (transparente), negro→255 (opaco)
+      }
     }
     ec.putImageData(imgData, 0, 0);
   }
