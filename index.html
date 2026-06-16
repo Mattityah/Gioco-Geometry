@@ -442,6 +442,7 @@
         <button class="sw-btn" data-val="circle">●</button>
         <button class="sw-btn" data-val="arrow">◀</button>
         <button class="sw-btn" data-val="mix">✦</button>
+        <button class="sw-btn" data-val="custom">Custom</button>
       </div>
     </div>
     <div class="sw-row" id="mix-row" style="display:none">
@@ -449,6 +450,18 @@
       <div class="sw-btns" id="sw-mix">
         <button class="sw-btn active" data-val="ordered">Ordered</button>
         <button class="sw-btn" data-val="random">Random</button>
+      </div>
+    </div>
+    <div id="custom-mix-row" style="display:none">
+      <div class="section-title">Custom Mix</div>
+      <div class="toggle-row custom-shape-toggle" data-shape="square">
+        <div class="tog" id="custom-square-ind">✓</div> Square
+      </div>
+      <div class="toggle-row custom-shape-toggle" data-shape="circle">
+        <div class="tog" id="custom-circle-ind">&nbsp;</div> Circle
+      </div>
+      <div class="toggle-row custom-shape-toggle" data-shape="arrow">
+        <div class="tog" id="custom-arrow-ind">✓</div> Arrow
       </div>
     </div>
     <div class="row">
@@ -528,7 +541,8 @@ const S = {
   relief: false, reliefDepth: 120, reliefAngle: 135, reliefThreshold: 0.15, reliefBlend: 'overlay',
   dither: 'floyd', grid: 'regular', shape: 'square',
   mix: 'ordered', color: 'mono', format: 'png',
-  showEffect: true, invert: false, luminanceSize: false
+  showEffect: true, invert: false, luminanceSize: false,
+  customMix: { square: true, circle: false, arrow: true }
 };
 
 const PALETTE = ['#2e5fa3','#c95f2a','#2a6b3a','#d4a0b0','#7a3b2e','#c8b040','#6b4a8a'];
@@ -613,7 +627,8 @@ makeSwitcher('sw-relief-blend', 'reliefBlend');
 makeSwitcher('sw-grid', 'grid');
 makeSwitcher('sw-format', 'format');
 makeSwitcher('sw-shape', 'shape', val => {
-  document.getElementById('mix-row').style.display = val === 'mix' ? 'flex' : 'none';
+  document.getElementById('mix-row').style.display = (val === 'mix' || val === 'custom') ? 'flex' : 'none';
+  document.getElementById('custom-mix-row').style.display = val === 'custom' ? 'block' : 'none';
 });
 makeSwitcher('sw-mix', 'mix');
 makeSwitcher('sw-color', 'color', val => {
@@ -643,6 +658,32 @@ document.getElementById('toggle-luminance-size').addEventListener('click', () =>
   document.getElementById('luminance-size-ind').textContent = S.luminanceSize ? '✓' : ' ';
   document.getElementById('luminance-size-wrap').style.display = S.luminanceSize ? 'block' : 'none';
   scheduleRender();
+});
+
+// ---- CUSTOM MIX SHAPES ----
+function getCustomMixPool() {
+  const pool = Object.entries(S.customMix)
+    .filter(([, enabled]) => enabled)
+    .map(([shape]) => shape);
+  return pool.length ? pool : ['square'];
+}
+
+function syncCustomMixUI() {
+  ['square', 'circle', 'arrow'].forEach(shape => {
+    const ind = document.getElementById(`custom-${shape}-ind`);
+    if (ind) ind.textContent = S.customMix[shape] ? '✓' : ' ';
+  });
+}
+
+document.querySelectorAll('.custom-shape-toggle').forEach(row => {
+  row.addEventListener('click', () => {
+    const shape = row.dataset.shape;
+    const selectedCount = Object.values(S.customMix).filter(Boolean).length;
+    if (S.customMix[shape] && selectedCount <= 1) return;
+    S.customMix[shape] = !S.customMix[shape];
+    syncCustomMixUI();
+    scheduleRender();
+  });
 });
 
 // ---- PALETTE ----
@@ -847,12 +888,15 @@ function dither(gray, gw, gh) {
 // ---- SHAPE ----
 const MIX = ['square','circle','arrow'];
 function shapeFor(col, row) {
-  if (S.shape !== 'mix') return S.shape;
+  if (S.shape !== 'mix' && S.shape !== 'custom') return S.shape;
+
+  const pool = S.shape === 'custom' ? getCustomMixPool() : MIX;
+
   if (S.mix === 'random') {
     const s = ((col*2654435761)^(row*2246822519))>>>0;
-    return MIX[s%3];
+    return pool[s % pool.length];
   }
-  return MIX[(col+row)%3];
+  return pool[(col + row) % pool.length];
 }
 function colorFor(col) {
   if (S.color === 'mono' || !activeColors.length) return '#1a1a1a';
@@ -1092,13 +1136,14 @@ const DEFAULTS = {
   relief:false, reliefDepth:120, reliefAngle:135, reliefThreshold:0.15, reliefBlend:'overlay',
   stepSize:8, shapeSize:5, minShapeSize:1, maxShapeSize:9, cornerRadius:1, gridAngle:0, noise:0,
   dither:'floyd', grid:'regular', shape:'square', mix:'ordered',
-  color:'mono', showEffect:true, invert:false, luminanceSize:false
+  color:'mono', showEffect:true, invert:false, luminanceSize:false,
+  customMix:{ square:true, circle:false, arrow:true }
 };
 
 document.getElementById('reset-tab').addEventListener('click', () => {
   if (!confirm('Reset all parameters to defaults?')) return;
 
-  Object.assign(S, DEFAULTS);
+  Object.assign(S, DEFAULTS, { customMix: { ...DEFAULTS.customMix } });
   S.canvasW = 800; S.canvasH = 800;
 
   // Sync sliders + number inputs
@@ -1142,6 +1187,8 @@ document.getElementById('reset-tab').addEventListener('click', () => {
 
   // Hide conditional panels
   document.getElementById('mix-row').style.display = 'none';
+  document.getElementById('custom-mix-row').style.display = 'none';
+  syncCustomMixUI();
   document.getElementById('palette-wrap').style.display = 'none';
   document.getElementById('relief-wrap').style.display = 'none';
   document.getElementById('luminance-size-wrap').style.display = 'none';
