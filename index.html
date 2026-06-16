@@ -372,6 +372,44 @@
       </div>
       <input type="range" id="threshold" min="0" max="255" step="1" value="128">
     </div>
+
+    <div class="section-title">Relief</div>
+    <div class="toggle-row" id="toggle-relief">
+      <div class="tog" id="relief-ind">&nbsp;</div> Enable Relief
+    </div>
+    <div id="relief-wrap" style="display:none">
+      <div class="row">
+        <div class="row-top">
+          <label>Depth</label>
+          <input type="number" id="num-relief-depth" value="120" min="0" max="500" step="1">
+        </div>
+        <input type="range" id="relief-depth" min="0" max="500" step="1" value="120">
+      </div>
+      <div class="row">
+        <div class="row-top">
+          <label>Light Angle</label>
+          <input type="number" id="num-relief-angle" value="135" min="0" max="360" step="1">
+        </div>
+        <input type="range" id="relief-angle" min="0" max="360" step="1" value="135">
+      </div>
+      <div class="row">
+        <div class="row-top">
+          <label>Relief Threshold</label>
+          <input type="number" id="num-relief-threshold" value="0.15" min="0" max="4" step="0.01">
+        </div>
+        <input type="range" id="relief-threshold" min="0" max="4" step="0.01" value="0.15">
+      </div>
+      <div class="sw-row">
+        <span class="sw-label">Blend</span>
+        <div class="sw-btns" id="sw-relief-blend">
+          <button class="sw-btn" data-val="replace">Replace</button>
+          <button class="sw-btn active" data-val="overlay">Overlay</button>
+          <button class="sw-btn" data-val="multiply">Multiply</button>
+          <button class="sw-btn" data-val="add">Add</button>
+        </div>
+      </div>
+    </div>
+
     <div class="sw-row">
       <span class="sw-label">Grid Type</span>
       <div class="sw-btns" id="sw-grid">
@@ -487,6 +525,7 @@ const S = {
   imgScale: 100, imgX: 0, imgY: 0, imgRotation: 0,
   threshold: 128, stepSize: 8, shapeSize: 5, cornerRadius: 1, minShapeSize: 1, maxShapeSize: 9,
   gridAngle: 0, noise: 0,
+  relief: false, reliefDepth: 120, reliefAngle: 135, reliefThreshold: 0.15, reliefBlend: 'overlay',
   dither: 'floyd', grid: 'regular', shape: 'square',
   mix: 'ordered', color: 'mono', format: 'png',
   showEffect: true, invert: false, luminanceSize: false
@@ -509,6 +548,7 @@ const spinner = document.getElementById('spinner');
   ['blur','blur'],['contrast','contrast'],
   ['brightness','brightness'],['gamma','gamma'],['img-scale','imgScale'],
   ['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],['threshold','threshold'],
+  ['relief-depth','reliefDepth'],['relief-angle','reliefAngle'],['relief-threshold','reliefThreshold'],
   ['step-size','stepSize'],['shape-size','shapeSize'],['min-shape-size','minShapeSize'],['max-shape-size','maxShapeSize'],
   ['corner-radius','cornerRadius'],['grid-angle','gridAngle'],['noise','noise']
 ].forEach(([id, key]) => {
@@ -569,6 +609,7 @@ function makeSwitcher(id, key, extra) {
   });
 }
 makeSwitcher('sw-dither', 'dither');
+makeSwitcher('sw-relief-blend', 'reliefBlend');
 makeSwitcher('sw-grid', 'grid');
 makeSwitcher('sw-format', 'format');
 makeSwitcher('sw-shape', 'shape', val => {
@@ -583,6 +624,12 @@ makeSwitcher('sw-color', 'color', val => {
 document.getElementById('toggle-effect').addEventListener('click', () => {
   S.showEffect = !S.showEffect;
   document.getElementById('effect-ind').textContent = S.showEffect ? '✓' : ' ';
+  scheduleRender();
+});
+document.getElementById('toggle-relief').addEventListener('click', () => {
+  S.relief = !S.relief;
+  document.getElementById('relief-ind').textContent = S.relief ? '✓' : ' ';
+  document.getElementById('relief-wrap').style.display = S.relief ? 'block' : 'none';
   scheduleRender();
 });
 document.getElementById('toggle-invert').addEventListener('click', () => {
@@ -711,6 +758,53 @@ function prepareGray(gw, gh) {
     gray[i] = S.invert ? 255-l : l;
   }
   return gray;
+}
+
+
+function clamp255(v) {
+  return Math.max(0, Math.min(255, v));
+}
+
+function blendReliefValue(base, relief) {
+  if (S.reliefBlend === 'replace') return relief;
+  if (S.reliefBlend === 'multiply') return clamp255(base * (relief / 255));
+  if (S.reliefBlend === 'add') return clamp255(base + (relief - 128));
+  // Overlay-style: keeps original tonal range but injects depth around edges.
+  const normalizedRelief = (relief - 128) / 128;
+  const strength = Math.abs(normalizedRelief);
+  const overlay = base < 128
+    ? (2 * base * relief / 255)
+    : (255 - 2 * (255 - base) * (255 - relief) / 255);
+  return clamp255(base * (1 - strength) + overlay * strength);
+}
+
+function applyRelief(gray, gw, gh) {
+  if (!S.relief || S.reliefDepth <= 0) return gray;
+
+  const out = new Float32Array(gray.length);
+  const angle = S.reliefAngle * Math.PI / 180;
+  const sx = Math.round(Math.cos(angle));
+  const sy = Math.round(Math.sin(angle));
+  const depth = S.reliefDepth;
+  const threshold = S.reliefThreshold;
+
+  for (let y = 0; y < gh; y++) {
+    for (let x = 0; x < gw; x++) {
+      const i = y * gw + x;
+      const nx = Math.max(0, Math.min(gw - 1, x + sx));
+      const ny = Math.max(0, Math.min(gh - 1, y + sy));
+      const ni = ny * gw + nx;
+      const delta = gray[ni] - gray[i];
+
+      let reliefValue = 128;
+      if (Math.abs(delta) > threshold) {
+        reliefValue = clamp255(128 + delta * depth / 255);
+      }
+
+      out[i] = blendReliefValue(gray[i], reliefValue);
+    }
+  }
+  return out;
 }
 
 // ---- DITHERING ----
@@ -911,7 +1005,8 @@ async function doRender() {
     return;
   }
 
-  const gray = prepareGray(gw, gh);
+  let gray = prepareGray(gw, gh);
+  gray = applyRelief(gray, gw, gh);
   await yieldFrame(); if (myID !== currentRenderID) return;
 
   const mask = dither(gray, gw, gh);
@@ -969,9 +1064,10 @@ function doExport() {
     const size = Math.max(S.canvasW,S.canvasH), step = S.stepSize;
     const diag = Math.ceil(Math.sqrt(2)*size)+step*4;
     const gw = Math.ceil(diag/step)+2, gh = Math.ceil(diag/step)+2;
-    const gray = prepareGray(gw,gh);
+    let gray = prepareGray(gw,gh);
+    gray = applyRelief(gray,gw,gh);
     const mask = dither(gray,gw,gh);
-    const cells = collectCells(mask,gw,gh,S.canvasW,S.canvasH);
+    const cells = collectCells(mask,gw,gh,S.canvasW,S.canvasH,gray);
     const r = S.shapeSize, cr = S.cornerRadius;
     let s = '';
     cells.forEach(({shape,x,y,color,lum}) => {
@@ -993,6 +1089,7 @@ function doExport() {
 // ---- RESET ----
 const DEFAULTS = {
   blur:0, contrast:1, brightness:1, gamma:1, imgScale:100, imgX:0, imgY:0, imgRotation:0, threshold:128,
+  relief:false, reliefDepth:120, reliefAngle:135, reliefThreshold:0.15, reliefBlend:'overlay',
   stepSize:8, shapeSize:5, minShapeSize:1, maxShapeSize:9, cornerRadius:1, gridAngle:0, noise:0,
   dither:'floyd', grid:'regular', shape:'square', mix:'ordered',
   color:'mono', showEffect:true, invert:false, luminanceSize:false
@@ -1007,7 +1104,8 @@ document.getElementById('reset-tab').addEventListener('click', () => {
   // Sync sliders + number inputs
   [
     ['blur','blur'],['contrast','contrast'],['brightness','brightness'],
-    ['gamma','gamma'],['img-scale','imgScale'],['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],['threshold','threshold'],['step-size','stepSize'],
+    ['gamma','gamma'],['img-scale','imgScale'],['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],['threshold','threshold'],
+    ['relief-depth','reliefDepth'],['relief-angle','reliefAngle'],['relief-threshold','reliefThreshold'],['step-size','stepSize'],
     ['shape-size','shapeSize'],['min-shape-size','minShapeSize'],['max-shape-size','maxShapeSize'],['corner-radius','cornerRadius'],
     ['grid-angle','gridAngle'],['noise','noise']
   ].forEach(([id, key]) => {
@@ -1030,6 +1128,7 @@ document.getElementById('reset-tab').addEventListener('click', () => {
     });
   }
   resetSwitcher('sw-dither', 'floyd');
+  resetSwitcher('sw-relief-blend', 'overlay');
   resetSwitcher('sw-grid', 'regular');
   resetSwitcher('sw-shape', 'square');
   resetSwitcher('sw-mix', 'ordered');
@@ -1037,12 +1136,14 @@ document.getElementById('reset-tab').addEventListener('click', () => {
 
   // Sync toggles
   document.getElementById('effect-ind').textContent = '✓';
+  document.getElementById('relief-ind').textContent = ' ';
   document.getElementById('invert-ind').textContent = ' ';
   document.getElementById('luminance-size-ind').textContent = ' ';
 
   // Hide conditional panels
   document.getElementById('mix-row').style.display = 'none';
   document.getElementById('palette-wrap').style.display = 'none';
+  document.getElementById('relief-wrap').style.display = 'none';
   document.getElementById('luminance-size-wrap').style.display = 'none';
 
   scheduleRender();
@@ -1078,7 +1179,8 @@ function updateDitherPreview() {
     if (S.gamma !== 1) l = 255 * Math.pow(l/255, S.gamma);
     gray[i] = S.invert ? 255-l : l;
   }
-  const mask = dither(gray, size, size);
+  const processedGray = applyRelief(gray, size, size);
+  const mask = dither(processedGray, size, size);
 
   // Draw B&W result
   const out = ditherCtx.createImageData(size, size);
@@ -1098,7 +1200,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
 });
 
 // Also update on relevant param changes
-['threshold','blur','contrast','brightness','gamma'].forEach(id => {
+['threshold','blur','contrast','brightness','gamma','relief-depth','relief-angle','relief-threshold'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', () => {
     if (document.getElementById('tab-effect').classList.contains('active')) {
       updateDitherPreview();
