@@ -567,24 +567,35 @@ var BORDER_CHARS = {
   rounded: { tl:'╭',tr:'╮',bl:'╰',br:'╯',h:'─',v:'│' }
 };
 
-document.getElementById('ascii-cols').addEventListener('input', function() { asciiState.cols = parseInt(this.value); document.getElementById('num-ascii-cols').value = this.value; });
-document.getElementById('num-ascii-cols').addEventListener('change', function() { asciiState.cols = parseInt(this.value); document.getElementById('ascii-cols').value = this.value; });
-document.getElementById('ascii-rows').addEventListener('input', function() { asciiState.rows = parseInt(this.value); document.getElementById('num-ascii-rows').value = this.value; });
-document.getElementById('num-ascii-rows').addEventListener('change', function() { asciiState.rows = parseInt(this.value); document.getElementById('ascii-rows').value = this.value; });
-document.getElementById('ascii-charset').addEventListener('input', function() { asciiState.charset = this.value; });
+function scheduleASCII() {
+  if (document.getElementById('tab-ascii').classList.contains('active') && sourceImg) {
+    clearTimeout(asciiJob);
+    asciiJob = setTimeout(renderASCII, 120);
+  }
+}
+var asciiJob = null;
+
+document.getElementById('ascii-cols').addEventListener('input', function() { asciiState.cols = parseInt(this.value); document.getElementById('num-ascii-cols').value = this.value; scheduleASCII(); });
+document.getElementById('num-ascii-cols').addEventListener('change', function() { asciiState.cols = parseInt(this.value); document.getElementById('ascii-cols').value = this.value; scheduleASCII(); });
+document.getElementById('ascii-rows').addEventListener('input', function() { asciiState.rows = parseInt(this.value); document.getElementById('num-ascii-rows').value = this.value; scheduleASCII(); });
+document.getElementById('num-ascii-rows').addEventListener('change', function() { asciiState.rows = parseInt(this.value); document.getElementById('ascii-rows').value = this.value; scheduleASCII(); });
+document.getElementById('ascii-charset').addEventListener('input', function() { asciiState.charset = this.value; scheduleASCII(); });
 document.getElementById('toggle-ascii-borders').addEventListener('click', function() {
   asciiState.borders = !asciiState.borders;
   document.getElementById('ascii-borders-ind').innerHTML = asciiState.borders ? '&#10003;' : '&nbsp;';
   document.getElementById('ascii-border-opts').style.display = asciiState.borders ? 'block' : 'none';
+  scheduleASCII();
 });
 document.getElementById('toggle-ascii-comments').addEventListener('click', function() {
   asciiState.comments = !asciiState.comments;
   document.getElementById('ascii-comments-ind').innerHTML = asciiState.comments ? '&#10003;' : '&nbsp;';
+  scheduleASCII();
 });
 document.getElementById('sw-ascii-border').querySelectorAll('.sw-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {
     document.getElementById('sw-ascii-border').querySelectorAll('.sw-btn').forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active'); asciiState.borderStyle = btn.dataset.val;
+    scheduleASCII();
   });
 });
 
