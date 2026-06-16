@@ -182,7 +182,7 @@
   </div>
   <!-- TAB: ASCII -->
   <div class="tab-content" id="tab-ascii">
-    <div id="ascii-output" style="font-family:'Courier New',monospace;font-size:7px;line-height:1.1;white-space:pre;overflow:auto;background:#f0ede8;color:#1a1a1a;padding:8px;border:1px solid var(--border);min-height:120px;max-height:300px;margin-bottom:10px;word-break:break-all;">upload an image and click render</div>
+    <div id="ascii-output" style="font-family:'Courier New',monospace;font-size:6px;line-height:1.1;white-space:pre;overflow:hidden;background:#fff;color:#1a1a1a;padding:6px;border:1px solid var(--border);height:160px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;text-align:center;">upload an image and click render</div>
     <div class="row"><div class="row-top"><label>Columns</label><input type="number" id="num-ascii-cols" value="80" min="20" max="200" step="1"></div><input type="range" id="ascii-cols" min="20" max="200" step="1" value="80"></div>
     <div class="row"><div class="row-top"><label>Rows</label><input type="number" id="num-ascii-rows" value="40" min="10" max="150" step="1"></div><input type="range" id="ascii-rows" min="10" max="150" step="1" value="40"></div>
     <div class="row-top" style="margin-bottom:4px"><label style="font-size:11px">Charset</label></div>
@@ -660,15 +660,26 @@ function renderASCII() {
 
   // Draw to main canvas
   canvas.width = S.canvasW; canvas.height = S.canvasH;
-  ctx.fillStyle = '#f0ede8'; ctx.fillRect(0,0,S.canvasW,S.canvasH);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,S.canvasW,S.canvasH);
   ctx.fillStyle = '#1a1a1a';
-  var cw = S.canvasW / cols2, ch = S.canvasH / rows2;
-  var fs = Math.max(4, Math.floor(ch * 0.85));
-  ctx.font = fs + 'px monospace';
+  // Cell size based on canvas dimensions
+  var cellW = S.canvasW / cols2;
+  var cellH = S.canvasH / rows2;
+  // Font size: fill cell height, monospace chars are ~0.6x wide
+  // We want char to fill cellW, so fs = cellW / 0.6
+  var fsByW = Math.floor(cellW / 0.6);
+  var fsByH = Math.floor(cellH);
+  var fs = Math.max(4, Math.min(fsByW, fsByH));
+  ctx.font = fs + 'px "Courier New", monospace';
   ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  // Measure actual char width to center in cell
+  var charW = ctx.measureText('M').width;
+  var offsetX = (cellW - charW) / 2;
+  var offsetY = (cellH - fs) / 2;
   grid.forEach(function(row3, r) {
     row3.forEach(function(ch2, c) {
-      if (ch2 !== ' ') ctx.fillText(ch2, c*cw, r*ch);
+      if (ch2 !== ' ') ctx.fillText(ch2, c * cellW + offsetX, r * cellH + offsetY);
     });
   });
 }
