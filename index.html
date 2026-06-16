@@ -774,7 +774,7 @@ input[type="range"]::-webkit-slider-thumb {
       </div>
 
       <div class="tab-content" id="tab-solid">
-        <div class="tool-note">SOLID converts sketches, photos and thin line drawings into a clean black-fill mask for Halftone, Dithering and Dots.</div>
+        <div class="tool-note">SOLID convierte imágenes en una máscara de relleno negro. <b>Edge+Fill</b>: Stroke Weight controla la simplificación (más = formas más grandes/simples), Threshold controla cuántas regiones se detectan.</div>
 
         <div class="toggle-row" id="toggle-solid-effect"><div class="tog" id="solid-effect-ind">&#10003;</div> Show Solid Effect</div>
 
@@ -1737,8 +1737,39 @@ async function renderDots(myID) {
 }
 
 
+function gaussianBlur(gray, w, h, radius) {
+  // Simple box blur approximation of gaussian, applied 3x for quality
+  if (radius <= 0) return gray;
+  const out = new Float32Array(gray);
+  const r = Math.round(radius);
+  for (let pass = 0; pass < 3; pass++) {
+    const tmp = new Float32Array(out);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let sum = 0, count = 0;
+        for (let dx = -r; dx <= r; dx++) {
+          const nx = x + dx;
+          if (nx >= 0 && nx < w) { sum += tmp[y * w + nx]; count++; }
+        }
+        out[y * w + x] = sum / count;
+      }
+    }
+    const tmp2 = new Float32Array(out);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let sum = 0, count = 0;
+        for (let dy = -r; dy <= r; dy++) {
+          const ny = y + dy;
+          if (ny >= 0 && ny < h) { sum += tmp2[ny * w + x]; count++; }
+        }
+        out[y * w + x] = sum / count;
+      }
+    }
+  }
+  return out;
+}
+
 function sobelEdges(gray, w, h) {
-  // Sobel edge detection — returns edge strength 0..255
   const out = new Float32Array(w * h);
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
@@ -1752,8 +1783,6 @@ function sobelEdges(gray, w, h) {
 }
 
 function floodFillBackground(mask, w, h) {
-  // BFS from all border pixels that are 0 (background) — marks them as 2
-  // Anything remaining as 0 after this is an enclosed region → fill to 1
   const bg = new Uint8Array(mask);
   const queue = [];
 
@@ -1775,7 +1804,6 @@ function floodFillBackground(mask, w, h) {
     if (y < h - 1) enqueue(x, y + 1);
   }
 
-  // bg=2 → true background (stays 0), bg=0 → enclosed → fill to 1, bg=1 → edge
   const out = new Uint8Array(w * h);
   for (let i = 0; i < out.length; i++) {
     out[i] = bg[i] !== 2 ? 1 : 0;
@@ -1787,35 +1815,51 @@ function solidBuildMask(gray, w, h) {
   let mask = new Uint8Array(w * h);
 
   if (S.solidMode === 'edge') {
-    // 1. Sobel on grayscale
-    const edges = sobelEdges(gray, w, h);
+    // Strategy: blur heavily to kill texture → posterize to N levels →
+    // extract region boundaries → dilate to close gaps → flood fill regions
 
-    // Normalize and threshold edges
+    // 1. Strong blur to suppress internal texture (pinceladas, color variation)
+    //    Blur radius scales with strokeWeight so user controls simplification
+    const blurR = Math.max(2, S.solidStrokeWeight * 2);
+    const blurred = gaussianBlur(gray, w, h, blurR);
+
+    // 2. Posterize to few levels — reduces image to flat color regions
+    //    Threshold controls how many distinct regions: low = more regions, high = fewer
+    const levels = Math.max(2, Math.round(2 + (1 - S.solidThreshold / 255) * 6)); // 2..8 levels
+    const posterized = new Float32Array(blurred.length);
+    for (let i = 0; i < blurred.length; i++) {
+      posterized[i] = Math.round((blurred[i] / 255) * (levels - 1)) / (levels - 1) * 255;
+    }
+
+    // 3. Sobel on posterized image → clean region boundary edges
+    const edges = sobelEdges(posterized, w, h);
+
+    // Find max for normalization
     let maxE = 0;
     for (let i = 0; i < edges.length; i++) if (edges[i] > maxE) maxE = edges[i];
-    const edgeThresh = maxE * (S.solidThreshold / 255);
 
+    // Low threshold to catch all region boundaries (not just strong ones)
+    const edgeThresh = maxE * 0.05;
     for (let i = 0; i < edges.length; i++) {
       mask[i] = edges[i] > edgeThresh ? 1 : 0;
     }
 
-    // 2. Dilate edges to close gaps (controlled by strokeWeight)
+    // 4. Dilate to close any remaining gaps in contours
     const sw = Math.max(1, Math.round(S.solidStrokeWeight));
     mask = morph(mask, w, h, sw, 'dilate');
 
-    // 3. Smooth to clean up jagged edges
+    // 5. Smooth contours
     const smooth = Math.max(0, Math.round(S.solidSmooth));
     for (let i = 0; i < smooth; i++) mask = majority(mask, w, h);
 
-    // 4. Flood fill enclosed regions
+    // 6. Flood fill — fill all enclosed regions
     mask = floodFillBackground(mask, w, h);
 
-    // 5. Post smooth + despeckle
+    // 7. Post-process
     for (let i = 0; i < smooth; i++) mask = majority(mask, w, h);
     const desp = Math.max(0, Math.round(S.solidDespeckle));
     if (desp > 0) mask = removeSpeckles(mask, w, h, desp);
 
-    // 6. Expand/erode final shape
     const exp = Math.round(S.solidExpand);
     if (exp > 0) mask = morph(mask, w, h, exp, 'dilate');
     if (exp < 0) mask = morph(mask, w, h, Math.abs(exp), 'erode');
