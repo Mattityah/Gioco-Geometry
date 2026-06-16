@@ -11,17 +11,17 @@
     --bg: #f0ede8; --panel: #e8e4de; --border: #ccc8c0;
     --text: #1a1a1a; --muted: #888;
     --font: 'Courier New', monospace;
-    --panel-h: 340px;
+    --panel-h: 48vh;
   }
   html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
-  body { font-family: var(--font); background: var(--bg); color: var(--text); }
+  body { font-family: var(--font); background: #ffffff; color: var(--text); }
   .canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; background: #d8d4ce; padding: 16px; }
   .canvas-outer { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
   #canvas { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; box-shadow: 0 2px 20px rgba(0,0,0,0.18); }
   .hint { position: absolute; font-size: 12px; color: var(--muted); text-align: center; pointer-events: none; }
   .panel { background: var(--panel); border-top: 1px solid var(--border); height: var(--panel-h); display: flex; flex-direction: column; position: relative; }
   .mode-switch { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .mode-btn { flex: 1; font-family: var(--font); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 8px 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 3px; cursor: pointer; }
+  .mode-btn { flex: 1; font-family: var(--font); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; padding: 6px 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 3px; cursor: pointer; }
   .mode-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   .tool-note { font-size: 10px; color: var(--muted); line-height: 1.45; margin: 6px 0 12px; }
   .handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 8px auto 4px; flex-shrink: 0; cursor: pointer; }
@@ -72,20 +72,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
+  background: #ffffff;
   position: relative;
   gap: 0;
 }
 #home-logo {
-  width: min(500px, 85vw);
-  max-height: 50vh;
+  width: min(720px, 94vw);
+  max-height: 62vh;
   object-fit: contain;
   display: block;
-  margin-bottom: 48px;
+  margin-bottom: 32px;
 }
 /* Logo placeholder when image fails to load */
 #home-logo-placeholder {
-  width: min(500px, 85vw);
+  width: min(720px, 94vw);
   height: 180px;
   display: flex;
   align-items: center;
@@ -98,7 +98,8 @@
 }
 #home-buttons {
   display: flex;
-  gap: 14px;
+  gap: 12px;
+  width: min(500px, 88vw);
 }
 .home-btn {
   font-family: var(--font);
@@ -106,13 +107,13 @@
   border: 1px solid var(--text);
   color: var(--text);
   cursor: pointer;
-  padding: 20px 44px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
   transition: background 0.15s, color 0.15s;
-  min-width: 160px;
+  flex: 1;
 }
 .home-btn:hover {
   background: var(--text);
@@ -166,6 +167,10 @@
   overflow: hidden;
 }
 /* desktop: tool-inner is row */
+/* Mobile: tool is vertical stack */
+#tool-inner {
+  flex-direction: column;
+}
 @media (min-width: 700px) {
   #tool-inner { flex-direction: row; }
 }
@@ -775,7 +780,7 @@ async function doRender(){
 
 
 // ---- STYLE PRESETS ----
-function applyStylePreset(name) {
+window.applyStylePreset = function(name) {
   var c = document.getElementById('palette');
 
   function setPalette(colors) {
@@ -1106,7 +1111,7 @@ var PRESET_KEYS = [
   'format','jpgQuality'
 ];
 
-function exportPreset() {
+window.exportPreset = function() {
   var preset = {};
   PRESET_KEYS.forEach(function(k) { preset[k] = S[k]; });
   // Also save active palette colors
@@ -1312,7 +1317,7 @@ document.getElementById('preset-file-input').addEventListener('change', function
 
 
 // ── HOME NAVIGATION ──────────────────────────────────────────
-function enterTool(mode) {
+window.enterTool = function(mode) {
   document.getElementById('home-screen').style.display = 'none';
   var ts = document.getElementById('tool-screen');
   ts.style.display = 'flex';
@@ -1321,7 +1326,7 @@ function enterTool(mode) {
   setMode(mode);
 }
 
-function goHome() {
+window.goHome = function() {
   document.getElementById('tool-screen').style.display = 'none';
   document.getElementById('tool-screen').classList.remove('visible');
   document.getElementById('home-screen').style.display = 'flex';
