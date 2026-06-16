@@ -92,6 +92,39 @@
     letter-spacing: .08em;
   }
 
+  /* ---- MODE SWITCH ---- */
+  .mode-switch {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .mode-btn {
+    flex: 1;
+    font-family: var(--font);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 8px 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .mode-btn.active {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+  }
+  .tool-note {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.45;
+    margin: 6px 0 12px;
+  }
+
   /* Drag handle */
   .handle {
     width: 36px; height: 4px;
@@ -294,10 +327,17 @@
     </div>
   </div>
 
+  <div class="mode-switch">
+    <button class="mode-btn active" data-mode="halftone">Halftone</button>
+    <button class="mode-btn" data-mode="crt">CRT</button>
+  </div>
+
   <div class="tabs">
     <button class="tab active" data-tab="upload">Upload</button>
-    <button class="tab" data-tab="effect">Effect</button>
-    <button class="tab" data-tab="shape">Shape</button>
+    <button class="tab mode-halftone" data-tab="effect">Effect</button>
+    <button class="tab mode-halftone" data-tab="shape">Shape</button>
+    <button class="tab mode-crt" data-tab="crt" style="display:none">CRT</button>
+    <button class="tab mode-crt" data-tab="bloom" style="display:none">Bloom</button>
     <button class="tab" data-tab="export">Export</button>
     <button class="tab" id="reset-tab" title="Reset all parameters" style="flex:0;padding:6px 10px;font-size:14px">↺</button>
   </div>
@@ -561,6 +601,135 @@
     </div>
   </div>
 
+  <!-- TAB: CRT -->
+  <div class="tab-content" id="tab-crt">
+    <div class="tool-note">CRT is a separate render mode. It uses the same uploaded image and image transform, but renders a screen simulation instead of halftone geometry.</div>
+    <div class="toggle-row" id="toggle-crt-effect">
+      <div class="tog" id="crt-effect-ind">✓</div> Show CRT Effect
+    </div>
+    <div class="sw-row">
+      <span class="sw-label">Type</span>
+      <div class="sw-btns" id="sw-crt-pattern">
+        <button class="sw-btn active" data-val="monitor">Monitor</button>
+        <button class="sw-btn" data-val="tv">TV</button>
+        <button class="sw-btn" data-val="lcd">LCD</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Distortion</label>
+        <input type="number" id="num-crt-distortion" value="0.02" min="0" max="0.08" step="0.01">
+      </div>
+      <input type="range" id="crt-distortion" min="0" max="0.08" step="0.01" value="0.02">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Dot Scale</label>
+        <input type="number" id="num-crt-dot-scale" value="1" min="0.05" max="2" step="0.01">
+      </div>
+      <input type="range" id="crt-dot-scale" min="0.05" max="2" step="0.01" value="1">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Dot Pitch</label>
+        <input type="number" id="num-crt-dot-pitch" value="6" min="1" max="30" step="0.1">
+      </div>
+      <input type="range" id="crt-dot-pitch" min="1" max="30" step="0.1" value="6">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Falloff</label>
+        <input type="number" id="num-crt-falloff" value="0.45" min="0.01" max="1" step="0.01">
+      </div>
+      <input type="range" id="crt-falloff" min="0.01" max="1" step="0.01" value="0.45">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Brightness</label>
+        <input type="number" id="num-crt-brightness" value="1.35" min="0.2" max="3" step="0.01">
+      </div>
+      <input type="range" id="crt-brightness" min="0.2" max="3" step="0.01" value="1.35">
+    </div>
+
+    <div class="section-title">RGB Convergence</div>
+    <div class="row">
+      <div class="row-top">
+        <label>Red X</label>
+        <input type="number" id="num-crt-red-x" value="0.7" min="-2" max="2" step="0.01">
+      </div>
+      <input type="range" id="crt-red-x" min="-2" max="2" step="0.01" value="0.7">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Red Y</label>
+        <input type="number" id="num-crt-red-y" value="0" min="-2" max="2" step="0.01">
+      </div>
+      <input type="range" id="crt-red-y" min="-2" max="2" step="0.01" value="0">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Blue X</label>
+        <input type="number" id="num-crt-blue-x" value="-0.7" min="-2" max="2" step="0.01">
+      </div>
+      <input type="range" id="crt-blue-x" min="-2" max="2" step="0.01" value="-0.7">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Blue Y</label>
+        <input type="number" id="num-crt-blue-y" value="0" min="-2" max="2" step="0.01">
+      </div>
+      <input type="range" id="crt-blue-y" min="-2" max="2" step="0.01" value="0">
+    </div>
+  </div>
+
+  <!-- TAB: BLOOM -->
+  <div class="tab-content" id="tab-bloom">
+    <div class="tool-note">Bloom and glow are applied after the CRT screen pattern.</div>
+    <div class="row">
+      <div class="row-top">
+        <label>Glow Radius</label>
+        <input type="number" id="num-crt-glow-radius" value="0.18" min="0" max="0.5" step="0.01">
+      </div>
+      <input type="range" id="crt-glow-radius" min="0" max="0.5" step="0.01" value="0.18">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Glow Intensity</label>
+        <input type="number" id="num-crt-glow-intensity" value="0.35" min="0" max="1" step="0.01">
+      </div>
+      <input type="range" id="crt-glow-intensity" min="0" max="1" step="0.01" value="0.35">
+    </div>
+    <div class="sw-row">
+      <span class="sw-label">Bloom</span>
+      <div class="sw-btns" id="sw-crt-bloom-blend">
+        <button class="sw-btn active" data-val="screen">Screen</button>
+        <button class="sw-btn" data-val="light">Light</button>
+        <button class="sw-btn" data-val="hdr">HDR</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Bloom Threshold</label>
+        <input type="number" id="num-crt-bloom-threshold" value="0.55" min="0" max="1" step="0.01">
+      </div>
+      <input type="range" id="crt-bloom-threshold" min="0" max="1" step="0.01" value="0.55">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Bloom Intensity</label>
+        <input type="number" id="num-crt-bloom-intensity" value="0.8" min="0" max="5" step="0.01">
+      </div>
+      <input type="range" id="crt-bloom-intensity" min="0" max="5" step="0.01" value="0.8">
+    </div>
+    <div class="row">
+      <div class="row-top">
+        <label>Bloom Radius</label>
+        <input type="number" id="num-crt-bloom-radius" value="5" min="0" max="12" step="0.1">
+      </div>
+      <input type="range" id="crt-bloom-radius" min="0" max="12" step="0.1" value="5">
+    </div>
+  </div>
+
   <!-- TAB: EXPORT -->
   <div class="tab-content" id="tab-export">
     <div class="sw-row">
@@ -570,6 +739,7 @@
         <button class="sw-btn" data-val="svg">SVG</button>
       </div>
     </div>
+    <div class="tool-note">SVG export is available for Halftone. CRT exports as PNG because it is a raster screen simulation.</div>
     <button class="export-btn" id="btn-export">Export canvas</button>
   </div>
 </div>
@@ -577,6 +747,7 @@
 <script>
 // ---- STATE ----
 const S = {
+  mode: 'halftone',
   canvasW: 800, canvasH: 800, blur: 0, contrast: 1, brightness: 1, gamma: 1,
   imgScale: 100, imgX: 0, imgY: 0, imgRotation: 0,
   threshold: 128, stepSize: 8, shapeSize: 5, cornerRadius: 1, minShapeSize: 1, maxShapeSize: 9,
@@ -585,7 +756,12 @@ const S = {
   dither: 'floyd', grid: 'regular', shape: 'square',
   mix: 'ordered', color: 'mono', format: 'png',
   showEffect: true, invert: false, luminanceSize: false,
-  customMix: { square: true, circle: false, arrow: true }
+  customMix: { square: true, circle: false, arrow: true },
+  crtShowEffect: true, crtPattern: 'monitor',
+  crtDistortion: 0.02, crtDotScale: 1, crtDotPitch: 6, crtFalloff: 0.45, crtBrightness: 1.35,
+  crtGlowRadius: 0.18, crtGlowIntensity: 0.35,
+  crtBloomBlend: 'screen', crtBloomThreshold: 0.55, crtBloomIntensity: 0.8, crtBloomRadius: 5,
+  crtRedX: 0.7, crtRedY: 0, crtBlueX: -0.7, crtBlueY: 0
 };
 
 const PALETTE = ['#2e5fa3','#c95f2a','#2a6b3a','#d4a0b0','#7a3b2e','#c8b040','#6b4a8a'];
@@ -607,7 +783,11 @@ const spinner = document.getElementById('spinner');
   ['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],['threshold','threshold'],
   ['relief-depth','reliefDepth'],['relief-angle','reliefAngle'],['relief-threshold','reliefThreshold'],
   ['step-size','stepSize'],['shape-size','shapeSize'],['min-shape-size','minShapeSize'],['max-shape-size','maxShapeSize'],
-  ['corner-radius','cornerRadius'],['grid-angle','gridAngle'],['noise','noise']
+  ['corner-radius','cornerRadius'],['grid-angle','gridAngle'],['noise','noise'],
+  ['crt-distortion','crtDistortion'],['crt-dot-scale','crtDotScale'],['crt-dot-pitch','crtDotPitch'],['crt-falloff','crtFalloff'],
+  ['crt-brightness','crtBrightness'],['crt-glow-radius','crtGlowRadius'],['crt-glow-intensity','crtGlowIntensity'],
+  ['crt-bloom-threshold','crtBloomThreshold'],['crt-bloom-intensity','crtBloomIntensity'],['crt-bloom-radius','crtBloomRadius'],
+  ['crt-red-x','crtRedX'],['crt-red-y','crtRedY'],['crt-blue-x','crtBlueX'],['crt-blue-y','crtBlueY']
 ].forEach(([id, key]) => {
   const slider = document.getElementById(id);
   const numIn  = document.getElementById('num-'+id);
@@ -625,14 +805,45 @@ const spinner = document.getElementById('spinner');
   }
 });
 
+// ---- MODE SWITCH ----
+function setMode(mode) {
+  S.mode = mode;
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  document.querySelectorAll('.mode-halftone').forEach(el => {
+    el.style.display = mode === 'halftone' ? '' : 'none';
+  });
+  document.querySelectorAll('.mode-crt').forEach(el => {
+    el.style.display = mode === 'crt' ? '' : 'none';
+  });
+
+  const activeTab = document.querySelector('.tab[data-tab].active');
+  const activeTabName = activeTab ? activeTab.dataset.tab : 'upload';
+  const invalidForCRT = mode === 'crt' && ['effect','shape'].includes(activeTabName);
+  const invalidForHalftone = mode === 'halftone' && ['crt','bloom'].includes(activeTabName);
+  if (invalidForCRT || invalidForHalftone) activateTab('upload');
+
+  scheduleRender();
+}
+
+function activateTab(tabName) {
+  document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+  const content = document.getElementById('tab-' + tabName);
+  if (tab) tab.classList.add('active');
+  if (content) content.classList.add('active');
+}
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+});
+
 // ---- TABS ----
 document.querySelectorAll('.tab[data-tab]').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
-  });
+  tab.addEventListener('click', () => activateTab(tab.dataset.tab));
 });
 
 // ---- PANEL DRAG (mobile) ----
@@ -667,6 +878,8 @@ function makeSwitcher(id, key, extra) {
 }
 makeSwitcher('sw-dither', 'dither');
 makeSwitcher('sw-relief-blend', 'reliefBlend');
+makeSwitcher('sw-crt-pattern', 'crtPattern');
+makeSwitcher('sw-crt-bloom-blend', 'crtBloomBlend');
 makeSwitcher('sw-grid', 'grid');
 makeSwitcher('sw-format', 'format');
 makeSwitcher('sw-shape', 'shape', val => {
@@ -684,6 +897,12 @@ document.getElementById('toggle-effect').addEventListener('click', () => {
   document.getElementById('effect-ind').textContent = S.showEffect ? '✓' : ' ';
   scheduleRender();
 });
+document.getElementById('toggle-crt-effect').addEventListener('click', () => {
+  S.crtShowEffect = !S.crtShowEffect;
+  document.getElementById('crt-effect-ind').textContent = S.crtShowEffect ? '✓' : ' ';
+  scheduleRender();
+});
+
 document.getElementById('toggle-relief').addEventListener('click', () => {
   S.relief = !S.relief;
   document.getElementById('relief-ind').textContent = S.relief ? '✓' : ' ';
@@ -1032,6 +1251,202 @@ document.getElementById('input-h').addEventListener('change', e => {
   scheduleRender();
 });
 
+
+// ---- CRT RENDERING ----
+function drawSourceToCanvas(targetCanvas, targetCtx, cw, ch) {
+  targetCanvas.width = cw;
+  targetCanvas.height = ch;
+  targetCtx.save();
+  targetCtx.fillStyle = '#fff';
+  targetCtx.fillRect(0, 0, cw, ch);
+  targetCtx.filter = `blur(${S.blur}px) contrast(${S.contrast}) brightness(${S.brightness})`;
+  const sc = Math.min(cw / sourceImg.width, ch / sourceImg.height) * (S.imgScale / 100);
+  const sw = sourceImg.width * sc, sh = sourceImg.height * sc;
+  targetCtx.translate(cw/2 + S.imgX, ch/2 + S.imgY);
+  targetCtx.rotate(S.imgRotation * Math.PI / 180);
+  targetCtx.drawImage(sourceImg, -sw/2, -sh/2, sw, sh);
+  targetCtx.restore();
+  targetCtx.filter = 'none';
+}
+
+function smoothstep(edge0, edge1, x) {
+  if (edge0 === edge1) return x < edge0 ? 0 : 1;
+  let t = (x - edge0) / (edge1 - edge0);
+  t = Math.max(0, Math.min(1, t));
+  return t * t * (3 - 2 * t);
+}
+
+function getPixelNearest(data, w, h, x, y, channel) {
+  const ix = Math.max(0, Math.min(w - 1, Math.round(x)));
+  const iy = Math.max(0, Math.min(h - 1, Math.round(y)));
+  return data[(iy * w + ix) * 4 + channel];
+}
+
+function crtPatternValue(x, y, channel, pitch, scale, falloff, type) {
+  const dotScale = Math.max(0.01, scale);
+  const dotSize = pitch * dotScale * 0.5;
+  const softEdge = dotSize * Math.max(0.001, 1 - falloff);
+
+  if (type === 'lcd') {
+    const elementW = pitch / 3;
+    const elementH = pitch;
+    const elementPos = Math.floor(x / elementW) % 3;
+    if (elementPos !== channel) return 0;
+
+    const cx = (Math.floor(x / elementW) + 0.5) * elementW;
+    const cy = (Math.floor(y / elementH) + 0.5) * elementH;
+    const dx = Math.abs(x - cx) / Math.max(0.001, elementW * 0.31);
+    const dy = Math.abs(y - cy) / Math.max(0.001, elementH);
+    const rectDistance = Math.max(dx, dy) * dotSize;
+    return 1 - smoothstep(softEdge, dotSize, rectDistance);
+  }
+
+  if (type === 'tv') {
+    const elementW = pitch / 3;
+    const elementH = pitch;
+    const groupIndex = Math.floor(x / (elementW * 3));
+    const yOffset = (groupIndex % 2) * (elementH * 0.5);
+    const yy = y - yOffset;
+    const elementPos = Math.floor(x / elementW) % 3;
+    if (elementPos !== channel) return 0;
+
+    const cx = (Math.floor(x / elementW) + 0.5) * elementW;
+    const cy = (Math.floor(yy / elementH) + 0.5) * elementH + yOffset;
+    const dx = Math.abs(x - cx) / Math.max(0.001, elementW * 0.31);
+    const dy = Math.abs(y - cy) / Math.max(0.001, elementH);
+    const rectDistance = Math.max(dx, dy) * dotSize;
+    return 1 - smoothstep(softEdge, dotSize, rectDistance);
+  }
+
+  // Monitor: staggered circular RGB dots.
+  const col = Math.floor(x / pitch);
+  const yOffset = (col % 2) * pitch * 0.5;
+  const yy = y - yOffset;
+  const row = Math.floor(yy / pitch);
+  const colorIndex = ((row % 3) + 3) % 3;
+  if (colorIndex !== channel) return 0;
+
+  const cx = (col + 0.5) * pitch;
+  const cy = (row + 0.5) * pitch + yOffset;
+  const dist = Math.hypot(x - cx, y - cy);
+  return 1 - smoothstep(softEdge, dotSize, dist);
+}
+
+function renderCRT() {
+  const cw = S.canvasW, ch = S.canvasH;
+  canvas.width = cw;
+  canvas.height = ch;
+
+  drawSourceToCanvas(off, offCtx, cw, ch);
+
+  if (!S.crtShowEffect) {
+    ctx.drawImage(off, 0, 0);
+    spinner.classList.remove('visible');
+    return;
+  }
+
+  const source = offCtx.getImageData(0, 0, cw, ch);
+  const src = source.data;
+  const output = ctx.createImageData(cw, ch);
+  const dst = output.data;
+
+  const pitch = Math.max(1, S.crtDotPitch);
+  const strength = Math.max(0, Math.min(2, pitch / 8));
+  const rx = S.crtRedX * strength, ry = S.crtRedY * strength;
+  const bx = S.crtBlueX * strength, by = S.crtBlueY * strength;
+  const distortion = S.crtDistortion;
+  const brightness = S.crtBrightness;
+  const patternType = S.crtPattern;
+
+  for (let y = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++) {
+      const u = x / Math.max(1, cw - 1);
+      const v = y / Math.max(1, ch - 1);
+      const cx = u - 0.5;
+      const cy = v - 0.5;
+      const d = (cx * cx + cy * cy) * distortion;
+      const du = u + cx * (1 + d) * d;
+      const dv = v + cy * (1 + d) * d;
+
+      const sx = du * (cw - 1);
+      const sy = dv * (ch - 1);
+      const o = (y * cw + x) * 4;
+
+      if (du < 0 || du > 1 || dv < 0 || dv > 1) {
+        dst[o] = dst[o + 1] = dst[o + 2] = 0;
+        dst[o + 3] = 255;
+        continue;
+      }
+
+      const pr = crtPatternValue(x, y, 0, pitch, S.crtDotScale, S.crtFalloff, patternType);
+      const pg = crtPatternValue(x, y, 1, pitch, S.crtDotScale, S.crtFalloff, patternType);
+      const pb = crtPatternValue(x, y, 2, pitch, S.crtDotScale, S.crtFalloff, patternType);
+
+      let r = getPixelNearest(src, cw, ch, sx + rx, sy + ry, 0) * pr * brightness;
+      let g = getPixelNearest(src, cw, ch, sx, sy, 1) * pg * brightness;
+      let b = getPixelNearest(src, cw, ch, sx + bx, sy + by, 2) * pb * brightness;
+
+      // Simple output gamma.
+      r = 255 * Math.pow(Math.max(0, Math.min(255, r)) / 255, 1 / 2.2);
+      g = 255 * Math.pow(Math.max(0, Math.min(255, g)) / 255, 1 / 2.2);
+      b = 255 * Math.pow(Math.max(0, Math.min(255, b)) / 255, 1 / 2.2);
+
+      dst[o] = r;
+      dst[o + 1] = g;
+      dst[o + 2] = b;
+      dst[o + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(output, 0, 0);
+
+  if (S.crtGlowIntensity > 0 || S.crtBloomIntensity > 0) {
+    const bloom = document.createElement('canvas');
+    bloom.width = cw;
+    bloom.height = ch;
+    const bctx = bloom.getContext('2d');
+    bctx.putImageData(output, 0, 0);
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, S.crtGlowIntensity);
+    ctx.filter = `blur(${Math.max(0, S.crtGlowRadius * S.crtDotPitch * 4)}px)`;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.drawImage(bloom, 0, 0);
+    ctx.restore();
+
+    if (S.crtBloomIntensity > 0 && S.crtBloomRadius > 0) {
+      const bright = document.createElement('canvas');
+      bright.width = cw;
+      bright.height = ch;
+      const brightCtx = bright.getContext('2d');
+      const brightData = brightCtx.createImageData(cw, ch);
+      const bd = brightData.data;
+      const threshold = S.crtBloomThreshold * 255;
+
+      for (let i = 0; i < dst.length; i += 4) {
+        const lum = dst[i] * 0.2126 + dst[i+1] * 0.7152 + dst[i+2] * 0.0722;
+        const k = Math.max(0, Math.min(1, (lum - threshold) / Math.max(1, 255 - threshold)));
+        bd[i] = dst[i] * k;
+        bd[i+1] = dst[i+1] * k;
+        bd[i+2] = dst[i+2] * k;
+        bd[i+3] = 255;
+      }
+      brightCtx.putImageData(brightData, 0, 0);
+
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, S.crtBloomIntensity / 2);
+      ctx.filter = `blur(${S.crtBloomRadius}px)`;
+      ctx.globalCompositeOperation = S.crtBloomBlend === 'light' ? 'lighten' : 'screen';
+      if (S.crtBloomBlend === 'hdr') ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(bright, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  spinner.classList.remove('visible');
+}
+
+
 // ---- MAIN RENDER ----
 let currentRenderID = 0;
 
@@ -1075,6 +1490,11 @@ async function doRender() {
   canvas.height = S.canvasH;
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, S.canvasW, S.canvasH);
+
+  if (S.mode === 'crt') {
+    renderCRT();
+    return;
+  }
 
   if (!S.showEffect) {
     off.width = S.canvasW; off.height = S.canvasH;
@@ -1142,9 +1562,13 @@ async function doRender() {
 document.getElementById('btn-export').addEventListener('click', doExport);
 function doExport() {
   if (!sourceImg) return;
+  if (S.mode === 'crt' && S.format === 'svg') {
+    alert('CRT is a raster effect. Switch format to PNG to export CRT.');
+    return;
+  }
   if (S.format === 'png') {
     const a = document.createElement('a');
-    a.download = 'halftone.png';
+    a.download = S.mode === 'crt' ? 'crt.png' : 'halftone.png';
     a.href = canvas.toDataURL('image/png');
     a.click();
   } else {
@@ -1175,12 +1599,18 @@ function doExport() {
 
 // ---- RESET ----
 const DEFAULTS = {
+  mode:'halftone',
   blur:0, contrast:1, brightness:1, gamma:1, imgScale:100, imgX:0, imgY:0, imgRotation:0, threshold:128,
   relief:false, reliefDepth:120, reliefAngle:135, reliefThreshold:0.15, reliefBlend:'overlay',
   stepSize:8, shapeSize:5, minShapeSize:1, maxShapeSize:9, cornerRadius:1, gridAngle:0, noise:0,
   dither:'floyd', grid:'regular', shape:'square', mix:'ordered',
   color:'mono', showEffect:true, invert:false, luminanceSize:false,
-  customMix:{ square:true, circle:false, arrow:true }
+  customMix:{ square:true, circle:false, arrow:true },
+  crtShowEffect:true, crtPattern:'monitor',
+  crtDistortion:0.02, crtDotScale:1, crtDotPitch:6, crtFalloff:0.45, crtBrightness:1.35,
+  crtGlowRadius:0.18, crtGlowIntensity:0.35,
+  crtBloomBlend:'screen', crtBloomThreshold:0.55, crtBloomIntensity:0.8, crtBloomRadius:5,
+  crtRedX:0.7, crtRedY:0, crtBlueX:-0.7, crtBlueY:0
 };
 
 document.getElementById('reset-tab').addEventListener('click', () => {
@@ -1195,7 +1625,11 @@ document.getElementById('reset-tab').addEventListener('click', () => {
     ['gamma','gamma'],['img-scale','imgScale'],['img-x','imgX'],['img-y','imgY'],['img-rotation','imgRotation'],['threshold','threshold'],
     ['relief-depth','reliefDepth'],['relief-angle','reliefAngle'],['relief-threshold','reliefThreshold'],['step-size','stepSize'],
     ['shape-size','shapeSize'],['min-shape-size','minShapeSize'],['max-shape-size','maxShapeSize'],['corner-radius','cornerRadius'],
-    ['grid-angle','gridAngle'],['noise','noise']
+    ['grid-angle','gridAngle'],['noise','noise'],
+    ['crt-distortion','crtDistortion'],['crt-dot-scale','crtDotScale'],['crt-dot-pitch','crtDotPitch'],['crt-falloff','crtFalloff'],
+    ['crt-brightness','crtBrightness'],['crt-glow-radius','crtGlowRadius'],['crt-glow-intensity','crtGlowIntensity'],
+    ['crt-bloom-threshold','crtBloomThreshold'],['crt-bloom-intensity','crtBloomIntensity'],['crt-bloom-radius','crtBloomRadius'],
+    ['crt-red-x','crtRedX'],['crt-red-y','crtRedY'],['crt-blue-x','crtBlueX'],['crt-blue-y','crtBlueY']
   ].forEach(([id, key]) => {
     const sl = document.getElementById(id);
     const ni = document.getElementById('num-'+id);
@@ -1217,6 +1651,8 @@ document.getElementById('reset-tab').addEventListener('click', () => {
   }
   resetSwitcher('sw-dither', 'floyd');
   resetSwitcher('sw-relief-blend', 'overlay');
+  resetSwitcher('sw-crt-pattern', 'monitor');
+  resetSwitcher('sw-crt-bloom-blend', 'screen');
   resetSwitcher('sw-grid', 'regular');
   resetSwitcher('sw-shape', 'square');
   resetSwitcher('sw-mix', 'ordered');
@@ -1224,6 +1660,7 @@ document.getElementById('reset-tab').addEventListener('click', () => {
 
   // Sync toggles
   document.getElementById('effect-ind').textContent = '✓';
+  document.getElementById('crt-effect-ind').textContent = '✓';
   document.getElementById('relief-ind').textContent = ' ';
   document.getElementById('invert-ind').textContent = ' ';
   document.getElementById('luminance-size-ind').textContent = ' ';
@@ -1236,6 +1673,7 @@ document.getElementById('reset-tab').addEventListener('click', () => {
   document.getElementById('relief-wrap').style.display = 'none';
   document.getElementById('luminance-size-wrap').style.display = 'none';
 
+  setMode('halftone');
   scheduleRender();
 });
 
