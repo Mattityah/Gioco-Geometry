@@ -153,6 +153,22 @@
     <div class="row"><div class="row-top"><label>Noise</label><input type="number" id="num-noise" value="0" min="0" max="10" step="1"></div><input type="range" id="noise" min="0" max="10" step="1" value="0"></div>
     <div class="sw-row"><span class="sw-label">Color</span><div class="sw-btns" id="sw-color"><button class="sw-btn active" data-val="mono">Mono</button><button class="sw-btn" data-val="multi">Multi</button></div></div>
     <div id="palette-wrap" style="display:none"><div style="font-size:11px;margin-bottom:6px">Palette</div><div class="palette" id="palette"></div></div>
+
+    <div class="section-title">Size Texture</div>
+    <div class="sw-row">
+      <span class="sw-label">Type</span>
+      <div class="sw-btns" id="sw-texture">
+        <button class="sw-btn active" data-val="none">None</button>
+        <button class="sw-btn" data-val="wave">Wave</button>
+        <button class="sw-btn" data-val="noise">Noise</button>
+        <button class="sw-btn" data-val="voronoi">Voronoi</button>
+      </div>
+    </div>
+    <div id="texture-params" style="display:none">
+      <div class="row"><div class="row-top"><label>Intensity</label><input type="number" id="num-tex-intensity" value="0.6" min="0" max="2" step="0.05"></div><input type="range" id="tex-intensity" min="0" max="2" step="0.05" value="0.6"></div>
+      <div class="row"><div class="row-top"><label>Scale</label><input type="number" id="num-tex-scale" value="3" min="0.5" max="20" step="0.5"></div><input type="range" id="tex-scale" min="0.5" max="20" step="0.5" value="3"></div>
+      <div class="row"><div class="row-top"><label>Speed</label><input type="number" id="num-tex-speed" value="0" min="0" max="5" step="0.1"></div><input type="range" id="tex-speed" min="0" max="5" step="0.1" value="0"></div>
+    </div>
   </div>
   <!-- CRT TAB -->
   <div class="tab-content" id="tab-crt">
@@ -221,6 +237,7 @@ const S = {
   mix: 'ordered', color: 'mono', format: 'png',
   showEffect: true, invert: false, luminanceSize: false,
   customMix: { square: true, circle: false, arrow: true },
+  texture: 'none', texIntensity: 0.6, texScale: 3, texSpeed: 0,
   crtShowEffect: true, crtPattern: 'monitor',
   crtDistortion: 0.02, crtDotScale: 1, crtDotPitch: 6, crtFalloff: 0.45, crtBrightness: 1.35,
   crtGlowRadius: 0.18, crtGlowIntensity: 0.35,
@@ -250,7 +267,8 @@ const spinner = document.getElementById('spinner');
   ['crt-glow-radius','crtGlowRadius'],['crt-glow-intensity','crtGlowIntensity'],
   ['crt-bloom-threshold','crtBloomThreshold'],['crt-bloom-intensity','crtBloomIntensity'],
   ['crt-bloom-radius','crtBloomRadius'],['crt-red-x','crtRedX'],['crt-red-y','crtRedY'],
-  ['crt-blue-x','crtBlueX'],['crt-blue-y','crtBlueY']
+  ['crt-blue-x','crtBlueX'],['crt-blue-y','crtBlueY'],
+  ['tex-intensity','texIntensity'],['tex-scale','texScale'],['tex-speed','texSpeed']
 ].forEach(([id, key]) => {
   const slider = document.getElementById(id);
   const numIn  = document.getElementById('num-'+id);
@@ -263,6 +281,12 @@ const spinner = document.getElementById('spinner');
   if (numIn) { numIn.addEventListener('change', () => update(numIn.value)); numIn.addEventListener('keydown', e => { if (e.key==='Enter') update(numIn.value); }); }
 });
 
+// Watch texSpeed changes to start/stop animation
+document.getElementById('tex-speed').addEventListener('input', function() {
+  if (parseFloat(this.value) > 0 && S.texture !== 'none') startTexAnimation();
+  else stopTexAnimation();
+});
+
 function setMode(mode) {
   S.mode = mode;
   document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
@@ -271,6 +295,7 @@ function setMode(mode) {
   const activeTab = document.querySelector('.tab[data-tab].active');
   const activeTabName = activeTab ? activeTab.dataset.tab : 'upload';
   if ((mode === 'crt' && ['effect','shape'].includes(activeTabName)) || (mode === 'halftone' && ['crt','bloom'].includes(activeTabName))) activateTab('upload');
+  if (mode === 'crt') stopTexAnimation();
   scheduleRender();
 }
 function activateTab(tabName) {
@@ -312,6 +337,11 @@ makeSwitcher('sw-shape', 'shape', val => {
 });
 makeSwitcher('sw-mix', 'mix');
 makeSwitcher('sw-color', 'color', val => { document.getElementById('palette-wrap').style.display = val === 'multi' ? 'block' : 'none'; });
+makeSwitcher('sw-texture', 'texture', function(val) {
+  document.getElementById('texture-params').style.display = val === 'none' ? 'none' : 'block';
+  if (val === 'none') { stopTexAnimation(); } else if (S.texSpeed > 0) { startTexAnimation(); }
+  scheduleRender();
+});
 
 document.getElementById('toggle-effect').addEventListener('click', () => { S.showEffect=!S.showEffect; document.getElementById('effect-ind').innerHTML=S.showEffect?'&#10003;':' '; scheduleRender(); });
 document.getElementById('toggle-crt-effect').addEventListener('click', () => { S.crtShowEffect=!S.crtShowEffect; document.getElementById('crt-effect-ind').innerHTML=S.crtShowEffect?'&#10003;':' '; scheduleRender(); });
@@ -418,6 +448,76 @@ function drawShape(ctx,shape,cx,cy,r,cr){
   }
 }
 
+
+// ---- TEXTURE MODULATION ----
+var texTime = 0;
+var texAnimFrame = null;
+
+// Simple value noise (no backticks needed)
+function valueNoise(x, y) {
+  var ix = Math.floor(x), iy = Math.floor(y);
+  var fx = x - ix, fy = y - iy;
+  // Smooth
+  fx = fx*fx*(3-2*fx); fy = fy*fy*(3-2*fy);
+  function rand(ax, ay) { var n = Math.sin(ax*127.1 + ay*311.7)*43758.5453; return n - Math.floor(n); }
+  return rand(ix,iy)*(1-fx)*(1-fy) + rand(ix+1,iy)*fx*(1-fy) + rand(ix,iy+1)*(1-fx)*fy + rand(ix+1,iy+1)*fx*fy;
+}
+
+function fbmNoise(x, y, oct) {
+  var v=0, a=0.5, f=1;
+  for (var i=0;i<(oct||4);i++) { v+=a*valueNoise(x*f,y*f); a*=0.5; f*=2; }
+  return v;
+}
+
+function voronoiDist(x, y, scale) {
+  var sx = x*scale, sy = y*scale;
+  var ix = Math.floor(sx), iy = Math.floor(sy);
+  var minD = 9999;
+  for (var dy=-1;dy<=1;dy++) for (var dx=-1;dx<=1;dx++) {
+    var cx = ix+dx, cy = iy+dy;
+    var h1 = (Math.sin(cx*127.1+cy*311.7)*43758.5453); h1-=Math.floor(h1);
+    var h2 = (Math.sin(cx*269.5+cy*183.3)*43758.5453); h2-=Math.floor(h2);
+    var px2 = cx + h1, py2 = cy + h2;
+    var d = Math.hypot(sx-px2, sy-py2);
+    if (d<minD) minD=d;
+  }
+  return Math.min(1, minD);
+}
+
+function getTextureFactor(nx, ny) {
+  // nx, ny normalized 0-1 position on canvas
+  if (S.texture === 'none') return 1;
+  var s = S.texScale, t = texTime;
+  var v;
+  if (S.texture === 'wave') {
+    v = (Math.sin((nx*s + t)*Math.PI*2)*0.5 + Math.cos((ny*s + t*0.7)*Math.PI*2)*0.5 + 1) * 0.5;
+  } else if (S.texture === 'noise') {
+    v = fbmNoise(nx*s + t*0.3, ny*s + t*0.2, 4);
+  } else if (S.texture === 'voronoi') {
+    v = voronoiDist(nx, ny, s);
+  } else {
+    return 1;
+  }
+  // v is 0-1, map to (1 - intensity/2) .. (1 + intensity/2)
+  return 1 + (v*2-1) * S.texIntensity;
+}
+
+function startTexAnimation() {
+  if (texAnimFrame) return;
+  function tick() {
+    if (S.texSpeed > 0 && S.texture !== 'none') {
+      texTime += S.texSpeed * 0.008;
+      doRender();
+    }
+    texAnimFrame = requestAnimationFrame(tick);
+  }
+  texAnimFrame = requestAnimationFrame(tick);
+}
+function stopTexAnimation() {
+  if (texAnimFrame) { cancelAnimationFrame(texAnimFrame); texAnimFrame = null; }
+}
+
+
 function collectCells(mask,gw,gh,cw,ch,gray){
   const size=Math.max(cw,ch),step=S.stepSize,angleRad=S.gridAngle*Math.PI/180;
   const cx=cw/2,cy=ch/2,diag=Math.ceil(Math.sqrt(2)*size)+step*4;
@@ -429,7 +529,9 @@ function collectCells(mask,gw,gh,cw,ch,gray){
     if(S.grid==='benday'&&row%2===1)lx+=step/2;
     const dx=lx-cx,dy=ly-cy,a=angleRad;
     const drawX=cx+dx*Math.cos(a)-dy*Math.sin(a),drawY=cy+dx*Math.sin(a)+dy*Math.cos(a),n=S.noise;
-    cells.push({col,row,x:n?drawX+(Math.random()-.5)*n:drawX,y:n?drawY+(Math.random()-.5)*n:drawY,shape:shapeFor(col,row),color:colorFor(col),lum:gray?gray[idx]:0});
+    var nx=(drawX/cw), ny=(drawY/ch);
+    var texF = S.texture !== 'none' ? getTextureFactor(nx, ny) : 1;
+    cells.push({col,row,x:n?drawX+(Math.random()-.5)*n:drawX,y:n?drawY+(Math.random()-.5)*n:drawY,shape:shapeFor(col,row),color:colorFor(col),lum:gray?gray[idx]:0,texF:texF});
   }}
   return cells;
 }
