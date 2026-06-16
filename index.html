@@ -532,6 +532,11 @@ input[type="range"]::-webkit-slider-thumb {
       <span class="home-btn-label">SOLID</span>
       <span class="home-btn-sub">drawings · mask · black fill</span>
     </button>
+
+    <button class="home-btn" id="btn-giocoeffect" onclick="enterTool('giocoeffect')">
+      <span class="home-btn-label">GIOCOEFFECT</span>
+      <span class="home-btn-sub">destroy · organic · smash</span>
+    </button>
   </div>
 
   <div id="home-footer">
@@ -562,6 +567,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="mode-btn" data-mode="dithering">Dithering</button>
         <button class="mode-btn" data-mode="dots">Dots</button>
         <button class="mode-btn" data-mode="solid">Solid</button>
+        <button class="mode-btn" data-mode="giocoeffect">GiocoFX</button>
       </div>
 
       <div class="tabs">
@@ -570,6 +576,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="tab mode-dithering" data-tab="dithering" style="display:none">Dither</button>
         <button class="tab mode-dots" data-tab="dots" style="display:none">Dots</button>
         <button class="tab mode-solid" data-tab="solid" style="display:none">Solid</button>
+        <button class="tab mode-giocoeffect" data-tab="giocoeffect" style="display:none">GiocoFX</button>
         <button class="tab" data-tab="tone">Tone</button>
         <button class="tab" data-tab="export">Export</button>
       </div>
@@ -774,30 +781,58 @@ input[type="range"]::-webkit-slider-thumb {
       </div>
 
       <div class="tab-content" id="tab-solid">
-        <div class="tool-note">SOLID convierte imágenes en una máscara de relleno negro. <b>Edge+Fill</b>: Stroke Weight controla la simplificación (más = formas más grandes/simples), Threshold controla cuántas regiones se detectan.</div>
+        <div class="tool-note">SOLID convierte dibujos en máscara negra plena. <b>Simplify</b>: cuánto simplificar la imagen (más = formas más grandes y limpias). <b>Threshold</b>: qué se considera oscuro.</div>
 
         <div class="toggle-row" id="toggle-solid-effect"><div class="tog" id="solid-effect-ind">&#10003;</div> Show Solid Effect</div>
 
         <div class="sw-row">
           <span class="sw-label">Mode</span>
           <div class="sw-btns" id="sw-solid-mode">
-            <button class="sw-btn" data-val="fill">Fill</button>
+            <button class="sw-btn active" data-val="fill">Fill</button>
             <button class="sw-btn" data-val="line">Line</button>
             <button class="sw-btn" data-val="poster">Poster</button>
-            <button class="sw-btn active" data-val="edge">Edge+Fill</button>
           </div>
         </div>
 
-        <div class="row"><div class="row-top"><label>Threshold</label><input type="number" id="num-solid-threshold" value="120" min="0" max="255" step="1"></div><input type="range" id="solid-threshold" min="0" max="255" step="1" value="120"></div>
-        <div class="row"><div class="row-top"><label>Stroke Weight</label><input type="number" id="num-solid-stroke-weight" value="4" min="0" max="30" step="1"></div><input type="range" id="solid-stroke-weight" min="0" max="30" step="1" value="4"></div>
-        <div class="row"><div class="row-top"><label>Smooth</label><input type="number" id="num-solid-smooth" value="3" min="0" max="8" step="1"></div><input type="range" id="solid-smooth" min="0" max="8" step="1" value="3"></div>
-        <div class="row"><div class="row-top"><label>Despeckle</label><input type="number" id="num-solid-despeckle" value="3" min="0" max="12" step="1"></div><input type="range" id="solid-despeckle" min="0" max="12" step="1" value="3"></div>
+        <div class="row"><div class="row-top"><label>Threshold</label><input type="number" id="num-solid-threshold" value="160" min="0" max="255" step="1"></div><input type="range" id="solid-threshold" min="0" max="255" step="1" value="160"></div>
+        <div class="row"><div class="row-top"><label>Simplify</label><input type="number" id="num-solid-stroke-weight" value="12" min="0" max="30" step="1"></div><input type="range" id="solid-stroke-weight" min="0" max="30" step="1" value="12"></div>
+        <div class="row"><div class="row-top"><label>Smooth</label><input type="number" id="num-solid-smooth" value="4" min="0" max="12" step="1"></div><input type="range" id="solid-smooth" min="0" max="12" step="1" value="4"></div>
+        <div class="row"><div class="row-top"><label>Despeckle</label><input type="number" id="num-solid-despeckle" value="2" min="0" max="12" step="1"></div><input type="range" id="solid-despeckle" min="0" max="12" step="1" value="2"></div>
         <div class="row"><div class="row-top"><label>Expand</label><input type="number" id="num-solid-expand" value="0" min="-8" max="8" step="1"></div><input type="range" id="solid-expand" min="-8" max="8" step="1" value="0"></div>
 
         <button class="export-btn" id="btn-solid-use-halftone">Use result in Halftone</button>
         <button class="export-btn" id="btn-solid-export-png">Export Solid PNG</button>
         <button class="export-btn" id="btn-solid-export-svg">Export Solid SVG</button>
         <div class="tool-note">This replaces the current source image with the generated solid mask, so you can immediately process it in Halftone.</div>
+      </div>
+
+      <div class="tab-content" id="tab-giocoeffect">
+        <div class="tool-note">GiocoEffect destruye la imagen y genera formas orgánicas. Jugá con los parámetros para explorar resultados distintos.</div>
+
+        <div class="toggle-row" id="toggle-gfx-effect"><div class="tog" id="gfx-effect-ind">&#10003;</div> Show Effect</div>
+
+        <div class="section-title">Simplificación</div>
+        <div class="row"><div class="row-top"><label>Blur</label><input type="number" id="num-gfx-blur" value="4" min="1" max="20" step="1"></div><input type="range" id="gfx-blur" min="1" max="20" step="1" value="4"></div>
+        <div class="row"><div class="row-top"><label>Niveles</label><input type="number" id="num-gfx-levels" value="100" min="0" max="255" step="1"></div><input type="range" id="gfx-levels" min="0" max="255" step="1" value="100"></div>
+
+        <div class="section-title">Contorno</div>
+        <div class="row"><div class="row-top"><label>Stroke</label><input type="number" id="num-gfx-stroke" value="3" min="0" max="20" step="1"></div><input type="range" id="gfx-stroke" min="0" max="20" step="1" value="3"></div>
+        <div class="row"><div class="row-top"><label>Smooth</label><input type="number" id="num-gfx-smooth" value="3" min="0" max="10" step="1"></div><input type="range" id="gfx-smooth" min="0" max="10" step="1" value="3"></div>
+
+        <div class="section-title">Limpieza</div>
+        <div class="row"><div class="row-top"><label>Despeckle</label><input type="number" id="num-gfx-despeckle" value="3" min="0" max="12" step="1"></div><input type="range" id="gfx-despeckle" min="0" max="12" step="1" value="3"></div>
+        <div class="row"><div class="row-top"><label>Expand</label><input type="number" id="num-gfx-expand" value="0" min="-8" max="8" step="1"></div><input type="range" id="gfx-expand" min="-8" max="8" step="1" value="0"></div>
+
+        <div class="section-title">Color</div>
+        <div class="sw-row">
+          <span class="sw-label">Color</span>
+          <div class="sw-btns" id="sw-gfx-color">
+            <button class="sw-btn active" data-val="mono">Mono</button>
+            <button class="sw-btn" data-val="invert">Invert</button>
+          </div>
+        </div>
+
+        <button class="export-btn" id="btn-gfx-use-halftone" style="margin-top:12px">Use result in Halftone</button>
       </div>
 
       <div class="tab-content" id="tab-export">
@@ -878,12 +913,21 @@ const S = {
   dotsBackground: true,
 
   solidShowEffect: true,
-  solidThreshold: 120,
-  solidStrokeWeight: 4,
-  solidSmooth: 3,
-  solidDespeckle: 3,
+  solidThreshold: 160,
+  solidStrokeWeight: 12,
+  solidSmooth: 4,
+  solidDespeckle: 2,
   solidExpand: 0,
-  solidMode: 'edge',
+  solidMode: 'fill',
+
+  gfxShowEffect: true,
+  gfxBlur: 4,
+  gfxLevels: 100,
+  gfxStroke: 3,
+  gfxSmooth: 3,
+  gfxDespeckle: 3,
+  gfxExpand: 0,
+  gfxColor: 'mono',
 
   format: 'png',
   jpgQuality: 92
@@ -917,6 +961,8 @@ const CONTROL_MAP = [
   ['dots-max-size','dotsMaxSize'], ['dots-noise','dotsNoise'],
   ['solid-threshold','solidThreshold'], ['solid-stroke-weight','solidStrokeWeight'], ['solid-smooth','solidSmooth'],
   ['solid-despeckle','solidDespeckle'], ['solid-expand','solidExpand'],
+  ['gfx-blur','gfxBlur'], ['gfx-levels','gfxLevels'], ['gfx-stroke','gfxStroke'],
+  ['gfx-smooth','gfxSmooth'], ['gfx-despeckle','gfxDespeckle'], ['gfx-expand','gfxExpand'],
   ['jpg-quality','jpgQuality']
 ];
 
@@ -982,6 +1028,7 @@ makeSwitcher('sw-dither-pixel-shape', 'ditherPixelShape');
 makeSwitcher('sw-dither-color', 'ditherColor');
 makeSwitcher('sw-dots-mode', 'dotsMode');
 makeSwitcher('sw-solid-mode', 'solidMode');
+makeSwitcher('sw-gfx-color', 'gfxColor', val => { scheduleRender(); });
 makeSwitcher('sw-format', 'format', val => {
   $('jpg-quality-wrap').style.display = val === 'jpg' ? 'block' : 'none';
 });
@@ -1023,29 +1070,19 @@ function setMode(mode) {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
 
-  document.querySelectorAll('.mode-halftone').forEach(el => {
-    el.style.display = mode === 'halftone' ? '' : 'none';
-  });
-
-  document.querySelectorAll('.mode-dithering').forEach(el => {
-    el.style.display = mode === 'dithering' ? '' : 'none';
-  });
-
-  document.querySelectorAll('.mode-dots').forEach(el => {
-    el.style.display = mode === 'dots' ? '' : 'none';
-  });
-
-  document.querySelectorAll('.mode-solid').forEach(el => {
-    el.style.display = mode === 'solid' ? '' : 'none';
+  ['halftone','dithering','dots','solid','giocoeffect'].forEach(m => {
+    document.querySelectorAll('.mode-' + m).forEach(el => {
+      el.style.display = mode === m ? '' : 'none';
+    });
   });
 
   const active = document.querySelector('.tab.active[data-tab]');
   const current = active ? active.dataset.tab : 'upload';
+  const modeTabs = ['halftone','dithering','dots','solid','giocoeffect'];
 
-  if (mode === 'halftone' && ['dithering','dots','solid'].includes(current)) activateTab('upload');
-  if (mode === 'dithering' && ['halftone','dots','solid'].includes(current)) activateTab('upload');
-  if (mode === 'dots' && ['halftone','dithering','solid'].includes(current)) activateTab('upload');
-  if (mode === 'solid' && ['halftone','dithering','dots'].includes(current)) activateTab('upload');
+  if (modeTabs.includes(mode) && modeTabs.filter(t => t !== mode).includes(current)) {
+    activateTab('upload');
+  }
 
   scheduleRender();
 }
@@ -1121,6 +1158,12 @@ $('toggle-dots-background').addEventListener('click', () => {
 $('toggle-solid-effect').addEventListener('click', () => {
   S.solidShowEffect = !S.solidShowEffect;
   $('solid-effect-ind').innerHTML = S.solidShowEffect ? '&#10003;' : '&nbsp;';
+  scheduleRender();
+});
+
+$('toggle-gfx-effect').addEventListener('click', () => {
+  S.gfxShowEffect = !S.gfxShowEffect;
+  $('gfx-effect-ind').innerHTML = S.gfxShowEffect ? '&#10003;' : '&nbsp;';
   scheduleRender();
 });
 
@@ -2063,22 +2106,94 @@ async function renderSolid(myID) {
     return;
   }
 
-  const prep = prepareGray(cw, ch);
-  const mask = solidBuildMask(prep.gray, cw, ch);
+  // --- LOW-RES PIPELINE ---
+  // Scale factor: strokeWeight controls how much we simplify (lower res = bigger/simpler shapes)
+  // Range: strokeWeight 0 = 40% res, strokeWeight 30 = 8% res
+  const scaleFactor = Math.max(0.06, 0.40 - (S.solidStrokeWeight / 30) * 0.34);
+  const lw = Math.max(20, Math.round(cw * scaleFactor));
+  const lh = Math.max(20, Math.round(ch * scaleFactor));
 
-  const out = ctx.createImageData(cw, ch);
-  const d = out.data;
+  // 1. Draw source at low resolution
+  const loOff = document.createElement('canvas');
+  loOff.width = lw; loOff.height = lh;
+  const loCtx = loOff.getContext('2d', { willReadFrequently: true });
+  loCtx.fillStyle = '#ffffff';
+  loCtx.fillRect(0, 0, lw, lh);
+  loCtx.filter = 'blur(' + S.blur + 'px) contrast(' + S.contrast + ') brightness(' + S.brightness + ')';
+  const sc = Math.min(lw / sourceImg.width, lh / sourceImg.height) * (S.imgScale / 100);
+  loCtx.translate(lw / 2 + S.imgX * scaleFactor, lh / 2 + S.imgY * scaleFactor);
+  loCtx.rotate(S.imgRotation * Math.PI / 180);
+  loCtx.drawImage(sourceImg, -sourceImg.width * sc / 2, -sourceImg.height * sc / 2, sourceImg.width * sc, sourceImg.height * sc);
+  loCtx.restore && loCtx.restore();
+  loCtx.filter = 'none';
 
-  for (let i = 0; i < mask.length; i++) {
-    const v = mask[i] ? 0 : 255;
+  const loData = loCtx.getImageData(0, 0, lw, lh).data;
+  const loGray = new Float32Array(lw * lh);
+  for (let i = 0; i < loGray.length; i++) {
     const p = i * 4;
-    d[p] = v;
-    d[p + 1] = v;
-    d[p + 2] = v;
-    d[p + 3] = 255;
+    let l = loData[p] * 0.299 + loData[p+1] * 0.587 + loData[p+2] * 0.114;
+    if (S.gamma !== 1) l = 255 * Math.pow(l / 255, S.gamma);
+    loGray[i] = S.invert ? 255 - l : l;
   }
 
-  ctx.putImageData(out, 0, 0);
+  // 2. Threshold at low res → clean binary mask
+  let loMask = new Uint8Array(lw * lh);
+  for (let i = 0; i < loGray.length; i++) {
+    loMask[i] = loGray[i] < S.solidThreshold ? 1 : 0;
+  }
+
+  // 3. Morphological ops at low res (fast + effective)
+  if (S.solidMode === 'poster') {
+    // Posterize: multiple rounds of majority voting = region merging
+    for (let i = 0; i < 3; i++) loMask = majority(loMask, lw, lh);
+  } else if (S.solidMode !== 'line') {
+    // Fill mode: dilate slightly then smooth heavily to merge nearby regions
+    loMask = morph(loMask, lw, lh, 1, 'dilate');
+  }
+
+  // Smooth to merge small gaps and create organic shapes
+  const smooth = S.solidMode === 'line' ? 0 : Math.max(2, Math.round(S.solidSmooth));
+  for (let i = 0; i < smooth; i++) loMask = majority(loMask, lw, lh);
+
+  // Remove speckles at low res
+  const desp = Math.max(0, Math.round(S.solidDespeckle));
+  if (desp > 0) loMask = removeSpeckles(loMask, lw, lh, desp);
+
+  // Remove small isolated regions
+  const minArea = Math.max(1, Math.round(lw * lh * 0.002));
+  loMask = removeSmallRegions(loMask, lw, lh, minArea);
+
+  // Expand/erode
+  const exp = Math.round(S.solidExpand);
+  if (exp > 0) loMask = morph(loMask, lw, lh, exp, 'dilate');
+  if (exp < 0) loMask = morph(loMask, lw, lh, Math.abs(exp), 'erode');
+
+  // 4. Paint low-res mask to a small canvas
+  const maskSmall = document.createElement('canvas');
+  maskSmall.width = lw; maskSmall.height = lh;
+  const mCtx = maskSmall.getContext('2d');
+  const mImg = mCtx.createImageData(lw, lh);
+  for (let i = 0; i < loMask.length; i++) {
+    const v = loMask[i] ? 0 : 255;
+    const p = i * 4;
+    mImg.data[p] = v; mImg.data[p+1] = v; mImg.data[p+2] = v; mImg.data[p+3] = 255;
+  }
+  mCtx.putImageData(mImg, 0, 0);
+
+  // 5. Scale up to full canvas — browser bilinear interpolation creates smooth edges
+  ctx.drawImage(maskSmall, 0, 0, cw, ch);
+
+  // 6. Re-threshold at full res: converts the smooth gray gradient edges into
+  //    clean hard black/white — gives the "vector fill" look
+  const fullData = ctx.getImageData(0, 0, cw, ch);
+  const fd = fullData.data;
+  for (let i = 0; i < fd.length; i += 4) {
+    const lum = fd[i] * 0.299 + fd[i+1] * 0.587 + fd[i+2] * 0.114;
+    const v = lum < 128 ? 0 : 255;
+    fd[i] = v; fd[i+1] = v; fd[i+2] = v; fd[i+3] = 255;
+  }
+  ctx.putImageData(fullData, 0, 0);
+
   spinner.classList.remove('visible');
 }
 
@@ -2092,16 +2207,22 @@ function exportSolidPNG() {
 
 function exportSolidSVG() {
   if (!sourceImg) return;
-  const cw = S.canvasW;
-  const ch = S.canvasH;
-  const prep = prepareGray(cw, ch);
-  const mask = solidBuildMask(prep.gray, cw, ch);
+  const cw = canvas.width;
+  const ch = canvas.height;
+  // Read from the already-rendered canvas
+  const imgData = ctx.getImageData(0, 0, cw, ch).data;
   let rects = '';
   for (let y = 0; y < ch; y++) {
     let x = 0;
     while (x < cw) {
       const start = x;
-      while (x < cw && mask[y * cw + x]) x++;
+      // Black pixel = dark (lum < 128)
+      while (x < cw) {
+        const p = (y * cw + x) * 4;
+        const lum = imgData[p] * 0.299 + imgData[p+1] * 0.587 + imgData[p+2] * 0.114;
+        if (lum >= 128) break;
+        x++;
+      }
       if (x > start) rects += '<rect x="' + start + '" y="' + y + '" width="' + (x - start) + '" height="1"/>';
       x++;
     }
@@ -2157,6 +2278,98 @@ async function doRender() {
     renderSolid(myID);
     return;
   }
+
+  if (S.mode === 'giocoeffect') {
+    renderGiocoEffect(myID);
+    return;
+  }
+}
+
+async function renderGiocoEffect(myID) {
+  const cw = S.canvasW;
+  const ch = S.canvasH;
+
+  canvas.width = cw;
+  canvas.height = ch;
+
+  const bgColor = S.gfxColor === 'invert' ? '#000000' : '#ffffff';
+  const fgColor = S.gfxColor === 'invert' ? '#ffffff' : '#1a1a1a';
+
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, cw, ch);
+
+  if (!S.gfxShowEffect) {
+    drawSourceToCanvas(canvas, ctx, cw, ch);
+    spinner.classList.remove('visible');
+    return;
+  }
+
+  const prep = prepareGray(cw, ch);
+  const gray = prep.gray;
+
+  // Use the Edge+Fill pipeline with gfx-specific params
+  const blurR = Math.max(1, S.gfxBlur * 2);
+  const blurred = gaussianBlur(gray, cw, ch, blurR);
+
+  const levels = Math.max(2, Math.round(2 + (1 - S.gfxLevels / 255) * 6));
+  const posterized = new Float32Array(blurred.length);
+  for (let i = 0; i < blurred.length; i++) {
+    posterized[i] = Math.round((blurred[i] / 255) * (levels - 1)) / (levels - 1) * 255;
+  }
+
+  const edges = sobelEdges(posterized, cw, ch);
+  let maxE = 0;
+  for (let i = 0; i < edges.length; i++) if (edges[i] > maxE) maxE = edges[i];
+
+  let mask = new Uint8Array(cw * ch);
+  const edgeThresh = maxE * 0.05;
+  for (let i = 0; i < edges.length; i++) {
+    mask[i] = edges[i] > edgeThresh ? 1 : 0;
+  }
+
+  // Clear border margin
+  const margin = 2;
+  for (let x = 0; x < cw; x++) {
+    for (let m = 0; m < margin; m++) { mask[m * cw + x] = 0; mask[(ch - 1 - m) * cw + x] = 0; }
+  }
+  for (let y = 0; y < ch; y++) {
+    for (let m = 0; m < margin; m++) { mask[y * cw + m] = 0; mask[y * cw + (cw - 1 - m)] = 0; }
+  }
+
+  const sw = Math.max(1, Math.round(S.gfxStroke));
+  mask = morph(mask, cw, ch, sw, 'dilate');
+
+  const smooth = Math.max(1, Math.round(S.gfxSmooth));
+  for (let i = 0; i < smooth; i++) mask = majority(mask, cw, ch);
+
+  mask = floodFillBackground(mask, cw, ch);
+
+  for (let i = 0; i < smooth; i++) mask = majority(mask, cw, ch);
+
+  const minArea = Math.round((cw * ch) * 0.0003);
+  mask = removeSmallRegions(mask, cw, ch, minArea);
+
+  const desp = Math.max(0, Math.round(S.gfxDespeckle));
+  if (desp > 0) mask = removeSpeckles(mask, cw, ch, desp);
+
+  const exp = Math.round(S.gfxExpand);
+  if (exp > 0) mask = morph(mask, cw, ch, exp, 'dilate');
+  if (exp < 0) mask = morph(mask, cw, ch, Math.abs(exp), 'erode');
+
+  // Render
+  const out = ctx.createImageData(cw, ch);
+  const d = out.data;
+  const fg = fgColor === '#ffffff' ? [255,255,255] : [26,26,26];
+  const bg = bgColor === '#000000' ? [0,0,0] : [255,255,255];
+
+  for (let i = 0; i < mask.length; i++) {
+    const c = mask[i] ? fg : bg;
+    const p = i * 4;
+    d[p] = c[0]; d[p+1] = c[1]; d[p+2] = c[2]; d[p+3] = 255;
+  }
+
+  ctx.putImageData(out, 0, 0);
+  spinner.classList.remove('visible');
 }
 
 function svgForHalftone() {
@@ -2323,6 +2536,19 @@ $('btn-solid-use-halftone').addEventListener('click', useSolidResultInHalftone);
 if ($('btn-solid-export-png')) $('btn-solid-export-png').addEventListener('click', exportSolidPNG);
 if ($('btn-solid-export-svg')) $('btn-solid-export-svg').addEventListener('click', exportSolidSVG);
 
+$('btn-gfx-use-halftone').addEventListener('click', () => {
+  if (!sourceImg) return;
+  const dataURL = canvas.toDataURL('image/png');
+  const img = new Image();
+  img.onload = function() {
+    sourceImg = img;
+    setMode('halftone');
+    activateTab('halftone');
+    scheduleRender();
+  };
+  img.src = dataURL;
+});
+
 window.enterTool = function(mode) {
   $('home-screen').style.display = 'none';
   const ts = $('tool-screen');
@@ -2334,6 +2560,7 @@ window.enterTool = function(mode) {
   if (mode === 'dithering') activateTab('dithering');
   if (mode === 'dots') activateTab('dots');
   if (mode === 'solid') activateTab('solid');
+  if (mode === 'giocoeffect') activateTab('giocoeffect');
 };
 
 window.goHome = function() {
