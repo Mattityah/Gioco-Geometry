@@ -794,6 +794,16 @@ input[type="range"]::-webkit-slider-thumb {
           </div>
         </div>
 
+        <div class="section-title">Color a negro</div>
+        <div class="tool-note" style="margin-bottom:6px">Tocá un punto de la imagen en el canvas para seleccionar qué color se convierte en negro. O usá luminosidad si la imagen es B&N.</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <div id="solid-picked-color" style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:3px;background:#ffffff;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:10px;color:var(--muted)" id="solid-color-label">Usando luminosidad</div>
+          </div>
+          <button class="sw-btn" id="btn-solid-clear-color" style="font-size:10px;padding:4px 8px;border:1px solid var(--border);border-radius:3px">Limpiar</button>
+        </div>
+        <div class="row"><div class="row-top"><label>Tolerancia</label><input type="number" id="num-solid-tolerance" value="60" min="1" max="200" step="1"></div><input type="range" id="solid-tolerance" min="1" max="200" step="1" value="60"></div>
         <div class="row"><div class="row-top"><label>Threshold</label><input type="number" id="num-solid-threshold" value="160" min="0" max="255" step="1"></div><input type="range" id="solid-threshold" min="0" max="255" step="1" value="160"></div>
         <div class="row"><div class="row-top"><label>Simplify</label><input type="number" id="num-solid-stroke-weight" value="12" min="0" max="30" step="1"></div><input type="range" id="solid-stroke-weight" min="0" max="30" step="1" value="12"></div>
         <div class="row"><div class="row-top"><label>Smooth</label><input type="number" id="num-solid-smooth" value="4" min="0" max="12" step="1"></div><input type="range" id="solid-smooth" min="0" max="12" step="1" value="4"></div>
@@ -811,17 +821,38 @@ input[type="range"]::-webkit-slider-thumb {
 
         <div class="toggle-row" id="toggle-gfx-effect"><div class="tog" id="gfx-effect-ind">&#10003;</div> Show Effect</div>
 
-        <div class="section-title">Simplificación</div>
-        <div class="row"><div class="row-top"><label>Blur</label><input type="number" id="num-gfx-blur" value="4" min="1" max="20" step="1"></div><input type="range" id="gfx-blur" min="1" max="20" step="1" value="4"></div>
-        <div class="row"><div class="row-top"><label>Niveles</label><input type="number" id="num-gfx-levels" value="100" min="0" max="255" step="1"></div><input type="range" id="gfx-levels" min="0" max="255" step="1" value="100"></div>
+        <div class="sw-row">
+          <span class="sw-label">Modo</span>
+          <div class="sw-btns" id="sw-gfx-mode">
+            <button class="sw-btn active" data-val="destroy">Destroy</button>
+            <button class="sw-btn" data-val="blob">Blob</button>
+          </div>
+        </div>
 
-        <div class="section-title">Contorno</div>
-        <div class="row"><div class="row-top"><label>Stroke</label><input type="number" id="num-gfx-stroke" value="3" min="0" max="20" step="1"></div><input type="range" id="gfx-stroke" min="0" max="20" step="1" value="3"></div>
-        <div class="row"><div class="row-top"><label>Smooth</label><input type="number" id="num-gfx-smooth" value="3" min="0" max="10" step="1"></div><input type="range" id="gfx-smooth" min="0" max="10" step="1" value="3"></div>
+        <div id="gfx-destroy-params">
+          <div class="section-title">Simplificación</div>
+          <div class="row"><div class="row-top"><label>Blur</label><input type="number" id="num-gfx-blur" value="4" min="1" max="20" step="1"></div><input type="range" id="gfx-blur" min="1" max="20" step="1" value="4"></div>
+          <div class="row"><div class="row-top"><label>Niveles</label><input type="number" id="num-gfx-levels" value="100" min="0" max="255" step="1"></div><input type="range" id="gfx-levels" min="0" max="255" step="1" value="100"></div>
 
-        <div class="section-title">Limpieza</div>
-        <div class="row"><div class="row-top"><label>Despeckle</label><input type="number" id="num-gfx-despeckle" value="3" min="0" max="12" step="1"></div><input type="range" id="gfx-despeckle" min="0" max="12" step="1" value="3"></div>
-        <div class="row"><div class="row-top"><label>Expand</label><input type="number" id="num-gfx-expand" value="0" min="-8" max="8" step="1"></div><input type="range" id="gfx-expand" min="-8" max="8" step="1" value="0"></div>
+          <div class="section-title">Contorno</div>
+          <div class="row"><div class="row-top"><label>Stroke</label><input type="number" id="num-gfx-stroke" value="3" min="0" max="20" step="1"></div><input type="range" id="gfx-stroke" min="0" max="20" step="1" value="3"></div>
+          <div class="row"><div class="row-top"><label>Smooth</label><input type="number" id="num-gfx-smooth" value="3" min="0" max="10" step="1"></div><input type="range" id="gfx-smooth" min="0" max="10" step="1" value="3"></div>
+
+          <div class="section-title">Limpieza</div>
+          <div class="row"><div class="row-top"><label>Despeckle</label><input type="number" id="num-gfx-despeckle" value="3" min="0" max="12" step="1"></div><input type="range" id="gfx-despeckle" min="0" max="12" step="1" value="3"></div>
+          <div class="row"><div class="row-top"><label>Expand</label><input type="number" id="num-gfx-expand" value="0" min="-8" max="8" step="1"></div><input type="range" id="gfx-expand" min="-8" max="8" step="1" value="0"></div>
+        </div>
+
+        <div id="gfx-blob-params" style="display:none">
+          <div class="section-title">Tamaño</div>
+          <div class="row"><div class="row-top"><label>Blob Size</label><input type="number" id="num-gfx-blob-size" value="15" min="2" max="60" step="1"></div><input type="range" id="gfx-blob-size" min="2" max="60" step="1" value="15"></div>
+          <div class="row"><div class="row-top"><label>Threshold</label><input type="number" id="num-gfx-blob-threshold" value="160" min="0" max="255" step="1"></div><input type="range" id="gfx-blob-threshold" min="0" max="255" step="1" value="160"></div>
+
+          <div class="section-title">Forma</div>
+          <div class="row"><div class="row-top"><label>Smooth</label><input type="number" id="num-gfx-blob-smooth" value="4" min="0" max="12" step="1"></div><input type="range" id="gfx-blob-smooth" min="0" max="12" step="1" value="4"></div>
+          <div class="row"><div class="row-top"><label>Despeckle</label><input type="number" id="num-gfx-blob-despeckle" value="2" min="0" max="12" step="1"></div><input type="range" id="gfx-blob-despeckle" min="0" max="12" step="1" value="2"></div>
+          <div class="row"><div class="row-top"><label>Expand</label><input type="number" id="num-gfx-blob-expand" value="0" min="-8" max="8" step="1"></div><input type="range" id="gfx-blob-expand" min="-8" max="8" step="1" value="0"></div>
+        </div>
 
         <div class="section-title">Color</div>
         <div class="sw-row">
@@ -919,8 +950,9 @@ const S = {
   solidDespeckle: 2,
   solidExpand: 0,
   solidMode: 'fill',
-
-  gfxShowEffect: true,
+  solidTolerance: 60,
+  solidPickColor: null,
+  gfxMode: 'destroy',
   gfxBlur: 4,
   gfxLevels: 100,
   gfxStroke: 3,
@@ -928,6 +960,11 @@ const S = {
   gfxDespeckle: 3,
   gfxExpand: 0,
   gfxColor: 'mono',
+  gfxBlobSize: 15,
+  gfxBlobThreshold: 160,
+  gfxBlobSmooth: 4,
+  gfxBlobDespeckle: 2,
+  gfxBlobExpand: 0,
 
   format: 'png',
   jpgQuality: 92
@@ -960,9 +997,12 @@ const CONTROL_MAP = [
   ['dots-threshold','dotsThreshold'], ['dots-grid-size','dotsGridSize'], ['dots-min-size','dotsMinSize'],
   ['dots-max-size','dotsMaxSize'], ['dots-noise','dotsNoise'],
   ['solid-threshold','solidThreshold'], ['solid-stroke-weight','solidStrokeWeight'], ['solid-smooth','solidSmooth'],
-  ['solid-despeckle','solidDespeckle'], ['solid-expand','solidExpand'],
+  ['solid-despeckle','solidDespeckle'], ['solid-expand','solidExpand'], ['solid-tolerance','solidTolerance'],
   ['gfx-blur','gfxBlur'], ['gfx-levels','gfxLevels'], ['gfx-stroke','gfxStroke'],
   ['gfx-smooth','gfxSmooth'], ['gfx-despeckle','gfxDespeckle'], ['gfx-expand','gfxExpand'],
+  ['gfx-blob-size','gfxBlobSize'], ['gfx-blob-threshold','gfxBlobThreshold'],
+  ['gfx-blob-smooth','gfxBlobSmooth'], ['gfx-blob-despeckle','gfxBlobDespeckle'],
+  ['gfx-blob-expand','gfxBlobExpand'],
   ['jpg-quality','jpgQuality']
 ];
 
@@ -1029,6 +1069,11 @@ makeSwitcher('sw-dither-color', 'ditherColor');
 makeSwitcher('sw-dots-mode', 'dotsMode');
 makeSwitcher('sw-solid-mode', 'solidMode');
 makeSwitcher('sw-gfx-color', 'gfxColor', val => { scheduleRender(); });
+makeSwitcher('sw-gfx-mode', 'gfxMode', val => {
+  $('gfx-destroy-params').style.display = val === 'destroy' ? 'block' : 'none';
+  $('gfx-blob-params').style.display = val === 'blob' ? 'block' : 'none';
+  scheduleRender();
+});
 makeSwitcher('sw-format', 'format', val => {
   $('jpg-quality-wrap').style.display = val === 'jpg' ? 'block' : 'none';
 });
@@ -1171,8 +1216,41 @@ $('fileInput').addEventListener('change', e => {
   if (e.target.files[0]) loadFile(e.target.files[0]);
 });
 
-document.querySelector('.canvas-wrap').addEventListener('click', () => {
-  if (!sourceImg) $('fileInput').click();
+document.querySelector('.canvas-wrap').addEventListener('click', e => {
+  if (!sourceImg) { $('fileInput').click(); return; }
+
+  // Color picker: when in solid mode and image is loaded, click canvas to pick color
+  if (S.mode === 'solid' && sourceImg) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const cx = (e.clientX - rect.left) * scaleX;
+    const cy = (e.clientY - rect.top) * scaleY;
+
+    // Sample from the off-screen source canvas (not the processed result)
+    const sampleOff = document.createElement('canvas');
+    sampleOff.width = canvas.width;
+    sampleOff.height = canvas.height;
+    const sCtx = sampleOff.getContext('2d', { willReadFrequently: true });
+    drawSourceToCanvas(sampleOff, sCtx, canvas.width, canvas.height);
+
+    const px = Math.round(Math.max(0, Math.min(canvas.width - 1, cx)));
+    const py = Math.round(Math.max(0, Math.min(canvas.height - 1, cy)));
+    const pixel = sCtx.getImageData(px, py, 1, 1).data;
+    const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+
+    S.solidPickColor = hex;
+    $('solid-picked-color').style.background = hex;
+    $('solid-color-label').textContent = 'Color: ' + hex;
+    scheduleRender();
+  }
+});
+
+$('btn-solid-clear-color').addEventListener('click', () => {
+  S.solidPickColor = null;
+  $('solid-picked-color').style.background = '#ffffff';
+  $('solid-color-label').textContent = 'Usando luminosidad';
+  scheduleRender();
 });
 
 ['dragover', 'drop'].forEach(ev => {
@@ -2121,10 +2199,35 @@ async function renderSolid(myID) {
   const prep = prepareGray(gw, gh);
   const gray = prep.gray;
 
-  // Each cell → black (1) or white (0) based on threshold
+  // Each cell → black (1) or white (0) based on threshold or color match
   let cellMask = new Uint8Array(gw * gh);
-  for (let i = 0; i < gray.length; i++) {
-    cellMask[i] = gray[i] < S.solidThreshold ? 1 : 0;
+
+  if (S.solidPickColor) {
+    // Color-based masking: match cells to picked color by HSL distance
+    const pr = parseInt(S.solidPickColor.slice(1,3), 16);
+    const pg = parseInt(S.solidPickColor.slice(3,5), 16);
+    const pb = parseInt(S.solidPickColor.slice(5,7), 16);
+
+    // Sample full color at grid resolution
+    const colorOff = document.createElement('canvas');
+    colorOff.width = gw; colorOff.height = gh;
+    const cOCtx = colorOff.getContext('2d', { willReadFrequently: true });
+    drawSourceToCanvas(colorOff, cOCtx, gw, gh);
+    const colorData = cOCtx.getImageData(0, 0, gw, gh).data;
+
+    const tol = S.solidTolerance;
+    for (let i = 0; i < gw * gh; i++) {
+      const p = i * 4;
+      const dr = colorData[p] - pr;
+      const dg = colorData[p+1] - pg;
+      const db = colorData[p+2] - pb;
+      const dist = Math.sqrt(dr*dr + dg*dg + db*db);
+      cellMask[i] = dist < tol ? 1 : 0;
+    }
+  } else {
+    for (let i = 0; i < gray.length; i++) {
+      cellMask[i] = gray[i] < S.solidThreshold ? 1 : 0;
+    }
   }
 
   // Smooth at cell level to merge nearby dark regions
@@ -2281,6 +2384,54 @@ async function renderGiocoEffect(myID) {
     return;
   }
 
+  // ---- BLOB MODE: same cell-averaging as SOLID ----
+  if (S.gfxMode === 'blob') {
+    const cellSize = Math.max(2, Math.round(2 + (S.gfxBlobSize / 60) * 58));
+    const gw = Math.max(2, Math.ceil(cw / cellSize));
+    const gh = Math.max(2, Math.ceil(ch / cellSize));
+    const prep = prepareGray(gw, gh);
+    let cellMask = new Uint8Array(gw * gh);
+    for (let i = 0; i < prep.gray.length; i++) {
+      cellMask[i] = prep.gray[i] < S.gfxBlobThreshold ? 1 : 0;
+    }
+    const smooth = Math.max(0, Math.round(S.gfxBlobSmooth));
+    for (let i = 0; i < smooth; i++) cellMask = majority(cellMask, gw, gh);
+    const desp = Math.max(0, Math.round(S.gfxBlobDespeckle));
+    if (desp > 0) cellMask = removeSpeckles(cellMask, gw, gh, desp);
+    const minArea = Math.max(1, Math.round(gw * gh * 0.003));
+    cellMask = removeSmallRegions(cellMask, gw, gh, minArea);
+    const exp = Math.round(S.gfxBlobExpand);
+    if (exp > 0) cellMask = morph(cellMask, gw, gh, exp, 'dilate');
+    if (exp < 0) cellMask = morph(cellMask, gw, gh, Math.abs(exp), 'erode');
+
+    const small = document.createElement('canvas');
+    small.width = gw; small.height = gh;
+    const sCtx = small.getContext('2d');
+    const sImg = sCtx.createImageData(gw, gh);
+    const fg = fgColor === '#ffffff' ? [255,255,255] : [26,26,26];
+    const bg2 = bgColor === '#000000' ? [0,0,0] : [255,255,255];
+    for (let i = 0; i < cellMask.length; i++) {
+      const c = cellMask[i] ? fg : bg2;
+      const p = i * 4;
+      sImg.data[p] = c[0]; sImg.data[p+1] = c[1]; sImg.data[p+2] = c[2]; sImg.data[p+3] = 255;
+    }
+    sCtx.putImageData(sImg, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(small, 0, 0, cw, ch);
+    const fullData = ctx.getImageData(0, 0, cw, ch);
+    const fd = fullData.data;
+    for (let i = 0; i < fd.length; i += 4) {
+      const lum = fd[i] * 0.299 + fd[i+1] * 0.587 + fd[i+2] * 0.114;
+      const v = lum < 128 ? fg[0] : bg2[0];
+      fd[i] = v; fd[i+1] = v; fd[i+2] = v; fd[i+3] = 255;
+    }
+    ctx.putImageData(fullData, 0, 0);
+    spinner.classList.remove('visible');
+    return;
+  }
+
+  // ---- DESTROY MODE (original edge+fill pipeline) ----
   const prep = prepareGray(cw, ch);
   const gray = prep.gray;
 
