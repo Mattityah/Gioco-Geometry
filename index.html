@@ -332,6 +332,26 @@ input[type="range"]::-webkit-slider-thumb {
   color: var(--bg);
 }
 
+/* ---- PALETTE ---- */
+.palette {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.swatch.active {
+  border-color: var(--text);
+}
+
 .export-btn {
   width: 100%;
   font-size: 12px;
@@ -648,6 +668,19 @@ input[type="range"]::-webkit-slider-thumb {
           <div class="toggle-row custom-shape-toggle" data-shape="arrow"><div class="tog" id="custom-arrow-ind">&#10003;</div> Arrow</div>
         </div>
 
+        <div class="section-title">Color</div>
+        <div class="sw-row">
+          <span class="sw-label">Color</span>
+          <div class="sw-btns" id="sw-color">
+            <button class="sw-btn active" data-val="mono">Mono</button>
+            <button class="sw-btn" data-val="multi">Multi</button>
+          </div>
+        </div>
+        <div id="palette-wrap" style="display:none">
+          <div style="font-size:11px;margin-bottom:6px">Palette</div>
+          <div class="palette" id="palette"></div>
+        </div>
+
         <div class="row"><div class="row-top"><label>Shape Size</label><input type="number" id="num-shape-size" value="5" min="1" max="30" step="1"></div><input type="range" id="shape-size" min="1" max="30" step="1" value="5"></div>
         <div class="row"><div class="row-top"><label>Corner Radius</label><input type="number" id="num-corner-radius" value="1" min="0" max="20" step="1"></div><input type="range" id="corner-radius" min="0" max="20" step="1" value="1"></div>
         <div class="row"><div class="row-top"><label>Noise</label><input type="number" id="num-noise" value="0" min="0" max="10" step="1"></div><input type="range" id="noise" min="0" max="10" step="1" value="0"></div>
@@ -739,7 +772,6 @@ input[type="range"]::-webkit-slider-thumb {
         <div class="toggle-row" id="toggle-dots-background"><div class="tog" id="dots-background-ind">&#10003;</div> Background micro dots</div>
       </div>
 
-      
       <div class="tab-content" id="tab-solid">
         <div class="tool-note">SOLID converts sketches, photos and thin line drawings into a clean black-fill mask for Halftone, Dithering and Dots.</div>
 
@@ -814,6 +846,7 @@ const S = {
   halftoneDither: 'floyd',
   shape: 'square',
   mix: 'ordered',
+  color: 'mono',
   customMix: { square: true, circle: false, arrow: true },
   shapeSize: 5,
   cornerRadius: 1,
@@ -849,11 +882,14 @@ const S = {
   solidDespeckle: 2,
   solidExpand: 1,
   solidMode: 'fill',
-  solidUseSource: false,
 
   format: 'png',
   jpgQuality: 92
 };
+
+// ---- PALETTE ----
+const PALETTE = ['#2e5fa3','#c95f2a','#2a6b3a','#d4a0b0','#7a3b2e','#c8b040','#6b4a8a'];
+let activeColors = PALETTE.slice();
 
 let sourceImg = null;
 let renderJob = null;
@@ -931,6 +967,9 @@ makeSwitcher('sw-shape', 'shape', val => {
   if (customRow) customRow.style.display = val === 'custom' ? 'block' : 'none';
 });
 makeSwitcher('sw-mix', 'mix');
+makeSwitcher('sw-color', 'color', val => {
+  $('palette-wrap').style.display = val === 'multi' ? 'block' : 'none';
+});
 makeSwitcher('sw-texture', 'texture', val => {
   const params = $('texture-params');
   if (params) params.style.display = val === 'none' ? 'none' : 'block';
@@ -943,6 +982,25 @@ makeSwitcher('sw-solid-mode', 'solidMode');
 makeSwitcher('sw-format', 'format', val => {
   $('jpg-quality-wrap').style.display = val === 'jpg' ? 'block' : 'none';
 });
+
+// ---- BUILD PALETTE SWATCHES ----
+function buildPalette() {
+  const c = $('palette');
+  PALETTE.forEach(color => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch active';
+    sw.style.background = color;
+    sw.dataset.color = color;
+    sw.addEventListener('click', () => {
+      sw.classList.toggle('active');
+      activeColors = [...c.querySelectorAll('.swatch.active')].map(s => s.dataset.color);
+      if (!activeColors.length) { sw.classList.add('active'); activeColors = [color]; }
+      scheduleRender();
+    });
+    c.appendChild(sw);
+  });
+}
+buildPalette();
 
 function activateTab(tabName) {
   document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
@@ -1195,10 +1253,6 @@ function prepareGray(gw, gh) {
   return { gray, image };
 }
 
-function clamp255(v) {
-  return Math.max(0, Math.min(255, v));
-}
-
 function ditherMask(grayInput, gw, gh, algorithm, threshold, randomAmount) {
   const out = new Uint8Array(gw * gh);
   const buf = new Float32Array(grayInput);
@@ -1256,6 +1310,7 @@ function ditherMask(grayInput, gw, gh, algorithm, threshold, randomAmount) {
       [-2,2,1/42], [-1,2,2/42], [0,2,4/42], [1,2,2/42], [2,2,1/42]
     ];
   } else {
+    // floyd-steinberg (default)
     kernel = [
       [1,0,7/16],
       [-1,1,3/16], [0,1,5/16], [1,1,1/16]
@@ -1295,6 +1350,11 @@ function shapeFor(col, row) {
   const pool = S.shape === 'custom' ? getCustomMixPool() : MIX;
   if (S.mix === 'random') return pool[seededRandomIndex(col, row, pool.length)];
   return pool[(col + row) % pool.length];
+}
+
+function colorFor(col, row) {
+  if (S.color !== 'multi' || !activeColors.length) return '#1a1a1a';
+  return activeColors[Math.abs(col * 31 + row * 17) % activeColors.length];
 }
 
 function drawShape(pathCtx, shape, cx, cy, r, cr) {
@@ -1391,7 +1451,6 @@ function getTextureFactor(nx, ny, lum) {
   } else if (S.texture === 'voronoi') {
     v = voronoiDist(nx, ny, s);
   } else if (S.texture === 'white') {
-    // Pronounces the white/light areas: useful when the base image has thin black linework.
     v = lum / 255;
   }
 
@@ -1461,8 +1520,13 @@ async function renderHalftone(myID) {
   const cols = Math.ceil(diag / step) + 1;
   const rows = Math.ceil(diag / step) + 1;
 
-  ctx.fillStyle = '#1a1a1a';
-  ctx.beginPath();
+  const isMulti = S.color === 'multi' && activeColors.length > 0;
+
+  // For mono: single path fill (fast). For multi: fill per shape.
+  if (!isMulti) {
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+  }
 
   for (let row = 0; row <= rows; row++) {
     for (let col = 0; col <= cols; col++) {
@@ -1495,16 +1559,28 @@ async function renderHalftone(myID) {
       const texF = getTextureFactor(drawX / cw, drawY / ch, lum);
       const rr = baseR * texF;
 
-      drawShape(ctx, shapeFor(col, row), drawX, drawY, Math.max(0.5, rr), S.cornerRadius);
+      if (isMulti) {
+        ctx.fillStyle = colorFor(col, row);
+        ctx.beginPath();
+        drawShape(ctx, shapeFor(col, row), drawX, drawY, Math.max(0.5, rr), S.cornerRadius);
+        ctx.fill();
+      } else {
+        drawShape(ctx, shapeFor(col, row), drawX, drawY, Math.max(0.5, rr), S.cornerRadius);
+      }
     }
 
     if (row % 20 === 0) {
+      if (!isMulti) ctx.fill(); // flush partial mono path periodically
       await yieldFrame();
       if (myID !== currentRenderID) return;
+      if (!isMulti) {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+      }
     }
   }
 
-  ctx.fill();
+  if (!isMulti) ctx.fill();
   spinner.classList.remove('visible');
 }
 
@@ -1577,69 +1653,6 @@ async function renderDithering(myID) {
   }
 
   spinner.classList.remove('visible');
-}
-
-function smoothstep(e0, e1, x) {
-  if (e0 === e1) return x < e0 ? 0 : 1;
-  let t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
-  return t * t * (3 - 2 * t);
-}
-
-function getPixelNearest(data, w, h, x, y, ch) {
-  const ix = Math.max(0, Math.min(w - 1, Math.round(x)));
-  const iy = Math.max(0, Math.min(h - 1, Math.round(y)));
-  return data[(iy * w + ix) * 4 + ch];
-}
-
-function crtPatternValue(x, y, channel, pitch, scale, falloff, type) {
-  const dotScale = Math.max(0.01, scale);
-  const dotSize = pitch * dotScale * 0.5;
-  const softEdge = dotSize * Math.max(0.001, 1 - falloff);
-
-  if (type === 'lcd') {
-    const ew = pitch / 3;
-    const eh = pitch;
-    const ep = Math.floor(x / ew) % 3;
-    if (ep !== channel) return 0;
-
-    const cx2 = (Math.floor(x / ew) + 0.5) * ew;
-    const cy2 = (Math.floor(y / eh) + 0.5) * eh;
-    const dx = Math.abs(x - cx2) / Math.max(0.001, ew * 0.31);
-    const dy = Math.abs(y - cy2) / Math.max(0.001, eh);
-    const rd = Math.max(dx, dy) * dotSize;
-    return 1 - smoothstep(softEdge, dotSize, rd);
-  }
-
-  if (type === 'tv') {
-    const ew = pitch / 3;
-    const eh = pitch;
-    const gi = Math.floor(x / (ew * 3));
-    const yo = (gi % 2) * (eh * 0.5);
-    const yy = y - yo;
-    const ep = Math.floor(x / ew) % 3;
-    if (ep !== channel) return 0;
-
-    const cx2 = (Math.floor(x / ew) + 0.5) * ew;
-    const cy2 = (Math.floor(yy / eh) + 0.5) * eh + yo;
-    const dx = Math.abs(x - cx2) / Math.max(0.001, ew * 0.31);
-    const dy = Math.abs(y - cy2) / Math.max(0.001, eh);
-    const rd = Math.max(dx, dy) * dotSize;
-    return 1 - smoothstep(softEdge, dotSize, rd);
-  }
-
-  const col = Math.floor(x / pitch);
-  const yo = (col % 2) * pitch * 0.5;
-  const yy = y - yo;
-  const row = Math.floor(yy / pitch);
-  const ci = ((row % 3) + 3) % 3;
-
-  if (ci !== channel) return 0;
-
-  const cx2 = (col + 0.5) * pitch;
-  const cy2 = (row + 0.5) * pitch + yo;
-  const dist = Math.hypot(x - cx2, y - cy2);
-
-  return 1 - smoothstep(softEdge, dotSize, dist);
 }
 
 async function renderDots(myID) {
@@ -1718,7 +1731,6 @@ async function renderDots(myID) {
   ctx.globalAlpha = 1;
   spinner.classList.remove('visible');
 }
-
 
 function solidBuildMask(gray, w, h) {
   let mask = new Uint8Array(w * h);
@@ -1892,7 +1904,6 @@ function exportSolidSVG() {
   const prep = prepareGray(cw, ch);
   const mask = solidBuildMask(prep.gray, cw, ch);
   let rects = '';
-  // Compact enough for drawings: exports black mask as 1px vector rects.
   for (let y = 0; y < ch; y++) {
     let x = 0;
     while (x < cw) {
@@ -2007,7 +2018,7 @@ function svgForHalftone() {
       const rr = baseR * texF;
 
       const shape = shapeFor(col, row);
-      const fill = '#1a1a1a';
+      const fill = colorFor(col, row);
 
       if (shape === 'circle') {
         s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + rr.toFixed(2) + '" fill="' + fill + '"/>';
@@ -2056,6 +2067,7 @@ function svgForDithering() {
   return '<svg xmlns="http://www.w3.org/2000/svg" width="' + cw + '" height="' + ch + '" viewBox="0 0 ' + cw + ' ' + ch + '"><rect width="100%" height="100%" fill="white"/>' + s + '</svg>';
 }
 
+// ---- EXPORT (FIX: always composite over white canvas) ----
 function doExport() {
   if (!sourceImg) return;
 
@@ -2064,7 +2076,6 @@ function doExport() {
       alert((S.mode === 'solid' ? 'SOLID' : 'DOTS') + ' exports as PNG/JPG only.');
       return;
     }
-
     const svg = S.mode === 'dithering' ? svgForDithering() : svgForHalftone();
     const a = document.createElement('a');
     a.download = S.mode + '.svg';
@@ -2077,17 +2088,33 @@ function doExport() {
   const mime = S.format === 'jpg' ? 'image/jpeg' : 'image/png';
   const quality = S.format === 'jpg' ? (S.jpgQuality || 92) / 100 : undefined;
 
-  let exportCanvas = canvas;
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+  const ec = exportCanvas.getContext('2d');
 
   if (S.format === 'jpg') {
-    exportCanvas = document.createElement('canvas');
-    exportCanvas.width = canvas.width;
-    exportCanvas.height = canvas.height;
-
-    const ec = exportCanvas.getContext('2d');
+    // JPG no soporta transparencia: fondo blanco explícito
     ec.fillStyle = '#ffffff';
     ec.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
     ec.drawImage(canvas, 0, 0);
+  } else {
+    // PNG: fondo transparente — extraer solo las formas oscuras como alfa
+    // 1. Dibujar el canvas actual
+    ec.drawImage(canvas, 0, 0);
+    // 2. Leer los píxeles y convertir la luminosidad en canal alfa
+    //    Píxel blanco (255,255,255) → alfa 0 (transparente)
+    //    Píxel negro (0,0,0) → alfa 255 (opaco)
+    //    Colores intermedios y de paleta → alfa según luminosidad invertida
+    const imgData = ec.getImageData(0, 0, exportCanvas.width, exportCanvas.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+      const alpha = 255 - lum; // blanco → 0, negro → 255
+      // Preservar el color RGB original, solo ajustar alfa
+      d[i + 3] = Math.round(alpha);
+    }
+    ec.putImageData(imgData, 0, 0);
   }
 
   const a = document.createElement('a');
