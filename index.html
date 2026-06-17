@@ -953,6 +953,8 @@ input[type="range"]::-webkit-slider-thumb {
         <div class="row"><div class="row-top"><label>Despeckle</label><input type="number" id="num-solid-despeckle" value="2" min="0" max="12" step="1"></div><input type="range" id="solid-despeckle" min="0" max="12" step="1" value="2"></div>
         <div class="row"><div class="row-top"><label>Expand</label><input type="number" id="num-solid-expand" value="0" min="-8" max="8" step="1"></div><input type="range" id="solid-expand" min="-8" max="8" step="1" value="0"></div>
 
+        <div class="toggle-row" id="toggle-solid-fill-holes"><div class="tog" id="solid-fill-holes-ind">&#10003;</div> Fill closed holes</div>
+
         <button class="export-btn" id="btn-solid-use-halftone">Use result in Halftone</button>
         <button class="export-btn" id="btn-solid-export-png">Export Solid PNG</button>
         <button class="export-btn" id="btn-solid-export-svg">Export Solid SVG</button>
@@ -1245,6 +1247,7 @@ const S = {
   solidDespeckle: 2,
   solidExpand: 0,
   solidMode: 'fill',
+  solidFillHoles: true,
   solidTolerance: 60,
   solidPickColor: null,
 
@@ -1552,6 +1555,12 @@ $('toggle-dots-background').addEventListener('click', () => {
 $('toggle-solid-effect').addEventListener('click', () => {
   S.solidShowEffect = !S.solidShowEffect;
   $('solid-effect-ind').innerHTML = S.solidShowEffect ? '&#10003;' : '&nbsp;';
+  scheduleRender();
+});
+
+$('toggle-solid-fill-holes').addEventListener('click', () => {
+  S.solidFillHoles = !S.solidFillHoles;
+  $('solid-fill-holes-ind').innerHTML = S.solidFillHoles ? '&#10003;' : '&nbsp;';
   scheduleRender();
 });
 
@@ -2291,6 +2300,46 @@ function sobelEdges(gray, w, h) {
   return out;
 }
 
+function fillClosedHoles(mask, w, h) {
+  const visited = new Uint8Array(w * h);
+  const queue = [];
+
+  function pushIfWhite(x, y) {
+    if (x < 0 || x >= w || y < 0 || y >= h) return;
+    const i = y * w + x;
+    if (visited[i] || mask[i]) return;
+    visited[i] = 1;
+    queue.push(i);
+  }
+
+  for (let x = 0; x < w; x++) {
+    pushIfWhite(x, 0);
+    pushIfWhite(x, h - 1);
+  }
+
+  for (let y = 0; y < h; y++) {
+    pushIfWhite(0, y);
+    pushIfWhite(w - 1, y);
+  }
+
+  let q = 0;
+  while (q < queue.length) {
+    const i = queue[q++];
+    const x = i % w;
+    const y = Math.floor(i / w);
+    pushIfWhite(x + 1, y);
+    pushIfWhite(x - 1, y);
+    pushIfWhite(x, y + 1);
+    pushIfWhite(x, y - 1);
+  }
+
+  const out = new Uint8Array(mask);
+  for (let i = 0; i < out.length; i++) {
+    if (!mask[i] && !visited[i]) out[i] = 1;
+  }
+  return out;
+}
+
 function floodFillBackground(mask, w, h) {
   const bg = new Uint8Array(mask);
   const queue = [];
@@ -2457,6 +2506,8 @@ function solidBuildMask(gray, w, h) {
   const exp = Math.round(S.solidExpand);
   if (exp > 0) mask = morph(mask, w, h, exp, 'dilate');
   if (exp < 0) mask = morph(mask, w, h, Math.abs(exp), 'erode');
+
+  if (S.solidFillHoles) mask = fillClosedHoles(mask, w, h);
 
   const smooth = Math.max(0, Math.round(S.solidSmooth));
   for (let i = 0; i < smooth; i++) {
@@ -3757,7 +3808,7 @@ const PRESET_KEYS = {
               'dotsNoise','dotsMode','dotsBackground',
               'blur','contrast','brightness','gamma','invert'],
   solid:     ['solidShowEffect','solidThreshold','solidStrokeWeight','solidSmooth',
-              'solidDespeckle','solidExpand','solidMode','solidTolerance',
+              'solidDespeckle','solidExpand','solidMode','solidTolerance','solidFillHoles',
               'blur','contrast','brightness','gamma','invert'],
   giocoeffect: ['gfxShowEffect','gfxMode','gfxBlur','gfxLevels','gfxStroke','gfxSmooth',
                 'gfxDespeckle','gfxExpand','gfxColor',
@@ -3880,6 +3931,7 @@ function applyLoadedPreset(preset) {
   syncToggle('dots-effect-ind', S.dotsShowEffect);
   syncToggle('dots-background-ind', S.dotsBackground);
   syncToggle('solid-effect-ind', S.solidShowEffect);
+  syncToggle('solid-fill-holes-ind', S.solidFillHoles);
   syncToggle('gfx-effect-ind', S.gfxShowEffect);
   syncToggle('circuit-effect-ind', S.circuitShowEffect);
 
