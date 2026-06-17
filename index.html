@@ -380,28 +380,32 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 
-/* LOGO CANVAS */
+/* LOGO WRAP */
 #logo-canvas-wrap {
   position: relative;
   width: min(936px, 94vw);
-  margin-bottom: 28px;
+  margin-bottom: 24px;
+  overflow: hidden;
 }
 #home-logo {
   display: block;
   width: 100%;
   height: auto;
+  position: relative;
+  z-index: 1;
 }
 #logo-canvas {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0;
   width: 100%;
   height: 100%;
+  z-index: 2;
   mix-blend-mode: multiply;
-  opacity: 0.18;
+  opacity: 0.15;
   pointer-events: none;
 }
 
-/* HOME SCREEN — base (desktop) */
+/* HOME SCREEN desktop */
 #home-screen {
   height: 100vh;
   display: flex;
@@ -410,17 +414,16 @@ input[type="range"]::-webkit-slider-thumb {
   justify-content: center;
   background: #ffffff;
   position: relative;
-  padding-bottom: 44px; /* space for absolute footer */
+  padding-bottom: 40px;
 }
-
 
 #home-logo-placeholder {
   width: min(936px, 94vw);
-  height: 208px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
   border: 1px solid var(--border);
   font-size: 22px;
   letter-spacing: 0.18em;
@@ -430,7 +433,7 @@ input[type="range"]::-webkit-slider-thumb {
 #home-buttons {
   display: flex;
   gap: 12px;
-  width: min(760px, 90vw);
+  width: min(936px, 94vw);
 }
 
 .home-btn {
@@ -446,30 +449,13 @@ input[type="range"]::-webkit-slider-thumb {
   transition: background 0.15s, color 0.15s;
   flex: 1;
 }
+.home-btn:hover { background: var(--text); color: var(--bg); }
+.home-btn-label { font-size: 13px; letter-spacing: 0.15em; }
+.home-btn-sub { font-size: 8px; letter-spacing: 0.06em; opacity: 0.5; text-align: center; }
 
-.home-btn:hover {
-  background: var(--text);
-  color: var(--bg);
-}
-
-.home-btn-label {
-  font-size: 13px;
-  letter-spacing: 0.15em;
-}
-
-.home-btn-sub {
-  font-size: 8px;
-  letter-spacing: 0.06em;
-  opacity: 0.5;
-  text-align: center;
-}
-
-/* DESKTOP footer: absolute, doesn't affect layout */
 #home-footer {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   padding: 10px 14px;
   background: #ccff00;
   font-size: 10px;
@@ -477,6 +463,7 @@ input[type="range"]::-webkit-slider-thumb {
   letter-spacing: 0.08em;
   text-align: center;
 }
+
 
 /* TOOL SCREEN */
 #tool-screen {
@@ -581,26 +568,24 @@ input[type="range"]::-webkit-slider-thumb {
     overflow-y: auto;
   }
 
-  #home-logo {
-    max-height: 44vh;
-    width: 100vw;
-    margin-bottom: 18px;
-    margin-top: 24px;
-    flex-shrink: 0;
+  #logo-canvas-wrap {
+    width: 96vw;
+    margin-top: 20px;
+    margin-bottom: 16px;
   }
 
-  #logo-canvas-wrap {
-    width: 100vw;
-    margin-bottom: 18px;
-    margin-top: 24px;
+  #home-logo-placeholder {
+    height: 140px;
+    width: 96vw;
+    margin-top: 20px;
+    margin-bottom: 16px;
   }
 
   #home-buttons {
     flex-direction: column;
-    width: 88vw;
+    width: 90vw;
     gap: 7px;
     margin-bottom: 0;
-    flex-shrink: 0;
   }
 
   .home-btn {
@@ -610,69 +595,58 @@ input[type="range"]::-webkit-slider-thumb {
     align-items: center;
     gap: 14px;
   }
-
-  .home-btn-label {
-    font-size: 12px;
-    letter-spacing: 0.18em;
-  }
-
-  .home-btn-sub {
-    text-align: left;
-    font-size: 8px;
-  }
+  .home-btn-label { font-size: 12px; letter-spacing: 0.18em; }
+  .home-btn-sub { text-align: left; font-size: 8px; }
 
   #home-footer {
     position: static !important;
     width: 100%;
-    margin-top: 24px;
+    margin-top: 20px;
     padding: 12px 14px;
     flex-shrink: 0;
   }
 }
+
 </style>
 </head>
 
 <body>
 
 <div id="home-screen">
+
   <div id="logo-canvas-wrap">
-    <!-- Logo image — always visible as base -->
-    <img src="logoHOME-GiocoGeometry.jpg" alt="GiocoGeometry" id="home-logo"
-      style="display:block;width:100%;height:auto"
-      onload="initLogoCanvas(this)"
-      onerror="this.style.opacity='1'">
-    <!-- Canvas overlay for subtle animation -->
-    <canvas id="logo-canvas" style="pointer-events:none"></canvas>
+    <img src="logoHOME-GiocoGeometry.jpg"
+         alt="GiocoGeometry"
+         id="home-logo"
+         onload="initLogoCanvas(this)"
+         onerror="this.style.display='none';document.getElementById('home-logo-placeholder').style.display='flex'">
+    <canvas id="logo-canvas"></canvas>
   </div>
-  <div id="home-logo-placeholder" style="display:none;font-size:22px;letter-spacing:0.18em;margin-bottom:28px;color:var(--text)">GIOCO GEOMETRY</div>
+
+  <div id="home-logo-placeholder" style="display:none">GIOCO GEOMETRY</div>
 
   <div id="home-buttons">
-    <button class="home-btn" id="btn-halftone" onclick="enterTool('halftone')">
+    <button class="home-btn" onclick="enterTool('halftone')">
       <span class="home-btn-label">HALFTONE</span>
       <span class="home-btn-sub">grid · shapes · geometry</span>
     </button>
-
-    <button class="home-btn" id="btn-dithering" onclick="enterTool('dithering')">
+    <button class="home-btn" onclick="enterTool('dithering')">
       <span class="home-btn-label">DITHERING</span>
       <span class="home-btn-sub">pixel · threshold · diffusion</span>
     </button>
-
-    <button class="home-btn" id="btn-dots" onclick="enterTool('dots')">
+    <button class="home-btn" onclick="enterTool('dots')">
       <span class="home-btn-label">DOTS</span>
       <span class="home-btn-sub">ben-day · screen tone · dots</span>
     </button>
-
-    <button class="home-btn" id="btn-solid" onclick="enterTool('solid')">
+    <button class="home-btn" onclick="enterTool('solid')">
       <span class="home-btn-label">SOLID</span>
       <span class="home-btn-sub">drawings · mask · black fill</span>
     </button>
-
-    <button class="home-btn" id="btn-giocoeffect" onclick="enterTool('giocoeffect')">
+    <button class="home-btn" onclick="enterTool('giocoeffect')">
       <span class="home-btn-label">GIOCOEFFECT</span>
       <span class="home-btn-sub">destroy · organic · smash</span>
     </button>
-
-    <button class="home-btn" id="btn-circuit" onclick="enterTool('circuit')">
+    <button class="home-btn" onclick="enterTool('circuit')">
       <span class="home-btn-label">CIRCUIT</span>
       <span class="home-btn-sub">pcb · traces · nodes · chip</span>
     </button>
@@ -682,6 +656,8 @@ input[type="range"]::-webkit-slider-thumb {
     <div style="font-size:11px;letter-spacing:0.12em;color:var(--text);margin-bottom:4px">GIOCO-GEOMETRY</div>
     <div style="font-size:9px;letter-spacing:0.1em;color:var(--muted)">GiocoStudio · mattityah.github.io/Gioco-Geometry</div>
   </div>
+
+</div>
 </div>
 
 <div id="tool-screen">
@@ -3915,102 +3891,76 @@ $('preset-file-input').addEventListener('change', e => {
   reader.readAsText(file);
 });
 
-// ---- LOGO ANIMATED OVERLAY ----
-// Strategy: show logo as <img>, animate a canvas overlay with Voronoi texture
+// ---- LOGO CANVAS OVERLAY ----
 (function() {
-  function voronoiDist(x, y, scale) {
-    const sx=x*scale, sy=y*scale, ix=Math.floor(sx), iy=Math.floor(sy);
-    let minD=9999;
+  function voronoiDist(x, y, s) {
+    const sx=x*s, sy=y*s, ix=Math.floor(sx), iy=Math.floor(sy);
+    let m=9999;
     for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) {
       const cx=ix+dx, cy=iy+dy;
       let h1=Math.sin(cx*127.1+cy*311.7)*43758.5453; h1-=Math.floor(h1);
       let h2=Math.sin(cx*269.5+cy*183.3)*43758.5453; h2-=Math.floor(h2);
       const d=Math.hypot(sx-(cx+h1),sy-(cy+h2));
-      if(d<minD) minD=d;
+      if(d<m) m=d;
     }
-    return Math.min(1,minD);
+    return Math.min(1,m);
   }
 
   window.initLogoCanvas = function(img) {
-    const wrap = document.getElementById('logo-canvas-wrap');
-    const lc   = document.getElementById('logo-canvas');
-    if (!lc || !img || !img.naturalWidth) return;
+    const lc = document.getElementById('logo-canvas');
+    if (!lc || !img) return;
 
-    // Show img on top of canvas
-    img.style.display = 'block';
-    img.style.position = 'absolute';
-    img.style.inset = '0';
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'contain';
-    wrap.style.position = 'relative';
-
-    // Canvas overlay for animation (low-res Voronoi dots)
-    const CW = 200, CH = Math.round(200 * img.naturalHeight / img.naturalWidth);
-    lc.width = CW; lc.height = CH;
-    lc.style.position = 'absolute';
-    lc.style.inset = '0';
-    lc.style.width = '100%';
-    lc.style.height = '100%';
-    lc.style.mixBlendMode = 'multiply'; // blends dark dots with logo
-    lc.style.opacity = '0.18';
+    // Size canvas to match rendered image size
+    function resize() {
+      lc.width  = img.offsetWidth  || img.naturalWidth  || 400;
+      lc.height = img.offsetHeight || img.naturalHeight || 200;
+    }
+    resize();
+    window.addEventListener('resize', () => { resize(); });
 
     const lCtx = lc.getContext('2d');
-    // Set wrap height to match img aspect
-    wrap.style.aspectRatio = img.naturalWidth + '/' + img.naturalHeight;
-
-    // Animation — only texIntensity and texScale animate, very subtly
-    let curI = 0.85, curS = 4.0;
-    let t = 0, rafId = null, last = 0;
+    const step = 10;
+    let curI=0.85, curS=4.0, t=0, rafId=null, last=0;
     const isMobile = 'ontouchstart' in window;
-    const INTERVAL = isMobile ? 1000/12 : 1000/18;
-    const LERP = 0.02;
-    const step = 8; // dot grid step in low-res canvas
+    const MS = isMobile ? 1000/12 : 1000/18;
+    const LERP = 0.018;
 
-    function renderOverlay(texIntensity, texScale) {
-      lCtx.clearRect(0, 0, CW, CH);
-      lCtx.fillStyle = '#ffffff';
-      lCtx.fillRect(0, 0, CW, CH);
-      lCtx.fillStyle = '#1a1a1a';
+    function draw(ts) {
+      rafId = requestAnimationFrame(draw);
+      if (ts-last < MS) return;
+      last = ts; t += 0.004;
+
+      const W=lc.width, H=lc.height;
+      lCtx.clearRect(0,0,W,H);
+      lCtx.fillStyle='#ffffff';
+      lCtx.fillRect(0,0,W,H);
+      lCtx.fillStyle='#1a1a1a';
       lCtx.beginPath();
 
-      for (let cy = step/2; cy < CH; cy += step) {
-        for (let cx = step/2; cx < CW; cx += step) {
-          const v = voronoiDist(cx/CW, cy/CH, texScale);
-          const f = Math.max(0.05, 1 + (v*2-1)*texIntensity);
-          const r = Math.max(0.3, 1.8 * f);
-          lCtx.moveTo(cx+r, cy);
-          lCtx.arc(cx, cy, r, 0, Math.PI*2);
+      for (let cy=step/2;cy<H;cy+=step) {
+        for (let cx=step/2;cx<W;cx+=step) {
+          const v=voronoiDist(cx/W, cy/H, curS);
+          const f=Math.max(0.05, 1+(v*2-1)*curI);
+          const r=Math.max(0.3, 1.6*f);
+          lCtx.moveTo(cx+r,cy);
+          lCtx.arc(cx,cy,r,0,Math.PI*2);
         }
       }
       lCtx.fill();
+
+      const tI=0.85+Math.sin(t*0.5)*0.12;
+      const tS=4.0+Math.sin(t*0.31+1.1)*0.6;
+      curI+=(tI-curI)*LERP;
+      curS+=(tS-curS)*LERP;
     }
 
-    function animate(ts) {
-      rafId = requestAnimationFrame(animate);
-      if (ts - last < INTERVAL) return;
-      last = ts;
-      t += 0.004;
+    rafId=requestAnimationFrame(draw);
 
-      // Very subtle oscillation around preset values
-      const tgtI = 0.85 + Math.sin(t * 0.5) * 0.12;
-      const tgtS = 4.0  + Math.sin(t * 0.31 + 1.1) * 0.6;
-      curI += (tgtI - curI) * LERP;
-      curS += (tgtS - curS) * LERP;
-
-      renderOverlay(curI, curS);
-    }
-
-    rafId = requestAnimationFrame(animate);
-
-    const tool = document.getElementById('tool-screen');
-    new MutationObserver(() => {
-      if (tool.classList.contains('visible')) {
-        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-      } else {
-        if (!rafId) rafId = requestAnimationFrame(animate);
-      }
-    }).observe(tool, { attributes: true, attributeFilter: ['class'] });
+    const tool=document.getElementById('tool-screen');
+    new MutationObserver(()=>{
+      if(tool.classList.contains('visible')){ if(rafId){cancelAnimationFrame(rafId);rafId=null;} }
+      else { if(!rafId) rafId=requestAnimationFrame(draw); }
+    }).observe(tool,{attributes:true,attributeFilter:['class']});
   };
 })();
 </script>
