@@ -384,8 +384,8 @@ input[type="range"]::-webkit-slider-thumb {
 #logo-canvas-wrap {
   position: relative;
   width: min(936px, 94vw);
-  max-height: 52vh;
-  margin-bottom: 20px;
+  max-height: 44vh;
+  margin-bottom: 16px;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -393,7 +393,7 @@ input[type="range"]::-webkit-slider-thumb {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 52vh;
+  max-height: 44vh;
   object-fit: contain;
   position: relative;
   z-index: 1;
@@ -566,6 +566,14 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* MOBILE overrides */
 @media (max-width: 699px) {
+  html, body {
+    overflow: auto;
+    height: auto;
+  }
+
+  #tool-screen {
+    height: 100dvh;
+  }
   #home-screen {
     height: auto;
     min-height: 100dvh;
@@ -580,11 +588,11 @@ input[type="range"]::-webkit-slider-thumb {
     width: 96vw;
     max-height: none;
     margin-top: 20px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   #logo-canvas {
-    opacity: 0.32;  /* more visible on mobile */
+    opacity: 0.32;
   }
 
   #home-logo {
@@ -595,7 +603,7 @@ input[type="range"]::-webkit-slider-thumb {
     height: 140px;
     width: 96vw;
     margin-top: 20px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   #home-buttons {
@@ -618,8 +626,8 @@ input[type="range"]::-webkit-slider-thumb {
   #home-footer {
     position: static !important;
     width: 100%;
-    margin-top: 20px;
-    padding: 12px 14px;
+    margin-top: 24px;
+    padding: 14px;
     flex-shrink: 0;
   }
 }
