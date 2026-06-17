@@ -384,13 +384,17 @@ input[type="range"]::-webkit-slider-thumb {
 #logo-canvas-wrap {
   position: relative;
   width: min(936px, 94vw);
-  margin-bottom: 24px;
+  max-height: 52vh;
+  margin-bottom: 20px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 #home-logo {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 52vh;
+  object-fit: contain;
   position: relative;
   z-index: 1;
 }
@@ -401,7 +405,7 @@ input[type="range"]::-webkit-slider-thumb {
   height: 100%;
   z-index: 2;
   mix-blend-mode: multiply;
-  opacity: 0.15;
+  opacity: 0.22;
   pointer-events: none;
 }
 
@@ -415,25 +419,28 @@ input[type="range"]::-webkit-slider-thumb {
   background: #ffffff;
   position: relative;
   padding-bottom: 40px;
+  gap: 0;
 }
 
 #home-logo-placeholder {
   width: min(936px, 94vw);
-  height: 200px;
+  height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   border: 1px solid var(--border);
   font-size: 22px;
   letter-spacing: 0.18em;
   color: var(--text);
+  flex-shrink: 0;
 }
 
 #home-buttons {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   width: min(936px, 94vw);
+  flex-shrink: 0;
 }
 
 .home-btn {
@@ -441,22 +448,23 @@ input[type="range"]::-webkit-slider-thumb {
   border: 1px solid var(--text);
   color: var(--text);
   cursor: pointer;
-  padding: 14px 10px;
+  padding: 10px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   transition: background 0.15s, color 0.15s;
   flex: 1;
+  min-width: 0;
 }
 .home-btn:hover { background: var(--text); color: var(--bg); }
-.home-btn-label { font-size: 13px; letter-spacing: 0.15em; }
-.home-btn-sub { font-size: 8px; letter-spacing: 0.06em; opacity: 0.5; text-align: center; }
+.home-btn-label { font-size: 11px; letter-spacing: 0.12em; white-space: nowrap; }
+.home-btn-sub { font-size: 7px; letter-spacing: 0.04em; opacity: 0.5; text-align: center; }
 
 #home-footer {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  padding: 10px 14px;
+  padding: 8px 14px;
   background: #ccff00;
   font-size: 10px;
   color: #1a1a1a;
@@ -570,8 +578,17 @@ input[type="range"]::-webkit-slider-thumb {
 
   #logo-canvas-wrap {
     width: 96vw;
+    max-height: none;
     margin-top: 20px;
     margin-bottom: 16px;
+  }
+
+  #logo-canvas {
+    opacity: 0.32;  /* more visible on mobile */
+  }
+
+  #home-logo {
+    max-height: none;
   }
 
   #home-logo-placeholder {
@@ -3941,15 +3958,15 @@ $('preset-file-input').addEventListener('change', e => {
         for (let cx=step/2;cx<W;cx+=step) {
           const v=voronoiDist(cx/W, cy/H, curS);
           const f=Math.max(0.05, 1+(v*2-1)*curI);
-          const r=Math.max(0.3, 1.6*f);
+          const r=Math.max(0.3, 1.2*f);
           lCtx.moveTo(cx+r,cy);
           lCtx.arc(cx,cy,r,0,Math.PI*2);
         }
       }
       lCtx.fill();
 
-      const tI=0.85+Math.sin(t*0.5)*0.12;
-      const tS=4.0+Math.sin(t*0.31+1.1)*0.6;
+      const tI=0.85+Math.sin(t*0.5)*0.22;
+      const tS=4.0+Math.sin(t*0.31+1.1)*0.9;
       curI+=(tI-curI)*LERP;
       curS+=(tS-curS)*LERP;
     }
