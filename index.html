@@ -1121,13 +1121,15 @@ input[type="range"]::-webkit-slider-thumb {
           </div>
         </div>
 
-        <div class="tool-note">SVG works for Halftone and Dithering. DOTS and SOLID export as PNG/JPG for now.</div>
+        <div class="tool-note">SVG works for Halftone and Dithering. DOTS, SOLID, GiocoFX and Circuit export as PNG/JPG.</div>
+
+        <div class="toggle-row" id="toggle-export-transparent"><div class="tog" id="export-transparent-ind">&nbsp;</div> PNG transparente (quita el fondo)</div>
 
         <div id="jpg-quality-wrap" style="display:none">
           <div class="row"><div class="row-top"><label>JPG Quality</label><input type="number" id="num-jpg-quality" value="92" min="10" max="100" step="1"></div><input type="range" id="jpg-quality" min="10" max="100" step="1" value="92"></div>
         </div>
 
-        <button class="export-btn" id="btn-export">Export canvas</button>
+        <button class="export-btn" id="btn-export" onclick="doExport()">Export canvas</button>
       </div>
     </div>
   </div>
@@ -1198,19 +1200,7 @@ const S = {
   solidTolerance: 60,
   solidPickColor: null,
 
-  circuitShowEffect: true,
-  circuitCell: 12,
-  circuitDensity: 128,
-  circuitWidth: 2,
-  circuitChaos: 30,
-  circuitNode: 3,
-  circuitNodeShape: 'circle',
-  circuitSymbols: 'none',
-  circuitSymfreq: 15,
-  circuitBus: 'none',
-  circuitBusWidth: 2,
-  circuitBreak: 20,
-  circuitColor: 'mono',
+  gfxShowEffect: true,
   gfxMode: 'destroy',
   gfxBlur: 4,
   gfxLevels: 100,
@@ -1230,6 +1220,19 @@ const S = {
   beadsColor: 'source',
   beadsTones: 8,
 
+  circuitShowEffect: true,
+  circuitCell: 12,
+  circuitDensity: 128,
+  circuitWidth: 2,
+  circuitChaos: 30,
+  circuitNode: 3,
+  circuitNodeShape: 'circle',
+  circuitSymbols: 'none',
+  circuitSymfreq: 15,
+  circuitBus: 'none',
+  circuitBusWidth: 2,
+  circuitBreak: 20,
+  circuitColor: 'mono',
   circuitFrag: 'none',
   circuitFragCell: 32,
   circuitDispX: 0,
@@ -1238,7 +1241,8 @@ const S = {
   circuitCharset: 'elec',
 
   format: 'png',
-  jpgQuality: 92
+  jpgQuality: 92,
+  exportTransparent: false,
 };
 
 // ---- PALETTE ----
@@ -3555,33 +3559,26 @@ function doExport() {
   exportCanvas.height = canvas.height;
   const ec = exportCanvas.getContext('2d');
 
-  if (S.format === 'jpg') {
-    // JPG: white background
-    ec.fillStyle = '#ffffff';
+  if (S.format === 'jpg' || !S.exportTransparent) {
+    // JPG or PNG with background: composite over the correct background color
+    const bgColor = (S.mode === 'halftone' && S.color === 'invert') ||
+                    (S.mode === 'giocoeffect' && S.gfxColor === 'invert') ||
+                    (S.mode === 'circuit' && S.circuitColor === 'invert')
+                    ? '#1a1a1a' : '#ffffff';
+    ec.fillStyle = bgColor;
     ec.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
     ec.drawImage(canvas, 0, 0);
   } else {
-    // PNG: transparent background
-    // Detect if current mode uses dark background
+    // PNG transparent: remove background color, keep shapes
     const darkBg = (S.mode === 'halftone' && S.color === 'invert') ||
                    (S.mode === 'giocoeffect' && S.gfxColor === 'invert') ||
                    (S.mode === 'circuit' && S.circuitColor === 'invert');
-
     ec.drawImage(canvas, 0, 0);
     const imgData = ec.getImageData(0, 0, exportCanvas.width, exportCanvas.height);
     const d = imgData.data;
-    if (darkBg) {
-      // Dark background: dark pixels → transparent, light → opaque
-      for (let i = 0; i < d.length; i += 4) {
-        const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-        d[i+3] = Math.round(lum);
-      }
-    } else {
-      // Light background: white → transparent, dark/color → opaque
-      for (let i = 0; i < d.length; i += 4) {
-        const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-        d[i+3] = Math.round(255 - lum);
-      }
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+      d[i+3] = darkBg ? Math.round(lum) : Math.round(255 - lum);
     }
     ec.putImageData(imgData, 0, 0);
   }
@@ -3608,6 +3605,14 @@ $('panel-toggle').addEventListener('click', () => {
 $('btn-solid-use-halftone').addEventListener('click', useSolidResultInHalftone);
 if ($('btn-solid-export-png')) $('btn-solid-export-png').addEventListener('click', exportSolidPNG);
 if ($('btn-solid-export-svg')) $('btn-solid-export-svg').addEventListener('click', exportSolidSVG);
+
+// Export button — use direct reference to guarantee it fires
+document.getElementById('btn-export').addEventListener('click', doExport);
+
+$('toggle-export-transparent').addEventListener('click', () => {
+  S.exportTransparent = !S.exportTransparent;
+  $('export-transparent-ind').innerHTML = S.exportTransparent ? '&#10003;' : '&nbsp;';
+});
 
 $('btn-gfx-use-halftone').addEventListener('click', () => {
   if (!sourceImg) return;
@@ -3644,6 +3649,7 @@ window.goHome = function() {
 };
 
 window.applyPreset = applyPreset;
+window.doExport = doExport;
 </script>
 
 </body>
