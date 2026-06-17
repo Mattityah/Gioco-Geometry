@@ -924,15 +924,15 @@ input[type="range"]::-webkit-slider-thumb {
       </div>
 
       <div class="tab-content" id="tab-solid">
-        <div class="tool-note">SOLID convierte dibujos en máscara negra plena. <b>Simplify</b>: cuánto simplificar la imagen (más = formas más grandes y limpias). <b>Threshold</b>: qué se considera oscuro.</div>
+        <div class="tool-note">SOLID convierte dibujos en máscara negra. <b>Line</b>: conserva el trazo fino tal cual (ideal para dibujos a mano/lápiz). <b>Fill</b>: rellena en bloque sólido (logos/siluetas). <b>Poster</b>: niveles. <b>Threshold</b>: qué se considera oscuro.</div>
 
         <div class="toggle-row" id="toggle-solid-effect"><div class="tog" id="solid-effect-ind">&#10003;</div> Show Solid Effect</div>
 
         <div class="sw-row">
           <span class="sw-label">Mode</span>
           <div class="sw-btns" id="sw-solid-mode">
-            <button class="sw-btn active" data-val="fill">Fill</button>
-            <button class="sw-btn" data-val="line">Line</button>
+            <button class="sw-btn" data-val="fill">Fill</button>
+            <button class="sw-btn active" data-val="line">Line</button>
             <button class="sw-btn" data-val="poster">Poster</button>
           </div>
         </div>
@@ -947,7 +947,7 @@ input[type="range"]::-webkit-slider-thumb {
           <button class="sw-btn" id="btn-solid-clear-color" style="font-size:10px;padding:4px 8px;border:1px solid var(--border);border-radius:3px">Limpiar</button>
         </div>
         <div class="row"><div class="row-top"><label>Tolerancia</label><input type="number" id="num-solid-tolerance" value="60" min="1" max="200" step="1"></div><input type="range" id="solid-tolerance" min="1" max="200" step="1" value="60"></div>
-        <div class="row"><div class="row-top"><label>Threshold</label><input type="number" id="num-solid-threshold" value="160" min="0" max="255" step="1"></div><input type="range" id="solid-threshold" min="0" max="255" step="1" value="160"></div>
+        <div class="row"><div class="row-top"><label>Threshold</label><input type="number" id="num-solid-threshold" value="140" min="0" max="255" step="1"></div><input type="range" id="solid-threshold" min="0" max="255" step="1" value="140"></div>
         <div class="row"><div class="row-top"><label>Simplify</label><input type="number" id="num-solid-stroke-weight" value="12" min="0" max="30" step="1"></div><input type="range" id="solid-stroke-weight" min="0" max="30" step="1" value="12"></div>
         <div class="row"><div class="row-top"><label>Smooth</label><input type="number" id="num-solid-smooth" value="4" min="0" max="12" step="1"></div><input type="range" id="solid-smooth" min="0" max="12" step="1" value="4"></div>
         <div class="row"><div class="row-top"><label>Despeckle</label><input type="number" id="num-solid-despeckle" value="2" min="0" max="12" step="1"></div><input type="range" id="solid-despeckle" min="0" max="12" step="1" value="2"></div>
@@ -1241,12 +1241,12 @@ const S = {
   dotsBackground: true,
 
   solidShowEffect: true,
-  solidThreshold: 160,
+  solidThreshold: 140,
   solidStrokeWeight: 12,
   solidSmooth: 4,
   solidDespeckle: 2,
   solidExpand: 0,
-  solidMode: 'fill',
+  solidMode: 'line',
   solidFillHoles: true,
   solidTolerance: 60,
   solidPickColor: null,
