@@ -934,19 +934,23 @@ input[type="range"]::-webkit-slider-thumb {
             <button class="sw-btn" data-val="fill">Fill</button>
             <button class="sw-btn active" data-val="line">Line</button>
             <button class="sw-btn" data-val="poster">Poster</button>
+            <button class="sw-btn" data-val="edge">Edge+Fill</button>
           </div>
         </div>
 
         <div class="section-title">Color a negro</div>
-        <div class="tool-note" style="margin-bottom:6px">Tocá un punto de la imagen en el canvas para seleccionar qué color se convierte en negro. O usá luminosidad si la imagen es B&N.</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <div id="solid-picked-color" style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:3px;background:#ffffff;flex-shrink:0"></div>
-          <div style="flex:1">
-            <div style="font-size:10px;color:var(--muted)" id="solid-color-label">Usando luminosidad</div>
+        <div class="toggle-row" id="toggle-solid-color-pick"><div class="tog" id="solid-color-pick-ind">&#10003;</div> Activar selección por color</div>
+        <div class="tool-note" style="margin-bottom:6px">Tocá un punto de la imagen en el canvas para seleccionar qué color se convierte en negro. Desactivá esta opción para usar solo luminosidad (Threshold).</div>
+        <div id="solid-color-pick-wrap">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <div id="solid-picked-color" style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:3px;background:#ffffff;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div style="font-size:10px;color:var(--muted)" id="solid-color-label">Usando luminosidad</div>
+            </div>
+            <button class="sw-btn" id="btn-solid-clear-color" style="font-size:10px;padding:4px 8px;border:1px solid var(--border);border-radius:3px">Limpiar</button>
           </div>
-          <button class="sw-btn" id="btn-solid-clear-color" style="font-size:10px;padding:4px 8px;border:1px solid var(--border);border-radius:3px">Limpiar</button>
+          <div class="row"><div class="row-top"><label>Tolerancia</label><input type="number" id="num-solid-tolerance" value="60" min="1" max="200" step="1"></div><input type="range" id="solid-tolerance" min="1" max="200" step="1" value="60"></div>
         </div>
-        <div class="row"><div class="row-top"><label>Tolerancia</label><input type="number" id="num-solid-tolerance" value="60" min="1" max="200" step="1"></div><input type="range" id="solid-tolerance" min="1" max="200" step="1" value="60"></div>
         <div class="row"><div class="row-top"><label>Threshold</label><input type="number" id="num-solid-threshold" value="180" min="0" max="255" step="1"></div><input type="range" id="solid-threshold" min="0" max="255" step="1" value="180"></div>
         <div class="row"><div class="row-top"><label>Simplify</label><input type="number" id="num-solid-stroke-weight" value="12" min="0" max="30" step="1"></div><input type="range" id="solid-stroke-weight" min="0" max="30" step="1" value="12"></div>
         <div class="row"><div class="row-top"><label>Smooth</label><input type="number" id="num-solid-smooth" value="4" min="0" max="12" step="1"></div><input type="range" id="solid-smooth" min="0" max="12" step="1" value="4"></div>
@@ -1250,6 +1254,7 @@ const S = {
   solidFillHoles: true,
   solidTolerance: 60,
   solidPickColor: null,
+  solidColorPickEnabled: true,
 
   gfxShowEffect: true,
   gfxMode: 'destroy',
@@ -1616,8 +1621,8 @@ $('fileInput').addEventListener('change', e => {
 document.querySelector('.canvas-wrap').addEventListener('click', e => {
   if (!sourceImg) { $('fileInput').click(); return; }
 
-  // Color picker: when in solid mode and image is loaded, click canvas to pick color
-  if (S.mode === 'solid' && sourceImg) {
+  // Color picker: when in solid mode, color-pick enabled, and image is loaded, click canvas to pick color
+  if (S.mode === 'solid' && S.solidColorPickEnabled && sourceImg) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -1647,6 +1652,15 @@ $('btn-solid-clear-color').addEventListener('click', () => {
   S.solidPickColor = null;
   $('solid-picked-color').style.background = '#ffffff';
   $('solid-color-label').textContent = 'Usando luminosidad';
+  scheduleRender();
+});
+
+$('toggle-solid-color-pick').addEventListener('click', () => {
+  S.solidColorPickEnabled = !S.solidColorPickEnabled;
+  $('solid-color-pick-ind').innerHTML = S.solidColorPickEnabled ? '&#10003;' : '&nbsp;';
+  $('solid-color-pick-wrap').style.display = S.solidColorPickEnabled ? 'block' : 'none';
+  // Turning the feature off falls back to plain luminance threshold immediately,
+  // without losing the picked color/tolerance if the person turns it back on.
   scheduleRender();
 });
 
@@ -2412,17 +2426,68 @@ function removeSmallRegions(mask, w, h, minArea) {
   return out;
 }
 
-function solidBuildMask(gray, w, h) {
+function solidBuildMask(gray, w, h, colorData) {
   let mask = new Uint8Array(w * h);
+  const useColor = S.solidColorPickEnabled && S.solidPickColor && colorData;
 
-  for (let i = 0; i < gray.length; i++) {
-    let v = gray[i];
+  if (S.solidMode === 'edge') {
+    // Edge works on the luminance gradient — color-pick doesn't apply here.
+    // 1. Sobel on grayscale
+    const edges = sobelEdges(gray, w, h);
+    // Normalize and threshold edges
+    let maxE = 0;
+    for (let i = 0; i < edges.length; i++) if (edges[i] > maxE) maxE = edges[i];
+    const edgeThresh = maxE * (S.solidThreshold / 255);
+    for (let i = 0; i < edges.length; i++) {
+      mask[i] = edges[i] > edgeThresh ? 1 : 0;
+    }
+    // 2. Dilate edges to close gaps (controlled by strokeWeight)
+    const sw = Math.max(1, Math.round(S.solidStrokeWeight));
+    mask = morph(mask, w, h, sw, 'dilate');
+    // 3. Smooth to clean up jagged edges
+    const smooth = Math.max(0, Math.round(S.solidSmooth));
+    for (let i = 0; i < smooth; i++) mask = majority(mask, w, h);
+    // 4. Flood fill enclosed regions
+    mask = floodFillBackground(mask, w, h);
+    // 5. Post smooth + despeckle
+    for (let i = 0; i < smooth; i++) mask = majority(mask, w, h);
+    const desp = Math.max(0, Math.round(S.solidDespeckle));
+    if (desp > 0) mask = removeSpeckles(mask, w, h, desp);
+    // 6. Expand/erode final shape
+    const exp = Math.round(S.solidExpand);
+    if (exp > 0) mask = morph(mask, w, h, exp, 'dilate');
+    if (exp < 0) mask = morph(mask, w, h, Math.abs(exp), 'erode');
+    return mask;
+  }
 
+  if (useColor) {
+    // Color-based masking: match pixels to the picked color by RGB distance,
+    // instead of plain luminance threshold.
+    const pr = parseInt(S.solidPickColor.slice(1,3), 16);
+    const pg = parseInt(S.solidPickColor.slice(3,5), 16);
+    const pb = parseInt(S.solidPickColor.slice(5,7), 16);
+    const tol = S.solidTolerance;
+    for (let i = 0; i < w * h; i++) {
+      const p = i * 4;
+      const dr = colorData[p] - pr;
+      const dg = colorData[p+1] - pg;
+      const db = colorData[p+2] - pb;
+      const dist = Math.sqrt(dr*dr + dg*dg + db*db);
+      mask[i] = dist < tol ? 1 : 0;
+    }
     if (S.solidMode === 'poster') {
-      v = v < S.solidThreshold ? 0 : 255;
-      mask[i] = v === 0 ? 1 : 0;
-    } else {
-      mask[i] = v < S.solidThreshold ? 1 : 0;
+      // Poster with color-pick: same binary mask (no intermediate tonal levels to posterize)
+    }
+  } else {
+    for (let i = 0; i < gray.length; i++) {
+      let v = gray[i];
+
+      if (S.solidMode === 'poster') {
+        v = v < S.solidThreshold ? 0 : 255;
+        mask[i] = v === 0 ? 1 : 0;
+      } else {
+        mask[i] = v < S.solidThreshold ? 1 : 0;
+      }
     }
   }
 
@@ -2553,95 +2618,22 @@ async function renderSolid(myID) {
     return;
   }
 
-  // Core idea: same as halftone with tiny step size.
-  // Divide image into a grid of cells. Each cell votes black or white
-  // based on average luminosity. Then scale up with interpolation + re-threshold.
-  // This naturally produces organic filled shapes without noise.
-
-  // Cell size: solidStrokeWeight maps 0→2px cells (fine) to 30→40px cells (coarse/blob)
-  const cellSize = Math.max(2, Math.round(2 + (S.solidStrokeWeight / 30) * 38));
-
-  const gw = Math.max(2, Math.ceil(cw / cellSize));
-  const gh = Math.max(2, Math.ceil(ch / cellSize));
-
-  // Sample source at grid resolution
-  const prep = prepareGray(gw, gh);
+  // Sample source at full canvas resolution so Fill/Line/Poster/Edge and the
+  // color-pick option all operate on real detail, not a pre-blurred grid.
+  const prep = prepareGray(cw, ch);
   const gray = prep.gray;
+  const colorData = prep.image.data;
 
-  // Each cell → black (1) or white (0) based on threshold or color match
-  let cellMask = new Uint8Array(gw * gh);
+  const mask = solidBuildMask(gray, cw, ch, colorData);
 
-  if (S.solidPickColor) {
-    // Color-based masking: match cells to picked color by HSL distance
-    const pr = parseInt(S.solidPickColor.slice(1,3), 16);
-    const pg = parseInt(S.solidPickColor.slice(3,5), 16);
-    const pb = parseInt(S.solidPickColor.slice(5,7), 16);
-
-    // Sample full color at grid resolution
-    const colorOff = document.createElement('canvas');
-    colorOff.width = gw; colorOff.height = gh;
-    const cOCtx = colorOff.getContext('2d', { willReadFrequently: true });
-    drawSourceToCanvas(colorOff, cOCtx, gw, gh);
-    const colorData = cOCtx.getImageData(0, 0, gw, gh).data;
-
-    const tol = S.solidTolerance;
-    for (let i = 0; i < gw * gh; i++) {
-      const p = i * 4;
-      const dr = colorData[p] - pr;
-      const dg = colorData[p+1] - pg;
-      const db = colorData[p+2] - pb;
-      const dist = Math.sqrt(dr*dr + dg*dg + db*db);
-      cellMask[i] = dist < tol ? 1 : 0;
-    }
-  } else {
-    for (let i = 0; i < gray.length; i++) {
-      cellMask[i] = gray[i] < S.solidThreshold ? 1 : 0;
-    }
-  }
-
-  // Smooth at cell level to merge nearby dark regions
-  const smooth = Math.max(0, Math.round(S.solidSmooth));
-  for (let i = 0; i < smooth; i++) cellMask = majority(cellMask, gw, gh);
-
-  // Remove isolated speckles
-  const desp = Math.max(0, Math.round(S.solidDespeckle));
-  if (desp > 0) cellMask = removeSpeckles(cellMask, gw, gh, desp);
-
-  // Remove tiny regions
-  const minArea = Math.max(1, Math.round(gw * gh * 0.003));
-  cellMask = removeSmallRegions(cellMask, gw, gh, minArea);
-
-  // Expand/erode
-  const exp = Math.round(S.solidExpand);
-  if (exp > 0) cellMask = morph(cellMask, gw, gh, exp, 'dilate');
-  if (exp < 0) cellMask = morph(cellMask, gw, gh, Math.abs(exp), 'erode');
-
-  // Paint cell mask to small canvas
-  const small = document.createElement('canvas');
-  small.width = gw; small.height = gh;
-  const sCtx = small.getContext('2d');
-  const sImg = sCtx.createImageData(gw, gh);
-  for (let i = 0; i < cellMask.length; i++) {
-    const v = cellMask[i] ? 0 : 255;
+  const out = ctx.createImageData(cw, ch);
+  const d = out.data;
+  for (let i = 0; i < mask.length; i++) {
+    const v = mask[i] ? 0 : 255;
     const p = i * 4;
-    sImg.data[p] = v; sImg.data[p+1] = v; sImg.data[p+2] = v; sImg.data[p+3] = 255;
+    d[p] = v; d[p+1] = v; d[p+2] = v; d[p+3] = 255;
   }
-  sCtx.putImageData(sImg, 0, 0);
-
-  // Scale up with bilinear interpolation → smooth organic edges
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(small, 0, 0, cw, ch);
-
-  // Re-threshold: gradient edges → clean hard black/white
-  const fullData = ctx.getImageData(0, 0, cw, ch);
-  const fd = fullData.data;
-  for (let i = 0; i < fd.length; i += 4) {
-    const lum = fd[i] * 0.299 + fd[i+1] * 0.587 + fd[i+2] * 0.114;
-    const v = lum < 128 ? 0 : 255;
-    fd[i] = v; fd[i+1] = v; fd[i+2] = v; fd[i+3] = 255;
-  }
-  ctx.putImageData(fullData, 0, 0);
+  ctx.putImageData(out, 0, 0);
 
   spinner.classList.remove('visible');
 }
