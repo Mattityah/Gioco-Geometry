@@ -379,34 +379,6 @@ input[type="range"]::-webkit-slider-thumb {
   margin: 6px 0 12px;
 }
 
-/* LOGO CANVAS ANIMATED */
-#logo-canvas-wrap {
-  position: relative;
-  width: min(720px, 88vw);
-  min-height: 120px;
-  margin-bottom: 28px;
-  cursor: crosshair;
-}
-
-#logo-canvas {
-  display: block;
-  width: 100%;
-  height: auto;
-  min-height: 120px;
-}
-
-#logo-hint {
-  position: absolute;
-  bottom: -18px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  opacity: 0.5;
-  white-space: nowrap;
-  pointer-events: none;
-}
 
 /* HOME SCREEN — base (desktop) */
 #home-screen {
@@ -591,50 +563,45 @@ input[type="range"]::-webkit-slider-thumb {
     position: static;
     justify-content: flex-start;
     padding-top: 0;
+    padding-bottom: 0;
     overflow-y: auto;
   }
 
   #home-logo {
-    max-height: 35vh;
-    width: 92vw;
-    margin-bottom: 20px;
-    margin-top: 28px;
+    max-height: 30vh;
+    width: 88vw;
+    margin-bottom: 18px;
+    margin-top: 24px;
+    flex-shrink: 0;
   }
-
-  #logo-canvas-wrap {
-    width: 92vw;
-    margin-bottom: 20px;
-    margin-top: 28px;
-    min-height: 80px;
-  }
-
-  #logo-hint { display: none; }
 
   #home-logo-placeholder {
-    height: 140px;
-    width: 92vw;
-    margin-bottom: 20px;
-    margin-top: 28px;
+    height: 120px;
+    width: 88vw;
+    margin-bottom: 18px;
+    margin-top: 24px;
+    flex-shrink: 0;
   }
 
   #home-buttons {
     flex-direction: column;
     width: 88vw;
-    gap: 8px;
+    gap: 7px;
     margin-bottom: 0;
+    flex-shrink: 0;
   }
 
   .home-btn {
-    padding: 12px 18px;
+    padding: 11px 16px;
     flex-direction: row;
     justify-content: flex-start;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
   }
 
   .home-btn-label {
-    font-size: 13px;
-    letter-spacing: 0.2em;
+    font-size: 12px;
+    letter-spacing: 0.18em;
   }
 
   .home-btn-sub {
@@ -643,10 +610,11 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   #home-footer {
-    position: static;
+    position: static !important;
     width: 100%;
-    margin-top: 28px;
-    padding: 14px 14px;
+    margin-top: 24px;
+    padding: 12px 14px;
+    flex-shrink: 0;
   }
 }
 </style>
@@ -655,17 +623,8 @@ input[type="range"]::-webkit-slider-thumb {
 <body>
 
 <div id="home-screen">
-  <!-- Logo hidden, used as source for halftone canvas -->
   <img src="logoHOME-GiocoGeometry.jpg" alt="GiocoGeometry" id="home-logo"
-    style="display:none"
-    onload="initLogoCanvas(this)"
-    onerror="document.getElementById('home-logo-placeholder').style.display='flex';document.getElementById('logo-canvas-wrap').style.display='none'">
-
-  <!-- Animated halftone canvas replacing the logo -->
-  <div id="logo-canvas-wrap">
-    <canvas id="logo-canvas"></canvas>
-    <div id="logo-hint">move cursor · mouse over</div>
-  </div>
+    onerror="this.style.display='none';document.getElementById('home-logo-placeholder').style.display='flex';">
   <div id="home-logo-placeholder" style="display:none">GIOCO GEOMETRY</div>
 
   <div id="home-buttons">
