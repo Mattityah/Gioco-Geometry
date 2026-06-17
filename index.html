@@ -380,6 +380,17 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 
+/* LOGO CANVAS */
+#logo-canvas-wrap {
+  width: min(936px, 94vw);
+  margin-bottom: 28px;
+}
+#logo-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* HOME SCREEN — base (desktop) */
 #home-screen {
   height: 100vh;
@@ -575,6 +586,12 @@ input[type="range"]::-webkit-slider-thumb {
     flex-shrink: 0;
   }
 
+  #logo-canvas-wrap {
+    width: 100vw;
+    margin-bottom: 18px;
+    margin-top: 24px;
+  }
+
   #home-logo-placeholder {
     height: 176px;
     width: 100vw;
@@ -623,9 +640,16 @@ input[type="range"]::-webkit-slider-thumb {
 <body>
 
 <div id="home-screen">
+  <!-- Static img used as source, canvas shown instead -->
   <img src="logoHOME-GiocoGeometry.jpg" alt="GiocoGeometry" id="home-logo"
-    onerror="this.style.display='none';document.getElementById('home-logo-placeholder').style.display='flex';">
-  <div id="home-logo-placeholder" style="display:none">GIOCO GEOMETRY</div>
+    style="display:none"
+    onload="initLogoCanvas(this)"
+    onerror="document.getElementById('home-logo-fallback').style.display='block';document.getElementById('logo-canvas-wrap').style.display='none'">
+
+  <div id="logo-canvas-wrap">
+    <canvas id="logo-canvas"></canvas>
+  </div>
+  <div id="home-logo-fallback" style="display:none;font-size:22px;letter-spacing:0.18em;margin-bottom:28px;color:var(--text)">GIOCO GEOMETRY</div>
 
   <div id="home-buttons">
     <button class="home-btn" id="btn-halftone" onclick="enterTool('halftone')">
@@ -3897,191 +3921,226 @@ $('preset-file-input').addEventListener('change', e => {
 });
 
 // ---- LOGO CANVAS ANIMATED ----
-window.initLogoCanvas = function(img) {
-  const wrap = document.getElementById('logo-canvas-wrap');
-  const lc = document.getElementById('logo-canvas');
-  if (!lc || !img || !img.naturalWidth) return;
+// Preset: fixed halftone params, only texIntensity + texScale animate
+(function() {
+  const LOGO_PRESET = {
+    showHalftoneEffect: true,
+    threshold: 200,
+    stepSize: 8,
+    gridAngle: 0,
+    grid: 'regular',
+    halftoneDither: 'floyd',
+    shape: 'custom',
+    mix: 'ordered',
+    color: 'mono',
+    customMix: { square: true, circle: true, arrow: false },
+    shapeSize: 2,
+    cornerRadius: 3,
+    noise: 0,
+    luminanceSize: true,
+    minShapeSize: 1,
+    maxShapeSize: 2,
+    texture: 'voronoi',
+    texIntensity: 0.85,  // animated
+    texScale: 4,         // animated
+    blur: 0,
+    contrast: 1,
+    brightness: 1.4,
+    gamma: 1.7,
+    invert: false
+  };
 
-  // Set canvas size proportional to image, max 720px wide
-  const maxW = Math.min(720, wrap.offsetWidth || 600);
-  const aspect = img.naturalHeight / img.naturalWidth;
-  const W = maxW;
-  const H = Math.round(W * aspect);
-  lc.width = W;
-  lc.height = H;
-  lc.style.height = H + 'px';
-  wrap.style.height = H + 'px';
-
-  const lCtx = lc.getContext('2d', { willReadFrequently: true });
-  const isMobile = window.matchMedia('(max-width:699px)').matches || ('ontouchstart' in window);
-
-  // ---- Precompute source grayscale at full res ----
-  const srcOff = document.createElement('canvas');
-  srcOff.width = W; srcOff.height = H;
-  const sCtx = srcOff.getContext('2d', { willReadFrequently: true });
-  sCtx.drawImage(img, 0, 0, W, H);
-  const srcData = sCtx.getImageData(0, 0, W, H).data;
-  const srcGray = new Float32Array(W * H);
-  for (let i = 0; i < srcGray.length; i++) {
-    const p = i * 4;
-    srcGray[i] = srcData[p]*0.299 + srcData[p+1]*0.587 + srcData[p+2]*0.114;
-  }
-
-  function sampleGray(gw, gh) {
-    const gray = new Float32Array(gw * gh);
-    for (let gy = 0; gy < gh; gy++) {
-      for (let gx = 0; gx < gw; gx++) {
-        const sx = Math.min(W-1, Math.round(gx/gw*(W-1)));
-        const sy = Math.min(H-1, Math.round(gy/gh*(H-1)));
-        gray[gy*gw+gx] = srcGray[sy*W+sx];
+  // Voronoi noise (same as main app)
+  function voronoiDist(x, y, scale) {
+    const sx = x * scale, sy = y * scale;
+    const ix = Math.floor(sx), iy = Math.floor(sy);
+    let minD = 9999;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const cx = ix+dx, cy = iy+dy;
+        let h1 = Math.sin(cx*127.1+cy*311.7)*43758.5453; h1 -= Math.floor(h1);
+        let h2 = Math.sin(cx*269.5+cy*183.3)*43758.5453; h2 -= Math.floor(h2);
+        const d = Math.hypot(sx-(cx+h1), sy-(cy+h2));
+        if (d < minD) minD = d;
       }
     }
-    return gray;
+    return Math.min(1, minD);
   }
 
-  function ditherMask(gray, gw, gh) {
-    const out = new Uint8Array(gw*gh);
+  function getTexFactor(nx, ny, texIntensity, texScale) {
+    const v = voronoiDist(nx, ny, texScale);
+    return Math.max(0.05, 1 + (v * 2 - 1) * texIntensity);
+  }
+
+  function ditherMaskLogo(gray, gw, gh) {
+    const out = new Uint8Array(gw * gh);
     const buf = new Float32Array(gray);
     const k = [[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]];
-    for (let y=0;y<gh;y++) for (let x=0;x<gw;x++) {
-      const i=y*gw+x, old=buf[i], nw=old<128?0:255;
-      out[i]=nw===0?1:0;
-      const err=old-nw;
-      for (const [dx,dy,w] of k) {
-        const nx=x+dx,ny=y+dy;
-        if(nx>=0&&nx<gw&&ny>=0&&ny<gh) buf[ny*gw+nx]+=err*w;
+    for (let y = 0; y < gh; y++) {
+      for (let x = 0; x < gw; x++) {
+        const i = y*gw+x, old = buf[i], nw = old < 200 ? 0 : 255;
+        out[i] = nw === 0 ? 1 : 0;
+        const err = old - nw;
+        for (const [dx,dy,w] of k) {
+          const nx=x+dx, ny=y+dy;
+          if(nx>=0&&nx<gw&&ny>=0&&ny<gh) buf[ny*gw+nx] += err*w;
+        }
       }
     }
     return out;
   }
 
-  const SHAPES = ['circle','square','arrow'];
+  function seededRand(seed) {
+    const x = Math.sin(seed * 127.1 + 1) * 43758.5453;
+    return x - Math.floor(x);
+  }
 
-  function renderLogo(step, angle, shIdx) {
-    step = Math.max(3, Math.round(step));
+  function drawLogoShape(ctx, shape, cx, cy, r, cr) {
+    if (shape === 'circle') {
+      ctx.moveTo(cx+r, cy);
+      ctx.arc(cx, cy, r, 0, Math.PI*2);
+    } else {
+      const rx = Math.min(cr, r);
+      if (!rx) { ctx.rect(cx-r, cy-r, r*2, r*2); return; }
+      const x=cx-r, y=cy-r, w=r*2;
+      ctx.moveTo(x+rx,y); ctx.lineTo(x+w-rx,y);
+      ctx.arcTo(x+w,y,x+w,y+rx,rx); ctx.lineTo(x+w,y+w-rx);
+      ctx.arcTo(x+w,y+w,x+w-rx,y+w,rx); ctx.lineTo(x+rx,y+w);
+      ctx.arcTo(x,y+w,x,y+w-rx,rx); ctx.lineTo(x,y+rx);
+      ctx.arcTo(x,y,x+rx,y,rx); ctx.closePath();
+    }
+  }
+
+  window.initLogoCanvas = function(img) {
+    const wrap = document.getElementById('logo-canvas-wrap');
+    const lc = document.getElementById('logo-canvas');
+    if (!lc || !img || !img.naturalWidth) return;
+
+    const maxW = Math.min(720, wrap.offsetWidth || 600);
+    const aspect = img.naturalHeight / img.naturalWidth;
+    const W = maxW, H = Math.round(W * aspect);
+    lc.width = W; lc.height = H;
+    lc.style.height = H + 'px';
+    wrap.style.height = H + 'px';
+
+    const lCtx = lc.getContext('2d', { willReadFrequently: true });
+    const isMobile = window.matchMedia('(max-width:699px)').matches || ('ontouchstart' in window);
+
+    // Precompute grayscale + apply brightness/gamma
+    const srcOff = document.createElement('canvas');
+    srcOff.width = W; srcOff.height = H;
+    const sCtx = srcOff.getContext('2d', { willReadFrequently: true });
+    sCtx.filter = 'brightness(' + LOGO_PRESET.brightness + ')';
+    sCtx.drawImage(img, 0, 0, W, H);
+    sCtx.filter = 'none';
+    const srcData = sCtx.getImageData(0, 0, W, H).data;
+    const srcGray = new Float32Array(W * H);
+    for (let i = 0; i < srcGray.length; i++) {
+      const p = i*4;
+      let l = srcData[p]*0.299 + srcData[p+1]*0.587 + srcData[p+2]*0.114;
+      l = 255 * Math.pow(l/255, LOGO_PRESET.gamma);
+      srcGray[i] = l;
+    }
+
+    function sampleGray(gw, gh) {
+      const gray = new Float32Array(gw*gh);
+      for (let gy=0;gy<gh;gy++) for (let gx=0;gx<gw;gx++) {
+        const sx=Math.min(W-1,Math.round(gx/gw*(W-1)));
+        const sy=Math.min(H-1,Math.round(gy/gh*(H-1)));
+        gray[gy*gw+gx] = srcGray[sy*W+sx];
+      }
+      return gray;
+    }
+
+    const SHAPES = ['square','circle'];
+    const step = LOGO_PRESET.stepSize;
     const size = Math.max(W, H);
-    // Cap grid to keep it fast
-    const maxCells = 80;
-    const gw = Math.min(maxCells, Math.ceil(size/step)+2);
-    const gh = Math.min(maxCells, Math.ceil(size/step)+2);
+    const gw = Math.min(100, Math.ceil(size/step)+2);
+    const gh = Math.min(100, Math.ceil(size/step)+2);
     const gray = sampleGray(gw, gh);
-    const mask = ditherMask(gray, gw, gh);
-    const shape = SHAPES[Math.floor(shIdx) % SHAPES.length];
+    const mask = ditherMaskLogo(gray, gw, gh);
 
-    lCtx.clearRect(0, 0, W, H);
-    lCtx.fillStyle = '#ffffff';
-    lCtx.fillRect(0, 0, W, H);
-    lCtx.fillStyle = '#1a1a1a';
-    lCtx.beginPath();
-
-    const rad = angle * Math.PI / 180;
-    const cx = W/2, cy = H/2;
-    const diag = Math.ceil(Math.sqrt(2)*size) + step*4;
-    const sx0 = cx - diag/2, sy0 = cy - diag/2;
+    // Precompute grid points
+    const cx0 = W/2, cy0 = H/2;
+    const diag = Math.ceil(Math.sqrt(2)*size)+step*4;
+    const sx0 = cx0-diag/2, sy0 = cy0-diag/2;
     const cols = Math.ceil(diag/step)+1;
     const rows = Math.ceil(diag/step)+1;
-    const r = Math.max(0.5, step*0.38);
 
-    for (let row=0; row<=rows; row++) {
-      for (let col=0; col<=cols; col++) {
-        const gc = Math.round((col/cols)*(gw-1));
-        const gr = Math.round((row/rows)*(gh-1));
+    // Collect active cells
+    const cells = [];
+    for (let row=0;row<=rows;row++) {
+      for (let col=0;col<=cols;col++) {
+        const gc=Math.round((col/cols)*(gw-1));
+        const gr=Math.round((row/rows)*(gh-1));
         if (!mask[gr*gw+gc]) continue;
         const lx=sx0+col*step, ly=sy0+row*step;
-        const dx=lx-cx, dy=ly-cy;
-        const drawX = cx + dx*Math.cos(rad) - dy*Math.sin(rad);
-        const drawY = cy + dx*Math.sin(rad) + dy*Math.cos(rad);
+        const dx=lx-cx0, dy=ly-cy0;
+        const drawX=cx0+dx, drawY=cy0+dy; // angle=0 always for logo
         if (drawX<-step||drawX>W+step||drawY<-step||drawY>H+step) continue;
-
-        switch(shape) {
-          case 'circle':
-            lCtx.moveTo(drawX+r, drawY);
-            lCtx.arc(drawX, drawY, r, 0, Math.PI*2);
-            break;
-          case 'arrow':
-            lCtx.moveTo(drawX-r, drawY);
-            lCtx.lineTo(drawX+r*0.6, drawY-r*0.9);
-            lCtx.lineTo(drawX+r*0.6, drawY+r*0.9);
-            lCtx.closePath();
-            break;
-          default:
-            lCtx.rect(drawX-r, drawY-r, r*2, r*2);
-        }
+        const shIdx = (col+row)%2; // ordered mix square+circle
+        cells.push({ x: drawX, y: drawY, col, row, shIdx, lum: gray[gr*gw+gc] });
       }
     }
-    lCtx.fill();
-  }
 
-  // ---- Animated state with lerp ----
-  // Current (smoothed) values
-  let curStep = 8, curAngle = 0, curShape = 0;
-  // Target values
-  let tgtStep = 8, tgtAngle = 0, tgtShape = 0;
+    // Animation state
+    let texIntensity = LOGO_PRESET.texIntensity;
+    let texScale = LOGO_PRESET.texScale;
+    let tgtIntensity = texIntensity, tgtScale = texScale;
+    let t = 0, rafId = null, lastRender = 0;
+    const LERP = 0.025;
+    const FPS = isMobile ? 14 : 20;
+    const INTERVAL = 1000/FPS;
 
-  // Lerp speed: lower = smoother/slower
-  const LERP = isMobile ? 0.015 : 0.08;
+    function renderLogoFrame() {
+      lCtx.clearRect(0,0,W,H);
+      lCtx.fillStyle = '#ffffff';
+      lCtx.fillRect(0,0,W,H);
+      lCtx.fillStyle = '#1a1a1a';
+      lCtx.beginPath();
 
-  let t = 0;
-  let mouseX = 0.5, mouseY = 0.5;
-  let rafId = null;
-  let lastRender = 0;
-  const FPS = isMobile ? 18 : 24;
-  const INTERVAL = 1000 / FPS;
-
-  function lerp(a, b, f) { return a + (b - a) * f; }
-
-  if (!isMobile) {
-    // Desktop: mouse sets targets
-    document.getElementById('home-screen').addEventListener('mousemove', e => {
-      const rect = document.getElementById('home-screen').getBoundingClientRect();
-      mouseX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      mouseY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-    });
-  }
-
-  function animate(ts) {
-    rafId = requestAnimationFrame(animate);
-    if (ts - lastRender < INTERVAL) return;
-    lastRender = ts;
-    t += 0.008;
-
-    if (isMobile) {
-      // Slow sine targets — very gentle on mobile
-      tgtStep  = 6 + Math.abs(Math.sin(t * 0.25)) * 14;   // 6..20
-      tgtAngle = Math.sin(t * 0.18) * 15;                  // -15..15
-      tgtShape = (Math.sin(t * 0.07) * 0.5 + 0.5) * SHAPES.length;
-    } else {
-      // Mouse sets targets
-      tgtStep  = 4 + mouseX * 20;
-      tgtAngle = (mouseY - 0.5) * 36;
-      tgtShape = (Math.sin(t * 0.1) * 0.5 + 0.5) * SHAPES.length;
+      for (const c of cells) {
+        const baseR = LOGO_PRESET.luminanceSize
+          ? Math.max(LOGO_PRESET.minShapeSize, Math.min(LOGO_PRESET.maxShapeSize,
+              LOGO_PRESET.maxShapeSize - (c.lum/255)*(LOGO_PRESET.maxShapeSize-LOGO_PRESET.minShapeSize)))
+          : LOGO_PRESET.shapeSize;
+        const texF = getTexFactor(c.x/W, c.y/H, texIntensity, texScale);
+        const r = Math.max(0.5, baseR * texF);
+        const shape = SHAPES[c.shIdx % SHAPES.length];
+        drawLogoShape(lCtx, shape, c.x, c.y, r, LOGO_PRESET.cornerRadius);
+      }
+      lCtx.fill();
     }
 
-    // Smooth lerp toward targets
-    curStep  = lerp(curStep,  tgtStep,  LERP);
-    curAngle = lerp(curAngle, tgtAngle, LERP);
-    curShape = lerp(curShape, tgtShape, LERP * 0.3);
-
-    renderLogo(curStep, curAngle, curShape);
-  }
-
-  // Start animation
-  rafId = requestAnimationFrame(animate);
-
-  // Pause when tool opens, resume when home shown
-  const toolScreen = document.getElementById('tool-screen');
-  const observer = new MutationObserver(() => {
-    const toolOpen = toolScreen.classList.contains('visible');
-    if (toolOpen && rafId) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    } else if (!toolOpen && !rafId) {
-      t = 0; // reset time on return
+    function animate(ts) {
       rafId = requestAnimationFrame(animate);
+      if (ts - lastRender < INTERVAL) return;
+      lastRender = ts;
+      t += 0.006;
+
+      // Very slow, gentle oscillation around preset values
+      tgtIntensity = LOGO_PRESET.texIntensity + Math.sin(t * 0.4) * 0.28;
+      tgtScale     = LOGO_PRESET.texScale     + Math.sin(t * 0.27 + 1.2) * 1.4;
+
+      texIntensity += (tgtIntensity - texIntensity) * LERP;
+      texScale     += (tgtScale     - texScale)     * LERP;
+
+      renderLogoFrame();
     }
-  });
-  observer.observe(toolScreen, { attributes: true, attributeFilter: ['class'] });
-};
+
+    rafId = requestAnimationFrame(animate);
+
+    const toolScreen = document.getElementById('tool-screen');
+    const obs = new MutationObserver(() => {
+      if (toolScreen.classList.contains('visible') && rafId) {
+        cancelAnimationFrame(rafId); rafId = null;
+      } else if (!toolScreen.classList.contains('visible') && !rafId) {
+        rafId = requestAnimationFrame(animate);
+      }
+    });
+    obs.observe(toolScreen, { attributes: true, attributeFilter: ['class'] });
+  };
+})();
 </script>
 
 </body>
