@@ -1158,9 +1158,9 @@ input[type="range"]::-webkit-slider-thumb {
           </div>
         </div>
 
-        <div class="tool-note">Auto = como se ve. Black/White fuerza el color de las formas al exportar, útil para fotomontajes.</div>
+        <div class="tool-note">Auto = como se ve. Black/White fuerza el color de los puntos. Sin "PNG transparente": exporta con fondo sólido blanco/negro (clásico). Con "PNG transparente": solo los puntos (en negro o el color que elijas), fondo invisible.</div>
 
-        <div class="toggle-row" id="toggle-export-transparent"><div class="tog" id="export-transparent-ind">&nbsp;</div> PNG transparente (quita el fondo)</div>
+        <div class="toggle-row" id="toggle-export-transparent"><div class="tog" id="export-transparent-ind">&nbsp;</div> PNG transparente (solo puntitos, sin fondo)</div>
 
         <div id="jpg-quality-wrap" style="display:none">
           <div class="row"><div class="row-top"><label>JPG Quality</label><input type="number" id="num-jpg-quality" value="92" min="10" max="100" step="1"></div><input type="range" id="jpg-quality" min="10" max="100" step="1" value="92"></div>
@@ -3623,46 +3623,55 @@ function doExport() {
   exportCanvas.height = canvas.height;
   const ec = exportCanvas.getContext('2d');
 
-  // Step 1: composite canvas onto correct background
-  const bgColor = darkBg ? '#1a1a1a' : '#ffffff';
-  ec.fillStyle = bgColor;
-  ec.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+  // Step 1: read the canvas as-is (no background composite yet) so we can
+  // tell shape pixels from background pixels by luminance, independent of
+  // any later recoloring.
   ec.drawImage(canvas, 0, 0);
+  const imgData = ec.getImageData(0, 0, exportCanvas.width, exportCanvas.height);
+  const d = imgData.data;
+  const wantTransparent = S.format === 'png' && S.exportTransparent;
 
-  // Step 2: remap shape colors if Black or White selected
-  if (S.exportColor !== 'auto') {
-    const imgData = ec.getImageData(0, 0, exportCanvas.width, exportCanvas.height);
-    const d = imgData.data;
-    const wantWhite = S.exportColor === 'white';
+  for (let i = 0; i < d.length; i += 4) {
+    const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+    // isShape: true for the drawn dots/shapes, false for empty canvas space.
+    // On a dark canvas (invert modes) shapes are the bright pixels; on a
+    // light canvas shapes are the dark pixels.
+    const isShape = darkBg ? lum > 128 : lum < 128;
 
-    for (let i = 0; i < d.length; i += 4) {
-      const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-      // Determine if this pixel is a "shape" (dark on light bg) or "background"
-      const isShape = darkBg ? lum > 128 : lum < 128;
+    if (S.exportColor !== 'auto') {
+      // Force shape color to black or white, leave background pixels alone
+      // (they get dealt with by background/transparency step below).
       if (isShape) {
-        // Force shape to white or black
-        const v = wantWhite ? 255 : 0;
-        d[i] = v; d[i+1] = v; d[i+2] = v;
-      } else {
-        // Force background to the opposite
-        const v = wantWhite ? 0 : 255;
+        const v = S.exportColor === 'white' ? 255 : 0;
         d[i] = v; d[i+1] = v; d[i+2] = v;
       }
+    } else if (wantTransparent) {
+      // Transparent + Auto: still force a flat black so "solo puntitos"
+      // reads as a clean silhouette rather than full-color dots.
+      if (isShape) { d[i] = 0; d[i+1] = 0; d[i+2] = 0; }
     }
-    ec.putImageData(imgData, 0, 0);
-  }
 
-  // Step 3: if PNG transparent, remove background
-  if (S.format === 'png' && S.exportTransparent) {
-    const imgData = ec.getImageData(0, 0, exportCanvas.width, exportCanvas.height);
-    const d = imgData.data;
-    // After color remapping, background is always white (shapes white) or black
-    const removeDark = S.exportColor === 'white' ? false : !darkBg;
-    for (let i = 0; i < d.length; i += 4) {
-      const lum = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-      d[i+3] = removeDark ? Math.round(lum) : Math.round(255 - lum);
+    if (wantTransparent) {
+      // Shapes stay opaque with their (possibly just remapped) color;
+      // background becomes fully transparent.
+      d[i+3] = isShape ? 255 : 0;
     }
-    ec.putImageData(imgData, 0, 0);
+  }
+  ec.putImageData(imgData, 0, 0);
+
+  // Step 2: if not transparent, composite onto a solid background now
+  // (white, or dark if the mode is naturally inverted).
+  if (!wantTransparent) {
+    const bgColor = darkBg ? '#1a1a1a' : '#ffffff';
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = exportCanvas.width;
+    bgCanvas.height = exportCanvas.height;
+    const bc = bgCanvas.getContext('2d');
+    bc.fillStyle = bgColor;
+    bc.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+    bc.drawImage(exportCanvas, 0, 0);
+    ec.clearRect(0, 0, exportCanvas.width, exportCanvas.height);
+    ec.drawImage(bgCanvas, 0, 0);
   }
 
   const a = document.createElement('a');
