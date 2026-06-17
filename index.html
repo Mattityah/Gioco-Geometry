@@ -3921,178 +3921,101 @@ $('preset-file-input').addEventListener('change', e => {
 });
 
 // ---- LOGO CANVAS ANIMATED ----
-// Preset: fixed halftone params, only texIntensity + texScale animate
 (function() {
-  const LOGO_PRESET = {
-    showHalftoneEffect: true,
-    threshold: 200,
-    stepSize: 8,
-    gridAngle: 0,
-    grid: 'regular',
-    halftoneDither: 'floyd',
-    shape: 'custom',
-    mix: 'ordered',
-    color: 'mono',
-    customMix: { square: true, circle: true, arrow: false },
-    shapeSize: 2,
-    cornerRadius: 3,
-    noise: 0,
-    luminanceSize: true,
-    minShapeSize: 1,
-    maxShapeSize: 2,
-    texture: 'voronoi',
-    texIntensity: 0.85,  // animated
-    texScale: 4,         // animated
-    blur: 0,
-    contrast: 1,
-    brightness: 1.4,
-    gamma: 1.7,
-    invert: false
+  const P = {
+    threshold: 200, stepSize: 8, brightness: 1.4, gamma: 1.7,
+    shapeSize: 2, cornerRadius: 3,
+    luminanceSize: true, minShapeSize: 1, maxShapeSize: 2,
+    texIntensity: 0.85, texScale: 4
   };
 
-  // Voronoi noise (same as main app)
   function voronoiDist(x, y, scale) {
-    const sx = x * scale, sy = y * scale;
-    const ix = Math.floor(sx), iy = Math.floor(sy);
-    let minD = 9999;
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        const cx = ix+dx, cy = iy+dy;
-        let h1 = Math.sin(cx*127.1+cy*311.7)*43758.5453; h1 -= Math.floor(h1);
-        let h2 = Math.sin(cx*269.5+cy*183.3)*43758.5453; h2 -= Math.floor(h2);
-        const d = Math.hypot(sx-(cx+h1), sy-(cy+h2));
-        if (d < minD) minD = d;
-      }
+    const sx=x*scale, sy=y*scale, ix=Math.floor(sx), iy=Math.floor(sy);
+    let minD=9999;
+    for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) {
+      const cx=ix+dx, cy=iy+dy;
+      let h1=Math.sin(cx*127.1+cy*311.7)*43758.5453; h1-=Math.floor(h1);
+      let h2=Math.sin(cx*269.5+cy*183.3)*43758.5453; h2-=Math.floor(h2);
+      const d=Math.hypot(sx-(cx+h1),sy-(cy+h2));
+      if(d<minD) minD=d;
     }
-    return Math.min(1, minD);
-  }
-
-  function getTexFactor(nx, ny, texIntensity, texScale) {
-    const v = voronoiDist(nx, ny, texScale);
-    return Math.max(0.05, 1 + (v * 2 - 1) * texIntensity);
-  }
-
-  function ditherMaskLogo(gray, gw, gh) {
-    const out = new Uint8Array(gw * gh);
-    const buf = new Float32Array(gray);
-    const k = [[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]];
-    for (let y = 0; y < gh; y++) {
-      for (let x = 0; x < gw; x++) {
-        const i = y*gw+x, old = buf[i], nw = old < 200 ? 0 : 255;
-        out[i] = nw === 0 ? 1 : 0;
-        const err = old - nw;
-        for (const [dx,dy,w] of k) {
-          const nx=x+dx, ny=y+dy;
-          if(nx>=0&&nx<gw&&ny>=0&&ny<gh) buf[ny*gw+nx] += err*w;
-        }
-      }
-    }
-    return out;
-  }
-
-  function seededRand(seed) {
-    const x = Math.sin(seed * 127.1 + 1) * 43758.5453;
-    return x - Math.floor(x);
-  }
-
-  function drawLogoShape(ctx, shape, cx, cy, r, cr) {
-    if (shape === 'circle') {
-      ctx.moveTo(cx+r, cy);
-      ctx.arc(cx, cy, r, 0, Math.PI*2);
-    } else {
-      const rx = Math.min(cr, r);
-      if (!rx) { ctx.rect(cx-r, cy-r, r*2, r*2); return; }
-      const x=cx-r, y=cy-r, w=r*2;
-      ctx.moveTo(x+rx,y); ctx.lineTo(x+w-rx,y);
-      ctx.arcTo(x+w,y,x+w,y+rx,rx); ctx.lineTo(x+w,y+w-rx);
-      ctx.arcTo(x+w,y+w,x+w-rx,y+w,rx); ctx.lineTo(x+rx,y+w);
-      ctx.arcTo(x,y+w,x,y+w-rx,rx); ctx.lineTo(x,y+rx);
-      ctx.arcTo(x,y,x+rx,y,rx); ctx.closePath();
-    }
+    return Math.min(1,minD);
   }
 
   window.initLogoCanvas = function(img) {
     const wrap = document.getElementById('logo-canvas-wrap');
-    const lc = document.getElementById('logo-canvas');
+    const lc   = document.getElementById('logo-canvas');
     if (!lc || !img || !img.naturalWidth) return;
 
-    const maxW = Math.min(720, wrap.offsetWidth || 600);
-    const aspect = img.naturalHeight / img.naturalWidth;
-    const W = maxW, H = Math.round(W * aspect);
+    // Canvas = same pixel size as source image, CSS scales it
+    const W = img.naturalWidth, H = img.naturalHeight;
     lc.width = W; lc.height = H;
-    lc.style.height = H + 'px';
-    wrap.style.height = H + 'px';
+    wrap.style.aspectRatio = W + '/' + H;
 
     const lCtx = lc.getContext('2d', { willReadFrequently: true });
-    const isMobile = window.matchMedia('(max-width:699px)').matches || ('ontouchstart' in window);
 
-    // Precompute grayscale + apply brightness/gamma
-    const srcOff = document.createElement('canvas');
-    srcOff.width = W; srcOff.height = H;
-    const sCtx = srcOff.getContext('2d', { willReadFrequently: true });
-    sCtx.filter = 'brightness(' + LOGO_PRESET.brightness + ')';
+    // Draw image with brightness filter, read pixels
+    const src = document.createElement('canvas');
+    src.width = W; src.height = H;
+    const sCtx = src.getContext('2d', { willReadFrequently: true });
+    sCtx.filter = 'brightness(' + P.brightness + ')';
     sCtx.drawImage(img, 0, 0, W, H);
     sCtx.filter = 'none';
-    const srcData = sCtx.getImageData(0, 0, W, H).data;
-    const srcGray = new Float32Array(W * H);
-    for (let i = 0; i < srcGray.length; i++) {
-      const p = i*4;
-      let l = srcData[p]*0.299 + srcData[p+1]*0.587 + srcData[p+2]*0.114;
-      l = 255 * Math.pow(l/255, LOGO_PRESET.gamma);
-      srcGray[i] = l;
+    const px = sCtx.getImageData(0, 0, W, H).data;
+
+    // Build grayscale + gamma array
+    const gray = new Float32Array(W * H);
+    for (let i = 0; i < gray.length; i++) {
+      const p = i * 4;
+      let l = px[p]*0.299 + px[p+1]*0.587 + px[p+2]*0.114;
+      gray[i] = 255 * Math.pow(l/255, P.gamma);
     }
 
-    function sampleGray(gw, gh) {
-      const gray = new Float32Array(gw*gh);
-      for (let gy=0;gy<gh;gy++) for (let gx=0;gx<gw;gx++) {
-        const sx=Math.min(W-1,Math.round(gx/gw*(W-1)));
-        const sy=Math.min(H-1,Math.round(gy/gh*(H-1)));
-        gray[gy*gw+gx] = srcGray[sy*W+sx];
+    // Floyd-Steinberg on gray
+    function buildMask() {
+      const buf = new Float32Array(gray);
+      const out = new Uint8Array(W * H);
+      const k = [[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]];
+      for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
+        const i=y*W+x, old=buf[i], nw=old<P.threshold?0:255;
+        out[i] = nw===0 ? 1 : 0;
+        const err=old-nw;
+        for (const [dx,dy,w] of k) {
+          const nx=x+dx,ny=y+dy;
+          if(nx>=0&&nx<W&&ny>=0&&ny<H) buf[ny*W+nx]+=err*w;
+        }
       }
-      return gray;
+      return out;
     }
 
+    const mask = buildMask();
+
+    // Collect grid cells — simple regular grid over the image
+    const step = P.stepSize;
     const SHAPES = ['square','circle'];
-    const step = LOGO_PRESET.stepSize;
-    const size = Math.max(W, H);
-    const gw = Math.min(100, Math.ceil(size/step)+2);
-    const gh = Math.min(100, Math.ceil(size/step)+2);
-    const gray = sampleGray(gw, gh);
-    const mask = ditherMaskLogo(gray, gw, gh);
-
-    // Precompute grid points
-    const cx0 = W/2, cy0 = H/2;
-    const diag = Math.ceil(Math.sqrt(2)*size)+step*4;
-    const sx0 = cx0-diag/2, sy0 = cy0-diag/2;
-    const cols = Math.ceil(diag/step)+1;
-    const rows = Math.ceil(diag/step)+1;
-
-    // Collect active cells
     const cells = [];
-    for (let row=0;row<=rows;row++) {
-      for (let col=0;col<=cols;col++) {
-        const gc=Math.round((col/cols)*(gw-1));
-        const gr=Math.round((row/rows)*(gh-1));
-        if (!mask[gr*gw+gc]) continue;
-        const lx=sx0+col*step, ly=sy0+row*step;
-        const dx=lx-cx0, dy=ly-cy0;
-        const drawX=cx0+dx, drawY=cy0+dy; // angle=0 always for logo
-        if (drawX<-step||drawX>W+step||drawY<-step||drawY>H+step) continue;
-        const shIdx = (col+row)%2; // ordered mix square+circle
-        cells.push({ x: drawX, y: drawY, col, row, shIdx, lum: gray[gr*gw+gc] });
+
+    for (let cy=step/2; cy<H; cy+=step) {
+      for (let cx=step/2; cx<W; cx+=step) {
+        const ix=Math.round(cx), iy=Math.round(cy);
+        if (ix<0||ix>=W||iy<0||iy>=H) continue;
+        // Sample a small area average for stability
+        let sum=0, count=0;
+        const r2=Math.floor(step/2);
+        for (let sy=iy-r2;sy<=iy+r2;sy++) for (let sx=ix-r2;sx<=ix+r2;sx++) {
+          if(sx>=0&&sx<W&&sy>=0&&sy<H) { sum+=mask[sy*W+sx]; count++; }
+        }
+        if (sum/count < 0.35) continue; // skip mostly white cells
+
+        const lum = gray[iy*W+ix];
+        const col = Math.round(cx/step), row = Math.round(cy/step);
+        const shIdx = (col+row) % 2;
+        cells.push({ x: cx, y: cy, lum, shIdx });
       }
     }
 
-    // Animation state
-    let texIntensity = LOGO_PRESET.texIntensity;
-    let texScale = LOGO_PRESET.texScale;
-    let tgtIntensity = texIntensity, tgtScale = texScale;
-    let t = 0, rafId = null, lastRender = 0;
-    const LERP = 0.025;
-    const FPS = isMobile ? 14 : 20;
-    const INTERVAL = 1000/FPS;
-
-    function renderLogoFrame() {
+    // Render one frame
+    function renderFrame(texIntensity, texScale) {
       lCtx.clearRect(0,0,W,H);
       lCtx.fillStyle = '#ffffff';
       lCtx.fillRect(0,0,W,H);
@@ -4100,45 +4023,70 @@ $('preset-file-input').addEventListener('change', e => {
       lCtx.beginPath();
 
       for (const c of cells) {
-        const baseR = LOGO_PRESET.luminanceSize
-          ? Math.max(LOGO_PRESET.minShapeSize, Math.min(LOGO_PRESET.maxShapeSize,
-              LOGO_PRESET.maxShapeSize - (c.lum/255)*(LOGO_PRESET.maxShapeSize-LOGO_PRESET.minShapeSize)))
-          : LOGO_PRESET.shapeSize;
-        const texF = getTexFactor(c.x/W, c.y/H, texIntensity, texScale);
-        const r = Math.max(0.5, baseR * texF);
-        const shape = SHAPES[c.shIdx % SHAPES.length];
-        drawLogoShape(lCtx, shape, c.x, c.y, r, LOGO_PRESET.cornerRadius);
+        const v = voronoiDist(c.x/W, c.y/H, texScale);
+        const texF = Math.max(0.05, 1 + (v*2-1)*texIntensity);
+
+        const baseR = P.luminanceSize
+          ? Math.max(P.minShapeSize, Math.min(P.maxShapeSize,
+              P.maxShapeSize - (c.lum/255)*(P.maxShapeSize-P.minShapeSize)))
+          : P.shapeSize;
+        const r = Math.max(0.4, baseR * texF);
+
+        const shape = c.shIdx === 0 ? 'square' : 'circle';
+        if (shape === 'circle') {
+          lCtx.moveTo(c.x+r, c.y);
+          lCtx.arc(c.x, c.y, r, 0, Math.PI*2);
+        } else {
+          const cr = Math.min(P.cornerRadius, r);
+          const x=c.x-r, y=c.y-r, w=r*2;
+          if (cr <= 0) {
+            lCtx.rect(x, y, w, w);
+          } else {
+            lCtx.moveTo(x+cr,y); lCtx.lineTo(x+w-cr,y);
+            lCtx.arcTo(x+w,y,x+w,y+cr,cr); lCtx.lineTo(x+w,y+w-cr);
+            lCtx.arcTo(x+w,y+w,x+w-cr,y+w,cr); lCtx.lineTo(x+cr,y+w);
+            lCtx.arcTo(x,y+w,x,y+w-cr,cr); lCtx.lineTo(x,y+cr);
+            lCtx.arcTo(x,y,x+cr,y,cr); lCtx.closePath();
+          }
+        }
       }
       lCtx.fill();
     }
 
+    // Animation — only texIntensity and texScale move, very subtly
+    let curI = P.texIntensity, curS = P.texScale;
+    let t = 0, rafId = null, last = 0;
+    const isMobile = 'ontouchstart' in window;
+    const INTERVAL = isMobile ? 1000/14 : 1000/20;
+    const LERP = 0.018; // very slow approach
+
     function animate(ts) {
       rafId = requestAnimationFrame(animate);
-      if (ts - lastRender < INTERVAL) return;
-      lastRender = ts;
-      t += 0.006;
+      if (ts - last < INTERVAL) return;
+      last = ts;
+      t += 0.004; // extremely slow time
 
-      // Very slow, gentle oscillation around preset values
-      tgtIntensity = LOGO_PRESET.texIntensity + Math.sin(t * 0.4) * 0.28;
-      tgtScale     = LOGO_PRESET.texScale     + Math.sin(t * 0.27 + 1.2) * 1.4;
+      // Targets oscillate very subtly around preset values
+      const tgtI = P.texIntensity + Math.sin(t * 0.5) * 0.12;
+      const tgtS = P.texScale     + Math.sin(t * 0.31 + 1.1) * 0.6;
 
-      texIntensity += (tgtIntensity - texIntensity) * LERP;
-      texScale     += (tgtScale     - texScale)     * LERP;
+      curI += (tgtI - curI) * LERP;
+      curS += (tgtS - curS) * LERP;
 
-      renderLogoFrame();
+      renderFrame(curI, curS);
     }
 
     rafId = requestAnimationFrame(animate);
 
-    const toolScreen = document.getElementById('tool-screen');
-    const obs = new MutationObserver(() => {
-      if (toolScreen.classList.contains('visible') && rafId) {
-        cancelAnimationFrame(rafId); rafId = null;
-      } else if (!toolScreen.classList.contains('visible') && !rafId) {
-        rafId = requestAnimationFrame(animate);
+    // Pause when tool opens
+    const tool = document.getElementById('tool-screen');
+    new MutationObserver(() => {
+      if (tool.classList.contains('visible')) {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      } else {
+        if (!rafId) rafId = requestAnimationFrame(animate);
       }
-    });
-    obs.observe(toolScreen, { attributes: true, attributeFilter: ['class'] });
+    }).observe(tool, { attributes: true, attributeFilter: ['class'] });
   };
 })();
 </script>
