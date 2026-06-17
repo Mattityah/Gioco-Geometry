@@ -1147,6 +1147,17 @@ input[type="range"]::-webkit-slider-thumb {
         </div>
 
         <button class="export-btn" id="btn-export" onclick="doExport()">Export canvas</button>
+
+        <div class="section-title">Presets</div>
+        <div class="tool-note" id="preset-mode-label">Guarda y carga todos los parámetros del modo activo.</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="export-btn" id="btn-preset-save" style="flex:1;font-size:11px;padding:9px 6px">&#11015; Save preset</button>
+          <button class="export-btn" id="btn-preset-load" style="flex:1;font-size:11px;padding:9px 6px;position:relative">
+            &#11014; Load preset
+            <input type="file" id="preset-file-input" accept=".json" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+          </button>
+        </div>
+        <div id="preset-status" style="font-size:10px;color:var(--muted);min-height:16px;text-align:center"></div>
       </div>
     </div>
   </div>
@@ -3692,6 +3703,198 @@ window.goHome = function() {
 
 window.applyPreset = applyPreset;
 window.doExport = doExport;
+
+// ---- PRESET SYSTEM ----
+
+// Keys that belong to each mode
+const PRESET_KEYS = {
+  halftone: ['showHalftoneEffect','threshold','stepSize','gridAngle','grid','halftoneDither',
+             'shape','mix','color','customMix','shapeSize','cornerRadius','noise',
+             'luminanceSize','minShapeSize','maxShapeSize','texture','texIntensity','texScale',
+             'blur','contrast','brightness','gamma','invert'],
+  dithering: ['showDitherEffect','ditherAlgorithm','ditherThreshold','ditherPixelSize',
+              'ditherPixelShape','ditherColor','randomAmount',
+              'blur','contrast','brightness','gamma','invert'],
+  dots:      ['dotsShowEffect','dotsThreshold','dotsGridSize','dotsMinSize','dotsMaxSize',
+              'dotsNoise','dotsMode','dotsBackground',
+              'blur','contrast','brightness','gamma','invert'],
+  solid:     ['solidShowEffect','solidThreshold','solidStrokeWeight','solidSmooth',
+              'solidDespeckle','solidExpand','solidMode','solidTolerance',
+              'blur','contrast','brightness','gamma','invert'],
+  giocoeffect: ['gfxShowEffect','gfxMode','gfxBlur','gfxLevels','gfxStroke','gfxSmooth',
+                'gfxDespeckle','gfxExpand','gfxColor',
+                'gfxBlobSize','gfxBlobThreshold','gfxBlobSmooth','gfxBlobDespeckle','gfxBlobExpand',
+                'beadsShape','beadsSize','beadsGap','beadsColor','beadsTones',
+                'blur','contrast','brightness','gamma','invert'],
+  circuit:   ['circuitShowEffect','circuitCell','circuitDensity','circuitWidth','circuitChaos',
+              'circuitNode','circuitNodeShape','circuitSymbols','circuitSymfreq',
+              'circuitBus','circuitBusWidth','circuitBreak','circuitColor',
+              'circuitFrag','circuitFragCell','circuitDispX','circuitDispY',
+              'circuitFragChaos','circuitCharset',
+              'blur','contrast','brightness','gamma','invert'],
+};
+
+function showPresetStatus(msg, isError) {
+  const el = $('preset-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? '#c0392b' : 'var(--muted)';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+function savePreset() {
+  const mode = S.mode;
+  const keys = PRESET_KEYS[mode] || [];
+  const preset = { _mode: mode, _version: 1 };
+
+  keys.forEach(k => {
+    if (k in S) preset[k] = S[k];
+  });
+
+  // Also save active palette colors for modes that use them
+  if (mode === 'halftone') {
+    preset._activeColors = [...document.querySelectorAll('#palette .swatch.active')].map(s => s.dataset.color);
+  }
+  if (mode === 'circuit') {
+    preset._activeColors = [...document.querySelectorAll('#circuit-palette .swatch.active')].map(s => s.dataset.color);
+  }
+  if (mode === 'giocoeffect') {
+    preset._activeColors = [...document.querySelectorAll('#beads-palette .swatch.active')].map(s => s.dataset.color);
+  }
+
+  const json = JSON.stringify(preset, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.download = 'gioco-' + mode + '-preset.json';
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  showPresetStatus('Preset saved: ' + a.download);
+}
+
+function applyLoadedPreset(preset) {
+  const mode = preset._mode;
+  if (!mode || !PRESET_KEYS[mode]) {
+    showPresetStatus('Invalid preset file', true);
+    return;
+  }
+
+  // Switch to the preset's mode
+  setMode(mode);
+  activateTab(mode);
+
+  // Apply all values to S and sync UI
+  Object.entries(preset).forEach(([k, v]) => {
+    if (k.startsWith('_')) return; // skip meta keys
+    S[k] = v;
+  });
+
+  // Sync all sliders and number inputs via CONTROL_MAP
+  CONTROL_MAP.forEach(([id, key]) => {
+    if (!(key in preset)) return;
+    const slider = $(id);
+    const numIn = $('num-' + id);
+    if (slider) slider.value = S[key];
+    if (numIn) numIn.value = S[key];
+  });
+
+  // Sync switchers
+  function syncSwitcher(swId, val) {
+    const el = $(swId);
+    if (!el) return;
+    el.querySelectorAll('.sw-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.val === String(val));
+    });
+  }
+
+  // Sync all known switchers
+  syncSwitcher('sw-halftone-dither', S.halftoneDither);
+  syncSwitcher('sw-grid', S.grid);
+  syncSwitcher('sw-shape', S.shape);
+  syncSwitcher('sw-mix', S.mix);
+  syncSwitcher('sw-color', S.color);
+  syncSwitcher('sw-texture', S.texture);
+  syncSwitcher('sw-dither-algo', S.ditherAlgorithm);
+  syncSwitcher('sw-dither-pixel-shape', S.ditherPixelShape);
+  syncSwitcher('sw-dither-color', S.ditherColor);
+  syncSwitcher('sw-dots-mode', S.dotsMode);
+  syncSwitcher('sw-solid-mode', S.solidMode);
+  syncSwitcher('sw-gfx-mode', S.gfxMode);
+  syncSwitcher('sw-gfx-color', S.gfxColor);
+  syncSwitcher('sw-beads-shape', S.beadsShape);
+  syncSwitcher('sw-beads-color', S.beadsColor);
+  syncSwitcher('sw-circuit-color', S.circuitColor);
+  syncSwitcher('sw-circuit-node-shape', S.circuitNodeShape);
+  syncSwitcher('sw-circuit-symbols', S.circuitSymbols);
+  syncSwitcher('sw-circuit-bus', S.circuitBus);
+  syncSwitcher('sw-circuit-frag', S.circuitFrag);
+  syncSwitcher('sw-circuit-charset', S.circuitCharset);
+
+  // Sync toggles
+  function syncToggle(indId, val) {
+    const el = $(indId);
+    if (el) el.innerHTML = val ? '&#10003;' : '&nbsp;';
+  }
+  syncToggle('halftone-effect-ind', S.showHalftoneEffect);
+  syncToggle('invert-ind', S.invert);
+  syncToggle('luminance-size-ind', S.luminanceSize);
+  syncToggle('dither-effect-ind', S.showDitherEffect);
+  syncToggle('dots-effect-ind', S.dotsShowEffect);
+  syncToggle('dots-background-ind', S.dotsBackground);
+  syncToggle('solid-effect-ind', S.solidShowEffect);
+  syncToggle('gfx-effect-ind', S.gfxShowEffect);
+  syncToggle('circuit-effect-ind', S.circuitShowEffect);
+
+  // Sync dependent visibility
+  if ($('luminance-size-wrap')) $('luminance-size-wrap').style.display = S.luminanceSize ? 'block' : 'none';
+  if ($('palette-wrap')) $('palette-wrap').style.display = S.color === 'multi' ? 'block' : 'none';
+  if ($('mix-row')) $('mix-row').style.display = (S.shape === 'mix' || S.shape === 'custom') ? 'flex' : 'none';
+  if ($('custom-mix-row')) $('custom-mix-row').style.display = S.shape === 'custom' ? 'block' : 'none';
+  if ($('texture-params')) $('texture-params').style.display = S.texture !== 'none' ? 'block' : 'none';
+  if ($('gfx-destroy-params')) $('gfx-destroy-params').style.display = S.gfxMode === 'destroy' ? 'block' : 'none';
+  if ($('gfx-blob-params')) $('gfx-blob-params').style.display = S.gfxMode === 'blob' ? 'block' : 'none';
+  if ($('gfx-beads-params')) $('gfx-beads-params').style.display = S.gfxMode === 'beads' ? 'block' : 'none';
+  if ($('circuit-frag-params')) $('circuit-frag-params').style.display = S.circuitFrag !== 'none' ? 'block' : 'none';
+  if ($('circuit-palette-wrap')) $('circuit-palette-wrap').style.display = S.circuitColor === 'multi' ? 'block' : 'none';
+  if ($('beads-palette-wrap')) $('beads-palette-wrap').style.display = S.beadsColor === 'palette' ? 'block' : 'none';
+
+  // Restore palette swatches if saved
+  if (preset._activeColors) {
+    const paletteId = mode === 'halftone' ? 'palette'
+                    : mode === 'circuit' ? 'circuit-palette'
+                    : mode === 'giocoeffect' ? 'beads-palette' : null;
+    if (paletteId) {
+      const el = $(paletteId);
+      if (el) {
+        el.querySelectorAll('.swatch').forEach(sw => {
+          sw.classList.toggle('active', preset._activeColors.includes(sw.dataset.color));
+        });
+      }
+    }
+  }
+
+  syncCustomMixUI();
+  scheduleRender();
+  showPresetStatus('Preset loaded: ' + mode + ' ✓');
+}
+
+$('btn-preset-save').addEventListener('click', savePreset);
+
+$('preset-file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const preset = JSON.parse(ev.target.result);
+      applyLoadedPreset(preset);
+    } catch(err) {
+      showPresetStatus('Error reading preset file', true);
+    }
+    e.target.value = ''; // reset so same file can be loaded again
+  };
+  reader.readAsText(file);
+});
 
 // ---- LOGO CANVAS ANIMATED ----
 window.initLogoCanvas = function(img) {
