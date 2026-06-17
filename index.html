@@ -383,14 +383,16 @@ input[type="range"]::-webkit-slider-thumb {
 #logo-canvas-wrap {
   position: relative;
   width: min(720px, 88vw);
+  min-height: 120px;
   margin-bottom: 28px;
-  cursor: none;
+  cursor: crosshair;
 }
 
 #logo-canvas {
   display: block;
   width: 100%;
   height: auto;
+  min-height: 120px;
 }
 
 #logo-hint {
@@ -401,7 +403,7 @@ input[type="range"]::-webkit-slider-thumb {
   font-size: 9px;
   letter-spacing: 0.12em;
   color: var(--muted);
-  opacity: 0.6;
+  opacity: 0.5;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -414,7 +416,8 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   justify-content: center;
   background: #ffffff;
-  position: relative; /* desktop: footer absolute */
+  position: relative;
+  padding-bottom: 44px; /* space for absolute footer */
 }
 
 #home-logo {
@@ -602,6 +605,7 @@ input[type="range"]::-webkit-slider-thumb {
     width: 92vw;
     margin-bottom: 20px;
     margin-top: 28px;
+    min-height: 80px;
   }
 
   #logo-hint { display: none; }
@@ -3734,26 +3738,22 @@ window.doExport = doExport;
 window.initLogoCanvas = function(img) {
   const wrap = document.getElementById('logo-canvas-wrap');
   const lc = document.getElementById('logo-canvas');
-  if (!lc || !img) return;
+  if (!lc || !img || !img.naturalWidth) return;
 
-  // Set canvas dimensions proportional to image
-  const W = 720, H = Math.round(720 * img.naturalHeight / img.naturalWidth);
-  lc.width = W; lc.height = H;
+  // Set canvas size proportional to image, max 720px wide
+  const maxW = Math.min(720, wrap.offsetWidth || 600);
+  const aspect = img.naturalHeight / img.naturalWidth;
+  const W = maxW;
+  const H = Math.round(W * aspect);
+  lc.width = W;
+  lc.height = H;
+  lc.style.height = H + 'px';
+  wrap.style.height = H + 'px';
 
   const lCtx = lc.getContext('2d', { willReadFrequently: true });
-  const isMobile = window.matchMedia('(max-width: 699px)').matches || ('ontouchstart' in window);
+  const isMobile = window.matchMedia('(max-width:699px)').matches || ('ontouchstart' in window);
 
-  // ---- State ----
-  let stepSize = 8;
-  let gridAngle = 0;
-  let shapeIdx = 0;
-  let t = 0; // animation time
-  let mouseX = 0.5, mouseY = 0.3;
-  let isHovering = false;
-  let rafId = null;
-  const SHAPES = ['circle', 'square', 'arrow'];
-
-  // ---- Prepare gray from logo ----
+  // ---- Precompute source grayscale at full res ----
   const srcOff = document.createElement('canvas');
   srcOff.width = W; srcOff.height = H;
   const sCtx = srcOff.getContext('2d', { willReadFrequently: true });
@@ -3769,58 +3769,42 @@ window.initLogoCanvas = function(img) {
     const gray = new Float32Array(gw * gh);
     for (let gy = 0; gy < gh; gy++) {
       for (let gx = 0; gx < gw; gx++) {
-        const sx = Math.round(gx / gw * (W - 1));
-        const sy = Math.round(gy / gh * (H - 1));
-        gray[gy * gw + gx] = srcGray[sy * W + sx];
+        const sx = Math.min(W-1, Math.round(gx/gw*(W-1)));
+        const sy = Math.min(H-1, Math.round(gy/gh*(H-1)));
+        gray[gy*gw+gx] = srcGray[sy*W+sx];
       }
     }
     return gray;
   }
 
-  // Floyd-Steinberg dither mask
-  function ditherMask(gray, gw, gh, threshold) {
-    const out = new Uint8Array(gw * gh);
+  function ditherMask(gray, gw, gh) {
+    const out = new Uint8Array(gw*gh);
     const buf = new Float32Array(gray);
-    const kernel = [[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]];
-    for (let y = 0; y < gh; y++) {
-      for (let x = 0; x < gw; x++) {
-        const i = y*gw+x;
-        const old = buf[i];
-        const nw = old < threshold ? 0 : 255;
-        out[i] = nw === 0 ? 1 : 0;
-        const err = old - nw;
-        for (const [dx,dy,w] of kernel) {
-          const nx=x+dx, ny=y+dy;
-          if (nx>=0&&nx<gw&&ny>=0&&ny<gh) buf[ny*gw+nx] += err*w;
-        }
+    const k = [[1,0,7/16],[-1,1,3/16],[0,1,5/16],[1,1,1/16]];
+    for (let y=0;y<gh;y++) for (let x=0;x<gw;x++) {
+      const i=y*gw+x, old=buf[i], nw=old<128?0:255;
+      out[i]=nw===0?1:0;
+      const err=old-nw;
+      for (const [dx,dy,w] of k) {
+        const nx=x+dx,ny=y+dy;
+        if(nx>=0&&nx<gw&&ny>=0&&ny<gh) buf[ny*gw+nx]+=err*w;
       }
     }
     return out;
   }
 
-  function drawShape(ctx2, shape, cx, cy, r) {
-    switch(shape) {
-      case 'circle':
-        ctx2.moveTo(cx+r,cy);
-        ctx2.arc(cx,cy,r,0,Math.PI*2);
-        break;
-      case 'arrow':
-        ctx2.moveTo(cx-r,cy);
-        ctx2.lineTo(cx+r*0.6,cy-r*0.9);
-        ctx2.lineTo(cx+r*0.6,cy+r*0.9);
-        ctx2.closePath();
-        break;
-      default: // square
-        ctx2.rect(cx-r,cy-r,r*2,r*2);
-    }
-  }
+  const SHAPES = ['circle','square','arrow'];
 
   function renderLogo(step, angle, shIdx) {
+    step = Math.max(3, Math.round(step));
     const size = Math.max(W, H);
-    const gw = Math.min(120, Math.ceil(size / step) + 2);
-    const gh = Math.min(120, Math.ceil(size / step) + 2);
+    // Cap grid to keep it fast
+    const maxCells = 80;
+    const gw = Math.min(maxCells, Math.ceil(size/step)+2);
+    const gh = Math.min(maxCells, Math.ceil(size/step)+2);
     const gray = sampleGray(gw, gh);
-    const mask = ditherMask(gray, gw, gh, 128);
+    const mask = ditherMask(gray, gw, gh);
+    const shape = SHAPES[Math.floor(shIdx) % SHAPES.length];
 
     lCtx.clearRect(0, 0, W, H);
     lCtx.fillStyle = '#ffffff';
@@ -3828,95 +3812,113 @@ window.initLogoCanvas = function(img) {
     lCtx.fillStyle = '#1a1a1a';
     lCtx.beginPath();
 
-    const angleRad = angle * Math.PI / 180;
+    const rad = angle * Math.PI / 180;
     const cx = W/2, cy = H/2;
     const diag = Math.ceil(Math.sqrt(2)*size) + step*4;
-    const startX = cx - diag/2;
-    const startY = cy - diag/2;
+    const sx0 = cx - diag/2, sy0 = cy - diag/2;
     const cols = Math.ceil(diag/step)+1;
     const rows = Math.ceil(diag/step)+1;
-    const shape = SHAPES[shIdx % SHAPES.length];
+    const r = Math.max(0.5, step*0.38);
 
-    for (let row = 0; row <= rows; row++) {
-      for (let col = 0; col <= cols; col++) {
+    for (let row=0; row<=rows; row++) {
+      for (let col=0; col<=cols; col++) {
         const gc = Math.round((col/cols)*(gw-1));
         const gr = Math.round((row/rows)*(gh-1));
         if (!mask[gr*gw+gc]) continue;
+        const lx=sx0+col*step, ly=sy0+row*step;
+        const dx=lx-cx, dy=ly-cy;
+        const drawX = cx + dx*Math.cos(rad) - dy*Math.sin(rad);
+        const drawY = cy + dx*Math.sin(rad) + dy*Math.cos(rad);
+        if (drawX<-step||drawX>W+step||drawY<-step||drawY>H+step) continue;
 
-        let lx = startX + col*step;
-        let ly = startY + row*step;
-        const dx = lx-cx, dy = ly-cy;
-        const drawX = cx + dx*Math.cos(angleRad) - dy*Math.sin(angleRad);
-        const drawY = cy + dx*Math.sin(angleRad) + dy*Math.cos(angleRad);
-
-        // Only draw inside canvas bounds
-        if (drawX < -step || drawX > W+step || drawY < -step || drawY > H+step) continue;
-
-        drawShape(lCtx, shape, drawX, drawY, Math.max(0.5, step*0.38));
+        switch(shape) {
+          case 'circle':
+            lCtx.moveTo(drawX+r, drawY);
+            lCtx.arc(drawX, drawY, r, 0, Math.PI*2);
+            break;
+          case 'arrow':
+            lCtx.moveTo(drawX-r, drawY);
+            lCtx.lineTo(drawX+r*0.6, drawY-r*0.9);
+            lCtx.lineTo(drawX+r*0.6, drawY+r*0.9);
+            lCtx.closePath();
+            break;
+          default:
+            lCtx.rect(drawX-r, drawY-r, r*2, r*2);
+        }
       }
     }
     lCtx.fill();
   }
 
-  // ---- Desktop: mouse tracking ----
+  // ---- Animated state with lerp ----
+  // Current (smoothed) values
+  let curStep = 8, curAngle = 0, curShape = 0;
+  // Target values
+  let tgtStep = 8, tgtAngle = 0, tgtShape = 0;
+
+  // Lerp speed: lower = smoother/slower
+  const LERP = isMobile ? 0.015 : 0.08;
+
+  let t = 0;
+  let mouseX = 0.5, mouseY = 0.5;
+  let rafId = null;
+  let lastRender = 0;
+  const FPS = isMobile ? 18 : 24;
+  const INTERVAL = 1000 / FPS;
+
+  function lerp(a, b, f) { return a + (b - a) * f; }
+
   if (!isMobile) {
-    wrap.addEventListener('mousemove', e => {
-      const rect = wrap.getBoundingClientRect();
-      mouseX = (e.clientX - rect.left) / rect.width;
-      mouseY = (e.clientY - rect.top) / rect.height;
-      isHovering = true;
-    });
-    wrap.addEventListener('mouseleave', () => { isHovering = false; });
+    // Desktop: mouse sets targets
     document.getElementById('home-screen').addEventListener('mousemove', e => {
-      if (!isHovering) {
-        const rect = document.getElementById('home-screen').getBoundingClientRect();
-        mouseX = (e.clientX - rect.left) / rect.width;
-        mouseY = (e.clientY - rect.top) / rect.height;
-      }
+      const rect = document.getElementById('home-screen').getBoundingClientRect();
+      mouseX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      mouseY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
     });
   }
-
-  // ---- Animation loop ----
-  let lastRender = 0;
-  const FPS = 24;
-  const INTERVAL = 1000 / FPS;
 
   function animate(ts) {
     rafId = requestAnimationFrame(animate);
     if (ts - lastRender < INTERVAL) return;
     lastRender = ts;
-
-    t += 0.012;
+    t += 0.008;
 
     if (isMobile) {
-      // Auto-animate: smooth sine waves on all params
-      stepSize  = 5 + Math.abs(Math.sin(t * 0.4)) * 18;
-      gridAngle = Math.sin(t * 0.3) * 22;
-      shapeIdx  = Math.floor(t * 0.18) % SHAPES.length;
+      // Slow sine targets — very gentle on mobile
+      tgtStep  = 6 + Math.abs(Math.sin(t * 0.25)) * 14;   // 6..20
+      tgtAngle = Math.sin(t * 0.18) * 15;                  // -15..15
+      tgtShape = (Math.sin(t * 0.07) * 0.5 + 0.5) * SHAPES.length;
     } else {
-      // Mouse controls step + angle, time controls shape cycling
-      stepSize  = 4 + mouseX * 22;       // left=fine, right=coarse
-      gridAngle = (mouseY - 0.5) * 40;   // top=negative, bottom=positive angle
-      shapeIdx  = Math.floor(t * 0.12) % SHAPES.length;
+      // Mouse sets targets
+      tgtStep  = 4 + mouseX * 20;
+      tgtAngle = (mouseY - 0.5) * 36;
+      tgtShape = (Math.sin(t * 0.1) * 0.5 + 0.5) * SHAPES.length;
     }
 
-    renderLogo(Math.round(stepSize), gridAngle, shapeIdx);
+    // Smooth lerp toward targets
+    curStep  = lerp(curStep,  tgtStep,  LERP);
+    curAngle = lerp(curAngle, tgtAngle, LERP);
+    curShape = lerp(curShape, tgtShape, LERP * 0.3);
+
+    renderLogo(curStep, curAngle, curShape);
   }
 
-  // Start when home screen is visible
+  // Start animation
   rafId = requestAnimationFrame(animate);
 
-  // Pause when tool is open to save resources
+  // Pause when tool opens, resume when home shown
+  const toolScreen = document.getElementById('tool-screen');
   const observer = new MutationObserver(() => {
-    const homeVisible = document.getElementById('home-screen').style.display !== 'none';
-    if (homeVisible && !rafId) {
-      rafId = requestAnimationFrame(animate);
-    } else if (!homeVisible && rafId) {
+    const toolOpen = toolScreen.classList.contains('visible');
+    if (toolOpen && rafId) {
       cancelAnimationFrame(rafId);
       rafId = null;
+    } else if (!toolOpen && !rafId) {
+      t = 0; // reset time on return
+      rafId = requestAnimationFrame(animate);
     }
   });
-  observer.observe(document.getElementById('tool-screen'), { attributes: true, attributeFilter: ['style'] });
+  observer.observe(toolScreen, { attributes: true, attributeFilter: ['class'] });
 };
 </script>
 
