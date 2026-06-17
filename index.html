@@ -3973,10 +3973,21 @@ $('preset-file-input').addEventListener('change', e => {
       }
       lCtx.fill();
 
-      const tI=0.85+Math.sin(t*0.5)*0.22;
-      const tS=4.0+Math.sin(t*0.31+1.1)*0.9;
-      curI+=(tI-curI)*LERP;
-      curS+=(tS-curS)*LERP;
+      // 5-second cycle: 0→2.5s rise, 2.5→5s fall, repeat
+      // Use elapsed time in ms for precision
+      const elapsed = ts % 5000;           // position within 5s cycle
+      const phase = elapsed / 5000;         // 0..1
+      // Smooth triangle wave: rises 0→0.5, falls 0.5→1
+      const tri = phase < 0.5 ? phase * 2 : 2 - phase * 2; // 0→1→0
+      // Ease in-out with smoothstep
+      const ease = tri * tri * (3 - 2 * tri);
+
+      // Base values → peak values
+      const tI = 0.85 + ease * 0.55;  // 0.85 → 1.40
+      const tS = 4.0  + ease * 2.0;   // 4.0  → 6.0
+
+      curI += (tI - curI) * LERP;
+      curS += (tS - curS) * LERP;
     }
 
     rafId=requestAnimationFrame(draw);
