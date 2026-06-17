@@ -40,7 +40,7 @@ Everything runs locally in your browser. No server. No account. No data collecte
 
 — Why it exists
 
-Gioco-Geometry is part of **GiocoStudio** — a space dedicated to making things with intention. *Gioco* is Italian for *play*, and that word sits at the center of everything here.
+Gioco-Geometry is part of **GiocoStudio** — a space dedicated to making things with intention.*Play*, that word sits at the center of everything here.
 
 The studio was born from a belief: that technology is most powerful when it serves human creativity rather than replacing it. That the best tools are the ones that open possibilities rather than close them. That exploration is a valid end in itself.
 
