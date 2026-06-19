@@ -1175,8 +1175,25 @@ input[type="range"]::-webkit-slider-thumb {
         <div class="toggle-row" id="toggle-glitch-wrap"><div class="tog" id="glitch-wrap-ind">&#10003;</div> Wrap horizontal</div>
 
         <div class="section-title">Grid Overlay</div>
-        <div class="row"><div class="row-top"><label>Columns</label><input type="number" id="num-glitch-grid-cols" value="6" min="1" max="30" step="1"></div><input type="range" id="glitch-grid-cols" min="1" max="30" step="1" value="6"></div>
-        <div class="row"><div class="row-top"><label>Rows</label><input type="number" id="num-glitch-grid-rows" value="6" min="1" max="30" step="1"></div><input type="range" id="glitch-grid-rows" min="1" max="30" step="1" value="6"></div>
+        <div class="sw-row">
+          <span class="sw-label">Grid Mode</span>
+          <div class="sw-btns" id="sw-glitch-grid-mode">
+            <button class="sw-btn active" data-val="uniform">Uniform</button>
+            <button class="sw-btn" data-val="adaptive">Adaptive</button>
+          </div>
+        </div>
+
+        <div id="glitch-uniform-params">
+          <div class="row"><div class="row-top"><label>Columns</label><input type="number" id="num-glitch-grid-cols" value="6" min="1" max="30" step="1"></div><input type="range" id="glitch-grid-cols" min="1" max="30" step="1" value="6"></div>
+          <div class="row"><div class="row-top"><label>Rows</label><input type="number" id="num-glitch-grid-rows" value="6" min="1" max="30" step="1"></div><input type="range" id="glitch-grid-rows" min="1" max="30" step="1" value="6"></div>
+        </div>
+
+        <div id="glitch-adaptive-params" style="display:none">
+          <div class="tool-note">Adaptive corta el lienzo siguiendo los bordes de la imagen (BSP guiado por gradiente), no una grilla pareja.</div>
+          <div class="row"><div class="row-top"><label>Depth</label><input type="number" id="num-glitch-adaptive-depth" value="4" min="1" max="7" step="1"></div><input type="range" id="glitch-adaptive-depth" min="1" max="7" step="1" value="4"></div>
+          <div class="row"><div class="row-top"><label>Min Cell Size</label><input type="number" id="num-glitch-adaptive-min-size" value="40" min="10" max="200" step="1"></div><input type="range" id="glitch-adaptive-min-size" min="10" max="200" step="1" value="40"></div>
+          <div class="row"><div class="row-top"><label>Edge Sensitivity</label><input type="number" id="num-glitch-adaptive-edge-bias" value="50" min="0" max="100" step="1"></div><input type="range" id="glitch-adaptive-edge-bias" min="0" max="100" step="1" value="50"></div>
+        </div>
 
         <div class="toggle-row" id="toggle-glitch-show-grid"><div class="tog" id="glitch-show-grid-ind">&#10003;</div> Show grid lines</div>
         <div class="toggle-row" id="toggle-glitch-show-labels"><div class="tog" id="glitch-show-labels-ind">&#10003;</div> Show dimension labels</div>
@@ -1356,6 +1373,10 @@ const S = {
   glitchWrap: true,
   glitchGridCols: 6,
   glitchGridRows: 6,
+  glitchGridMode: 'uniform',
+  glitchAdaptiveDepth: 4,
+  glitchAdaptiveMinSize: 40,
+  glitchAdaptiveEdgeBias: 50,
   glitchShowGrid: true,
   glitchShowLabels: true,
   glitchLineWidth: 1,
@@ -1411,6 +1432,8 @@ const CONTROL_MAP = [
   ['glitch-band-size','glitchBandSize'], ['glitch-band-random','glitchBandRandom'],
   ['glitch-shift','glitchShift'], ['glitch-seed','glitchSeed'],
   ['glitch-grid-cols','glitchGridCols'], ['glitch-grid-rows','glitchGridRows'],
+  ['glitch-adaptive-depth','glitchAdaptiveDepth'], ['glitch-adaptive-min-size','glitchAdaptiveMinSize'],
+  ['glitch-adaptive-edge-bias','glitchAdaptiveEdgeBias'],
   ['glitch-line-width','glitchLineWidth'], ['glitch-font-size','glitchFontSize'],
   ['jpg-quality','jpgQuality']
 ];
@@ -1508,6 +1531,10 @@ makeSwitcher('sw-circuit-frag', 'circuitFrag', val => {
 makeSwitcher('sw-circuit-charset', 'circuitCharset');
 makeSwitcher('sw-glitch-shift-mode', 'glitchShiftMode');
 makeSwitcher('sw-glitch-grid-color', 'glitchGridColor');
+makeSwitcher('sw-glitch-grid-mode', 'glitchGridMode', val => {
+  $('glitch-uniform-params').style.display = val === 'uniform' ? 'block' : 'none';
+  $('glitch-adaptive-params').style.display = val === 'adaptive' ? 'block' : 'none';
+});
 makeSwitcher('sw-format', 'format', val => {
   $('jpg-quality-wrap').style.display = val === 'jpg' ? 'block' : 'none';
 });
@@ -3794,11 +3821,6 @@ async function renderGlitch(myID) {
 
   // ---- Grid overlay: cells with width x height labels ----
   if (S.glitchShowGrid || S.glitchShowLabels) {
-    const cols = Math.max(1, Math.round(S.glitchGridCols));
-    const rows = Math.max(1, Math.round(S.glitchGridRows));
-    const cellW = cw / cols;
-    const cellH = ch / rows;
-
     const gridColor = S.glitchGridColor === 'light' ? 'rgba(255,255,255,0.85)'
                      : S.glitchGridColor === 'accent' ? '#ff5a1f'
                      : 'rgba(20,20,20,0.85)';
@@ -3810,25 +3832,128 @@ async function renderGlitch(myID) {
     ctx.font = S.glitchFontSize + 'px ' + getComputedStyle(document.body).fontFamily;
     ctx.textBaseline = 'top';
 
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const x = c * cellW;
-        const yy = r * cellH;
-
-        if (S.glitchShowGrid) {
-          ctx.strokeRect(x, yy, cellW, cellH);
-        }
-
-        if (S.glitchShowLabels) {
-          const label = Math.round(cellW) + '×' + Math.round(cellH);
-          ctx.fillText(label, x + 4, yy + 4);
+    let cells;
+    if (S.glitchGridMode === 'adaptive') {
+      cells = await buildAdaptiveGridCells(cw, ch, myID);
+      if (myID !== currentRenderID) { ctx.restore(); return; }
+    } else {
+      const cols = Math.max(1, Math.round(S.glitchGridCols));
+      const rows = Math.max(1, Math.round(S.glitchGridRows));
+      const cellW = cw / cols;
+      const cellH = ch / rows;
+      cells = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          cells.push({ x: c * cellW, y: r * cellH, w: cellW, h: cellH });
         }
       }
     }
+
+    cells.forEach(cell => {
+      if (S.glitchShowGrid) {
+        ctx.strokeRect(cell.x, cell.y, cell.w, cell.h);
+      }
+      if (S.glitchShowLabels) {
+        const label = Math.round(cell.w) + '×' + Math.round(cell.h);
+        ctx.fillText(label, cell.x + 4, cell.y + 4);
+      }
+    });
+
     ctx.restore();
   }
 
   spinner.classList.remove('visible');
+}
+
+// Adaptive grid: recursive BSP that always cuts along the strongest image
+// edge inside the current rectangle, so cell boundaries trace the contours
+// of whatever is in the photo instead of dividing the canvas evenly.
+async function buildAdaptiveGridCells(cw, ch, myID) {
+  // Edge map computed from the clean, unshifted source image — the grid
+  // should follow the drawing/photo's content, not the glitch artifacts.
+  const mapW = Math.max(20, Math.min(160, Math.round(cw / 4)));
+  const mapH = Math.max(20, Math.round(mapW * (ch / cw)));
+
+  const prep = prepareGray(mapW, mapH);
+  const gray = prep.gray;
+
+  await yieldFrame();
+  if (myID !== currentRenderID) return [];
+
+  function g(x, y) {
+    x = Math.max(0, Math.min(mapW - 1, x));
+    y = Math.max(0, Math.min(mapH - 1, y));
+    return gray[y * mapW + x];
+  }
+
+  const edge = new Float32Array(mapW * mapH);
+  for (let y = 0; y < mapH; y++) {
+    for (let x = 0; x < mapW; x++) {
+      const gx = g(x + 1, y) - g(x - 1, y);
+      const gy = g(x, y + 1) - g(x, y - 1);
+      edge[y * mapW + x] = Math.sqrt(gx * gx + gy * gy);
+    }
+  }
+
+  const maxDepth = Math.max(1, Math.round(S.glitchAdaptiveDepth));
+  const sx = cw / mapW;
+  const sy = ch / mapH;
+  const minMapSize = Math.max(2, Math.round(S.glitchAdaptiveMinSize / Math.max(sx, sy)));
+  // Sensitivity blends "always cut at the strongest edge" (100) with
+  // "cut close to the middle regardless of content" (0).
+  const bias = S.glitchAdaptiveEdgeBias / 100;
+
+  const leaves = [];
+
+  function edgeSumCol(x0, y0, h, col) {
+    let s = 0;
+    for (let y = y0; y < y0 + h; y++) s += edge[y * mapW + col];
+    return s;
+  }
+  function edgeSumRow(x0, y0, w, row) {
+    let s = 0;
+    for (let x = x0; x < x0 + w; x++) s += edge[row * mapW + x];
+    return s;
+  }
+
+  function recurse(x, y, w, h, depth) {
+    if (depth <= 0 || w <= minMapSize * 2 || h <= minMapSize * 2) {
+      leaves.push({ x, y, w, h });
+      return;
+    }
+
+    const vertical = w >= h;
+    let bestPos = -1, bestScore = -1;
+
+    if (vertical) {
+      for (let cx = x + minMapSize; cx < x + w - minMapSize; cx++) {
+        const middleness = 1 - Math.abs((cx - x) / w - 0.5) * 2; // 1 at center, 0 at edges
+        const score = edgeSumCol(x, y, h, cx) * bias + middleness * (1 - bias) * 1000;
+        if (score > bestScore) { bestScore = score; bestPos = cx; }
+      }
+      if (bestPos < 0) { leaves.push({ x, y, w, h }); return; }
+      recurse(x, y, bestPos - x, h, depth - 1);
+      recurse(bestPos, y, x + w - bestPos, h, depth - 1);
+    } else {
+      for (let cy = y + minMapSize; cy < y + h - minMapSize; cy++) {
+        const middleness = 1 - Math.abs((cy - y) / h - 0.5) * 2;
+        const score = edgeSumRow(x, y, w, cy) * bias + middleness * (1 - bias) * 1000;
+        if (score > bestScore) { bestScore = score; bestPos = cy; }
+      }
+      if (bestPos < 0) { leaves.push({ x, y, w, h }); return; }
+      recurse(x, y, w, bestPos - y, depth - 1);
+      recurse(x, bestPos, w, y + h - bestPos, depth - 1);
+    }
+  }
+
+  recurse(0, 0, mapW, mapH, maxDepth);
+
+  return leaves.map(r => ({
+    x: r.x * sx,
+    y: r.y * sy,
+    w: r.w * sx,
+    h: r.h * sy,
+  }));
 }
 
 function doExport() {
@@ -4020,7 +4145,8 @@ const PRESET_KEYS = {
               'circuitFragChaos','circuitCharset',
               'blur','contrast','brightness','gamma','invert'],
   glitch:    ['glitchShowEffect','glitchBandSize','glitchBandRandom','glitchShift',
-              'glitchShiftMode','glitchSeed','glitchWrap','glitchGridCols','glitchGridRows',
+              'glitchShiftMode','glitchSeed','glitchWrap','glitchGridMode','glitchGridCols','glitchGridRows',
+              'glitchAdaptiveDepth','glitchAdaptiveMinSize','glitchAdaptiveEdgeBias',
               'glitchShowGrid','glitchShowLabels','glitchLineWidth','glitchFontSize','glitchGridColor',
               'blur','contrast','brightness','gamma','invert'],
 };
@@ -4122,6 +4248,7 @@ function applyLoadedPreset(preset) {
   syncSwitcher('sw-circuit-charset', S.circuitCharset);
   syncSwitcher('sw-glitch-shift-mode', S.glitchShiftMode);
   syncSwitcher('sw-glitch-grid-color', S.glitchGridColor);
+  syncSwitcher('sw-glitch-grid-mode', S.glitchGridMode);
 
   // Sync toggles
   function syncToggle(indId, val) {
@@ -4156,6 +4283,8 @@ function applyLoadedPreset(preset) {
   if ($('circuit-palette-wrap')) $('circuit-palette-wrap').style.display = S.circuitColor === 'multi' ? 'block' : 'none';
   if ($('beads-palette-wrap')) $('beads-palette-wrap').style.display = S.beadsColor === 'palette' ? 'block' : 'none';
   if ($('dither-pixel-params')) $('dither-pixel-params').style.display = S.ditherAlgorithm === 'threshold' ? 'none' : 'block';
+  if ($('glitch-uniform-params')) $('glitch-uniform-params').style.display = S.glitchGridMode === 'uniform' ? 'block' : 'none';
+  if ($('glitch-adaptive-params')) $('glitch-adaptive-params').style.display = S.glitchGridMode === 'adaptive' ? 'block' : 'none';
 
   // Restore palette swatches if saved
   if (preset._activeColors) {
