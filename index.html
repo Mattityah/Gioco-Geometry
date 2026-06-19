@@ -1179,7 +1179,7 @@ input[type="range"]::-webkit-slider-thumb {
           <span class="sw-label">Grid Mode</span>
           <div class="sw-btns" id="sw-glitch-grid-mode">
             <button class="sw-btn active" data-val="uniform">Uniform</button>
-            <button class="sw-btn" data-val="adaptive">Adaptive</button>
+            <button class="sw-btn" data-val="detect">Detect Shapes</button>
           </div>
         </div>
 
@@ -1188,11 +1188,11 @@ input[type="range"]::-webkit-slider-thumb {
           <div class="row"><div class="row-top"><label>Rows</label><input type="number" id="num-glitch-grid-rows" value="6" min="1" max="30" step="1"></div><input type="range" id="glitch-grid-rows" min="1" max="30" step="1" value="6"></div>
         </div>
 
-        <div id="glitch-adaptive-params" style="display:none">
-          <div class="tool-note">Adaptive corta el lienzo siguiendo los bordes de la imagen (BSP guiado por gradiente), no una grilla pareja.</div>
-          <div class="row"><div class="row-top"><label>Depth</label><input type="number" id="num-glitch-adaptive-depth" value="4" min="1" max="7" step="1"></div><input type="range" id="glitch-adaptive-depth" min="1" max="7" step="1" value="4"></div>
-          <div class="row"><div class="row-top"><label>Min Cell Size</label><input type="number" id="num-glitch-adaptive-min-size" value="40" min="10" max="200" step="1"></div><input type="range" id="glitch-adaptive-min-size" min="10" max="200" step="1" value="40"></div>
-          <div class="row"><div class="row-top"><label>Edge Sensitivity</label><input type="number" id="num-glitch-adaptive-edge-bias" value="50" min="0" max="100" step="1"></div><input type="range" id="glitch-adaptive-edge-bias" min="0" max="100" step="1" value="50"></div>
+        <div id="glitch-detect-params" style="display:none">
+          <div class="tool-note">Detect Shapes segmenta la imagen contra el color de fondo y dibuja una caja solo alrededor de cada forma/parte detectada — no cubre el lienzo entero.</div>
+          <div class="row"><div class="row-top"><label>Bg Tolerance</label><input type="number" id="num-glitch-detect-tolerance" value="40" min="5" max="150" step="1"></div><input type="range" id="glitch-detect-tolerance" min="5" max="150" step="1" value="40"></div>
+          <div class="row"><div class="row-top"><label>Merge Gap</label><input type="number" id="num-glitch-detect-merge" value="3" min="0" max="15" step="1"></div><input type="range" id="glitch-detect-merge" min="0" max="15" step="1" value="3"></div>
+          <div class="row"><div class="row-top"><label>Min Area %</label><input type="number" id="num-glitch-detect-min-area" value="0.3" min="0" max="10" step="0.1"></div><input type="range" id="glitch-detect-min-area" min="0" max="10" step="0.1" value="0.3"></div>
         </div>
 
         <div class="toggle-row" id="toggle-glitch-show-grid"><div class="tog" id="glitch-show-grid-ind">&#10003;</div> Show grid lines</div>
@@ -1374,9 +1374,9 @@ const S = {
   glitchGridCols: 6,
   glitchGridRows: 6,
   glitchGridMode: 'uniform',
-  glitchAdaptiveDepth: 4,
-  glitchAdaptiveMinSize: 40,
-  glitchAdaptiveEdgeBias: 50,
+  glitchDetectTolerance: 40,
+  glitchDetectMerge: 3,
+  glitchDetectMinArea: 0.3,
   glitchShowGrid: true,
   glitchShowLabels: true,
   glitchLineWidth: 1,
@@ -1432,8 +1432,8 @@ const CONTROL_MAP = [
   ['glitch-band-size','glitchBandSize'], ['glitch-band-random','glitchBandRandom'],
   ['glitch-shift','glitchShift'], ['glitch-seed','glitchSeed'],
   ['glitch-grid-cols','glitchGridCols'], ['glitch-grid-rows','glitchGridRows'],
-  ['glitch-adaptive-depth','glitchAdaptiveDepth'], ['glitch-adaptive-min-size','glitchAdaptiveMinSize'],
-  ['glitch-adaptive-edge-bias','glitchAdaptiveEdgeBias'],
+  ['glitch-detect-tolerance','glitchDetectTolerance'], ['glitch-detect-merge','glitchDetectMerge'],
+  ['glitch-detect-min-area','glitchDetectMinArea'],
   ['glitch-line-width','glitchLineWidth'], ['glitch-font-size','glitchFontSize'],
   ['jpg-quality','jpgQuality']
 ];
@@ -1533,7 +1533,7 @@ makeSwitcher('sw-glitch-shift-mode', 'glitchShiftMode');
 makeSwitcher('sw-glitch-grid-color', 'glitchGridColor');
 makeSwitcher('sw-glitch-grid-mode', 'glitchGridMode', val => {
   $('glitch-uniform-params').style.display = val === 'uniform' ? 'block' : 'none';
-  $('glitch-adaptive-params').style.display = val === 'adaptive' ? 'block' : 'none';
+  $('glitch-detect-params').style.display = val === 'detect' ? 'block' : 'none';
 });
 makeSwitcher('sw-format', 'format', val => {
   $('jpg-quality-wrap').style.display = val === 'jpg' ? 'block' : 'none';
@@ -3833,8 +3833,8 @@ async function renderGlitch(myID) {
     ctx.textBaseline = 'top';
 
     let cells;
-    if (S.glitchGridMode === 'adaptive') {
-      cells = await buildAdaptiveGridCells(cw, ch, myID);
+    if (S.glitchGridMode === 'detect') {
+      cells = await detectShapeBoxes(cw, ch, myID);
       if (myID !== currentRenderID) { ctx.restore(); return; }
     } else {
       const cols = Math.max(1, Math.round(S.glitchGridCols));
@@ -3865,95 +3865,135 @@ async function renderGlitch(myID) {
   spinner.classList.remove('visible');
 }
 
-// Adaptive grid: recursive BSP that always cuts along the strongest image
-// edge inside the current rectangle, so cell boundaries trace the contours
-// of whatever is in the photo instead of dividing the canvas evenly.
-async function buildAdaptiveGridCells(cw, ch, myID) {
-  // Edge map computed from the clean, unshifted source image — the grid
-  // should follow the drawing/photo's content, not the glitch artifacts.
-  const mapW = Math.max(20, Math.min(160, Math.round(cw / 4)));
-  const mapH = Math.max(20, Math.round(mapW * (ch / cw)));
+// Detect Shapes: segments the clean source image against its background
+// color and draws a box only around each detected connected region — not
+// a grid covering the whole canvas. This is what actually mirrors "boxes
+// that wrap around the parts of the object" on a solid-color background.
+async function detectShapeBoxes(cw, ch, myID) {
+  const mapW = Math.max(40, Math.min(220, Math.round(cw / 3)));
+  const mapH = Math.max(40, Math.round(mapW * (ch / cw)));
 
-  const prep = prepareGray(mapW, mapH);
-  const gray = prep.gray;
+  const sampleCanvas = document.createElement('canvas');
+  sampleCanvas.width = mapW;
+  sampleCanvas.height = mapH;
+  const sctx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+  drawSourceToCanvas(sampleCanvas, sctx, mapW, mapH);
 
   await yieldFrame();
   if (myID !== currentRenderID) return [];
 
-  function g(x, y) {
-    x = Math.max(0, Math.min(mapW - 1, x));
-    y = Math.max(0, Math.min(mapH - 1, y));
-    return gray[y * mapW + x];
+  const data = sctx.getImageData(0, 0, mapW, mapH).data;
+
+  function pixelAt(x, y) {
+    const i = (y * mapW + x) * 4;
+    return [data[i], data[i + 1], data[i + 2]];
   }
 
-  const edge = new Float32Array(mapW * mapH);
+  // Estimate background color by sampling the four corners + edge midpoints
+  // (robust against a subject that happens to touch one corner).
+  const samples = [
+    [0, 0], [mapW - 1, 0], [0, mapH - 1], [mapW - 1, mapH - 1],
+    [Math.floor(mapW / 2), 0], [Math.floor(mapW / 2), mapH - 1],
+    [0, Math.floor(mapH / 2)], [mapW - 1, Math.floor(mapH / 2)],
+  ];
+  let br = 0, bg = 0, bb = 0;
+  samples.forEach(([x, y]) => {
+    const [r, g, b] = pixelAt(x, y);
+    br += r; bg += g; bb += b;
+  });
+  br /= samples.length; bg /= samples.length; bb /= samples.length;
+
+  const tolerance = S.glitchDetectTolerance;
+
+  // Foreground mask: pixels far enough from the background color.
+  let mask = new Uint8Array(mapW * mapH);
   for (let y = 0; y < mapH; y++) {
     for (let x = 0; x < mapW; x++) {
-      const gx = g(x + 1, y) - g(x - 1, y);
-      const gy = g(x, y + 1) - g(x, y - 1);
-      edge[y * mapW + x] = Math.sqrt(gx * gx + gy * gy);
+      const [r, g, b] = pixelAt(x, y);
+      const dist = Math.sqrt((r - br) ** 2 + (g - bg) ** 2 + (b - bb) ** 2);
+      mask[y * mapW + x] = dist > tolerance ? 1 : 0;
     }
   }
 
-  const maxDepth = Math.max(1, Math.round(S.glitchAdaptiveDepth));
+  // Dilate the mask so nearby strokes/parts of the same drawing merge into
+  // one detected shape instead of fragmenting into dozens of tiny pieces.
+  const mergeRadius = Math.round(S.glitchDetectMerge);
+  if (mergeRadius > 0) {
+    const dilated = new Uint8Array(mapW * mapH);
+    for (let y = 0; y < mapH; y++) {
+      for (let x = 0; x < mapW; x++) {
+        let found = 0;
+        for (let dy = -mergeRadius; dy <= mergeRadius && !found; dy++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= mapH) continue;
+          for (let dx = -mergeRadius; dx <= mergeRadius; dx++) {
+            const nx = x + dx;
+            if (nx < 0 || nx >= mapW) continue;
+            if (mask[ny * mapW + nx]) { found = 1; break; }
+          }
+        }
+        dilated[y * mapW + x] = found;
+      }
+    }
+    mask = dilated;
+  }
+
+  await yieldFrame();
+  if (myID !== currentRenderID) return [];
+
+  // Connected-component labeling (4-connectivity, iterative flood fill).
+  const visited = new Uint8Array(mapW * mapH);
+  const boxes = [];
+  const stack = new Int32Array(mapW * mapH);
+
+  for (let start = 0; start < mapW * mapH; start++) {
+    if (!mask[start] || visited[start]) continue;
+
+    let sp = 0;
+    stack[sp++] = start;
+    visited[start] = 1;
+
+    let minX = mapW, maxX = -1, minY = mapH, maxY = -1, area = 0;
+
+    while (sp > 0) {
+      const idx = stack[--sp];
+      const x = idx % mapW;
+      const y = (idx - x) / mapW;
+
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      area++;
+
+      const neighbors = [idx - 1, idx + 1, idx - mapW, idx + mapW];
+      for (let n = 0; n < 4; n++) {
+        const nIdx = neighbors[n];
+        if (nIdx < 0 || nIdx >= mapW * mapH) continue;
+        // Guard against horizontal wrap-around on row edges.
+        if ((n === 0 && x === 0) || (n === 1 && x === mapW - 1)) continue;
+        if (!visited[nIdx] && mask[nIdx]) {
+          visited[nIdx] = 1;
+          stack[sp++] = nIdx;
+        }
+      }
+    }
+
+    boxes.push({ minX, maxX, minY, maxY, area });
+  }
+
+  const minAreaPx = (S.glitchDetectMinArea / 100) * mapW * mapH;
   const sx = cw / mapW;
   const sy = ch / mapH;
-  const minMapSize = Math.max(2, Math.round(S.glitchAdaptiveMinSize / Math.max(sx, sy)));
-  // Sensitivity blends "always cut at the strongest edge" (100) with
-  // "cut close to the middle regardless of content" (0).
-  const bias = S.glitchAdaptiveEdgeBias / 100;
 
-  const leaves = [];
-
-  function edgeSumCol(x0, y0, h, col) {
-    let s = 0;
-    for (let y = y0; y < y0 + h; y++) s += edge[y * mapW + col];
-    return s;
-  }
-  function edgeSumRow(x0, y0, w, row) {
-    let s = 0;
-    for (let x = x0; x < x0 + w; x++) s += edge[row * mapW + x];
-    return s;
-  }
-
-  function recurse(x, y, w, h, depth) {
-    if (depth <= 0 || w <= minMapSize * 2 || h <= minMapSize * 2) {
-      leaves.push({ x, y, w, h });
-      return;
-    }
-
-    const vertical = w >= h;
-    let bestPos = -1, bestScore = -1;
-
-    if (vertical) {
-      for (let cx = x + minMapSize; cx < x + w - minMapSize; cx++) {
-        const middleness = 1 - Math.abs((cx - x) / w - 0.5) * 2; // 1 at center, 0 at edges
-        const score = edgeSumCol(x, y, h, cx) * bias + middleness * (1 - bias) * 1000;
-        if (score > bestScore) { bestScore = score; bestPos = cx; }
-      }
-      if (bestPos < 0) { leaves.push({ x, y, w, h }); return; }
-      recurse(x, y, bestPos - x, h, depth - 1);
-      recurse(bestPos, y, x + w - bestPos, h, depth - 1);
-    } else {
-      for (let cy = y + minMapSize; cy < y + h - minMapSize; cy++) {
-        const middleness = 1 - Math.abs((cy - y) / h - 0.5) * 2;
-        const score = edgeSumRow(x, y, w, cy) * bias + middleness * (1 - bias) * 1000;
-        if (score > bestScore) { bestScore = score; bestPos = cy; }
-      }
-      if (bestPos < 0) { leaves.push({ x, y, w, h }); return; }
-      recurse(x, y, w, bestPos - y, depth - 1);
-      recurse(x, bestPos, w, y + h - bestPos, depth - 1);
-    }
-  }
-
-  recurse(0, 0, mapW, mapH, maxDepth);
-
-  return leaves.map(r => ({
-    x: r.x * sx,
-    y: r.y * sy,
-    w: r.w * sx,
-    h: r.h * sy,
-  }));
+  return boxes
+    .filter(b => b.area >= minAreaPx)
+    .map(b => ({
+      x: b.minX * sx,
+      y: b.minY * sy,
+      w: (b.maxX - b.minX + 1) * sx,
+      h: (b.maxY - b.minY + 1) * sy,
+    }));
 }
 
 function doExport() {
@@ -4146,7 +4186,7 @@ const PRESET_KEYS = {
               'blur','contrast','brightness','gamma','invert'],
   glitch:    ['glitchShowEffect','glitchBandSize','glitchBandRandom','glitchShift',
               'glitchShiftMode','glitchSeed','glitchWrap','glitchGridMode','glitchGridCols','glitchGridRows',
-              'glitchAdaptiveDepth','glitchAdaptiveMinSize','glitchAdaptiveEdgeBias',
+              'glitchDetectTolerance','glitchDetectMerge','glitchDetectMinArea',
               'glitchShowGrid','glitchShowLabels','glitchLineWidth','glitchFontSize','glitchGridColor',
               'blur','contrast','brightness','gamma','invert'],
 };
@@ -4284,7 +4324,7 @@ function applyLoadedPreset(preset) {
   if ($('beads-palette-wrap')) $('beads-palette-wrap').style.display = S.beadsColor === 'palette' ? 'block' : 'none';
   if ($('dither-pixel-params')) $('dither-pixel-params').style.display = S.ditherAlgorithm === 'threshold' ? 'none' : 'block';
   if ($('glitch-uniform-params')) $('glitch-uniform-params').style.display = S.glitchGridMode === 'uniform' ? 'block' : 'none';
-  if ($('glitch-adaptive-params')) $('glitch-adaptive-params').style.display = S.glitchGridMode === 'adaptive' ? 'block' : 'none';
+  if ($('glitch-detect-params')) $('glitch-detect-params').style.display = S.glitchGridMode === 'detect' ? 'block' : 'none';
 
   // Restore palette swatches if saved
   if (preset._activeColors) {
