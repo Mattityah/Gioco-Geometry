@@ -1402,7 +1402,13 @@ makeSwitcher('sw-texture', 'texture', val => {
   const params = $('texture-params');
   if (params) params.style.display = val === 'none' ? 'none' : 'block';
 });
-makeSwitcher('sw-dither-algo', 'ditherAlgorithm');
+makeSwitcher('sw-dither-algo', 'ditherAlgorithm', val => {
+  // Photoshop-style Threshold renders at full canvas resolution and ignores
+  // Pixel Size/Pixel Shape (those don't apply to a sharp 1:1 threshold).
+  const isThreshold = val === 'threshold';
+  const pxParams = $('dither-pixel-params');
+  if (pxParams) pxParams.style.display = isThreshold ? 'none' : 'block';
+});
 makeSwitcher('sw-dither-pixel-shape', 'ditherPixelShape');
 makeSwitcher('sw-dither-color', 'ditherColor');
 makeSwitcher('sw-dots-mode', 'dotsMode');
@@ -2150,6 +2156,40 @@ async function renderDithering(myID) {
 
   if (!S.showDitherEffect) {
     drawSourceToCanvas(canvas, ctx, cw, ch);
+    spinner.classList.remove('visible');
+    return;
+  }
+
+  // Photoshop-style Threshold: a true 1:1 pixel threshold at full canvas
+  // resolution, no pixel-size grid, no dithering pattern — just a clean
+  // black/white split by luminance. This bypasses ditherPixelSize entirely
+  // because downsampling to a coarse grid first (like the other algorithms
+  // need) is exactly what makes a "Threshold" look blocky/wrong.
+  if (S.ditherAlgorithm === 'threshold') {
+    const prep = prepareGray(cw, ch);
+    const gray = prep.gray;
+    const srcData = prep.image.data;
+
+    const out = ctx.createImageData(cw, ch);
+    const d = out.data;
+
+    for (let i = 0; i < gray.length; i++) {
+      const isDark = gray[i] < S.ditherThreshold;
+      const p = i * 4;
+
+      if (isDark) {
+        if (S.ditherColor === 'source') {
+          d[p] = srcData[p]; d[p + 1] = srcData[p + 1]; d[p + 2] = srcData[p + 2];
+        } else {
+          d[p] = 26; d[p + 1] = 26; d[p + 2] = 26; // matches #1a1a1a used elsewhere
+        }
+      } else {
+        d[p] = 255; d[p + 1] = 255; d[p + 2] = 255;
+      }
+      d[p + 3] = 255;
+    }
+
+    ctx.putImageData(out, 0, 0);
     spinner.classList.remove('visible');
     return;
   }
@@ -3869,6 +3909,7 @@ function applyLoadedPreset(preset) {
   if ($('circuit-frag-params')) $('circuit-frag-params').style.display = S.circuitFrag !== 'none' ? 'block' : 'none';
   if ($('circuit-palette-wrap')) $('circuit-palette-wrap').style.display = S.circuitColor === 'multi' ? 'block' : 'none';
   if ($('beads-palette-wrap')) $('beads-palette-wrap').style.display = S.beadsColor === 'palette' ? 'block' : 'none';
+  if ($('dither-pixel-params')) $('dither-pixel-params').style.display = S.ditherAlgorithm === 'threshold' ? 'none' : 'block';
 
   // Restore palette swatches if saved
   if (preset._activeColors) {
