@@ -675,6 +675,10 @@ input[type="range"]::-webkit-slider-thumb {
       <span class="home-btn-label">CIRCUIT</span>
       <span class="home-btn-sub">pcb · traces · nodes · chip</span>
     </button>
+    <button class="home-btn" onclick="enterTool('glitch')">
+      <span class="home-btn-label">GLITCH</span>
+      <span class="home-btn-sub">stretch · bands · grid labels</span>
+    </button>
   </div>
 
   <div id="home-footer">
@@ -710,6 +714,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="mode-btn" data-mode="solid">Solid</button>
         <button class="mode-btn" data-mode="giocoeffect">GiocoFX</button>
         <button class="mode-btn" data-mode="circuit">Circuit</button>
+        <button class="mode-btn" data-mode="glitch">Glitch</button>
       </div>
 
       <div class="tabs">
@@ -720,6 +725,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="tab mode-solid" data-tab="solid" style="display:none">Solid</button>
         <button class="tab mode-giocoeffect" data-tab="giocoeffect" style="display:none">GiocoFX</button>
         <button class="tab mode-circuit" data-tab="circuit" style="display:none">Circuit</button>
+        <button class="tab mode-glitch" data-tab="glitch" style="display:none">Glitch</button>
         <button class="tab" data-tab="tone">Tone</button>
         <button class="tab" data-tab="export">Export</button>
       </div>
@@ -1145,6 +1151,51 @@ input[type="range"]::-webkit-slider-thumb {
         </div>
       </div>
 
+      <div class="tab-content" id="tab-glitch">
+        <div class="tool-note">Glitch corta la imagen en bandas horizontales y las desplaza. La grilla es un overlay con las dimensiones de cada celda.</div>
+
+        <div class="toggle-row" id="toggle-glitch-effect"><div class="tog" id="glitch-effect-ind">&#10003;</div> Show Effect</div>
+
+        <div class="section-title">Stretch / Glitch</div>
+        <div class="row"><div class="row-top"><label>Band Size</label><input type="number" id="num-glitch-band-size" value="24" min="2" max="200" step="1"></div><input type="range" id="glitch-band-size" min="2" max="200" step="1" value="24"></div>
+        <div class="row"><div class="row-top"><label>Band Variation</label><input type="number" id="num-glitch-band-random" value="40" min="0" max="100" step="1"></div><input type="range" id="glitch-band-random" min="0" max="100" step="1" value="40"></div>
+        <div class="row"><div class="row-top"><label>Shift Amount</label><input type="number" id="num-glitch-shift" value="80" min="0" max="100" step="1"></div><input type="range" id="glitch-shift" min="0" max="100" step="1" value="80"></div>
+
+        <div class="sw-row">
+          <span class="sw-label">Shift Mode</span>
+          <div class="sw-btns" id="sw-glitch-shift-mode">
+            <button class="sw-btn active" data-val="random">Random</button>
+            <button class="sw-btn" data-val="sine">Sine</button>
+            <button class="sw-btn" data-val="luminance">Luminance</button>
+          </div>
+        </div>
+
+        <div class="row"><div class="row-top"><label>Seed</label><input type="number" id="num-glitch-seed" value="1" min="1" max="9999" step="1"></div><input type="range" id="glitch-seed" min="1" max="9999" step="1" value="1"></div>
+
+        <div class="toggle-row" id="toggle-glitch-wrap"><div class="tog" id="glitch-wrap-ind">&#10003;</div> Wrap horizontal</div>
+
+        <div class="section-title">Grid Overlay</div>
+        <div class="row"><div class="row-top"><label>Columns</label><input type="number" id="num-glitch-grid-cols" value="6" min="1" max="30" step="1"></div><input type="range" id="glitch-grid-cols" min="1" max="30" step="1" value="6"></div>
+        <div class="row"><div class="row-top"><label>Rows</label><input type="number" id="num-glitch-grid-rows" value="6" min="1" max="30" step="1"></div><input type="range" id="glitch-grid-rows" min="1" max="30" step="1" value="6"></div>
+
+        <div class="toggle-row" id="toggle-glitch-show-grid"><div class="tog" id="glitch-show-grid-ind">&#10003;</div> Show grid lines</div>
+        <div class="toggle-row" id="toggle-glitch-show-labels"><div class="tog" id="glitch-show-labels-ind">&#10003;</div> Show dimension labels</div>
+
+        <div id="glitch-grid-params">
+          <div class="row"><div class="row-top"><label>Line Width</label><input type="number" id="num-glitch-line-width" value="1" min="1" max="6" step="1"></div><input type="range" id="glitch-line-width" min="1" max="6" step="1" value="1"></div>
+          <div class="row"><div class="row-top"><label>Font Size</label><input type="number" id="num-glitch-font-size" value="11" min="6" max="28" step="1"></div><input type="range" id="glitch-font-size" min="6" max="28" step="1" value="11"></div>
+
+          <div class="sw-row">
+            <span class="sw-label">Grid Color</span>
+            <div class="sw-btns" id="sw-glitch-grid-color">
+              <button class="sw-btn active" data-val="dark">Dark</button>
+              <button class="sw-btn" data-val="light">Light</button>
+              <button class="sw-btn" data-val="accent">Accent</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="tab-content" id="tab-export">
         <div class="sw-row">
           <span class="sw-label">Format</span>
@@ -1296,6 +1347,21 @@ const S = {
   circuitFragChaos: 40,
   circuitCharset: 'elec',
 
+  glitchShowEffect: true,
+  glitchBandSize: 24,
+  glitchBandRandom: 40,
+  glitchShift: 80,
+  glitchShiftMode: 'random',
+  glitchSeed: 1,
+  glitchWrap: true,
+  glitchGridCols: 6,
+  glitchGridRows: 6,
+  glitchShowGrid: true,
+  glitchShowLabels: true,
+  glitchLineWidth: 1,
+  glitchFontSize: 11,
+  glitchGridColor: 'dark',
+
   format: 'png',
   jpgQuality: 92,
   exportTransparent: false,
@@ -1342,6 +1408,10 @@ const CONTROL_MAP = [
   ['circuit-bus-width','circuitBusWidth'], ['circuit-break','circuitBreak'],
   ['circuit-frag-cell','circuitFragCell'], ['circuit-disp-x','circuitDispX'],
   ['circuit-disp-y','circuitDispY'], ['circuit-frag-chaos','circuitFragChaos'],
+  ['glitch-band-size','glitchBandSize'], ['glitch-band-random','glitchBandRandom'],
+  ['glitch-shift','glitchShift'], ['glitch-seed','glitchSeed'],
+  ['glitch-grid-cols','glitchGridCols'], ['glitch-grid-rows','glitchGridRows'],
+  ['glitch-line-width','glitchLineWidth'], ['glitch-font-size','glitchFontSize'],
   ['jpg-quality','jpgQuality']
 ];
 
@@ -1436,6 +1506,8 @@ makeSwitcher('sw-circuit-frag', 'circuitFrag', val => {
   scheduleRender();
 });
 makeSwitcher('sw-circuit-charset', 'circuitCharset');
+makeSwitcher('sw-glitch-shift-mode', 'glitchShiftMode');
+makeSwitcher('sw-glitch-grid-color', 'glitchGridColor');
 makeSwitcher('sw-format', 'format', val => {
   $('jpg-quality-wrap').style.display = val === 'jpg' ? 'block' : 'none';
 });
@@ -1478,7 +1550,7 @@ function setMode(mode) {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
 
-  ['halftone','dithering','dots','solid','giocoeffect','circuit'].forEach(m => {
+  ['halftone','dithering','dots','solid','giocoeffect','circuit','glitch'].forEach(m => {
     document.querySelectorAll('.mode-' + m).forEach(el => {
       el.style.display = mode === m ? '' : 'none';
     });
@@ -1486,7 +1558,7 @@ function setMode(mode) {
 
   const active = document.querySelector('.tab.active[data-tab]');
   const current = active ? active.dataset.tab : 'upload';
-  const modeTabs = ['halftone','dithering','dots','solid','giocoeffect','circuit'];
+  const modeTabs = ['halftone','dithering','dots','solid','giocoeffect','circuit','glitch'];
 
   if (modeTabs.includes(mode) && modeTabs.filter(t => t !== mode).includes(current)) {
     activateTab('upload');
@@ -1584,6 +1656,30 @@ $('toggle-gfx-effect').addEventListener('click', () => {
 $('toggle-circuit-effect').addEventListener('click', () => {
   S.circuitShowEffect = !S.circuitShowEffect;
   $('circuit-effect-ind').innerHTML = S.circuitShowEffect ? '&#10003;' : '&nbsp;';
+  scheduleRender();
+});
+
+$('toggle-glitch-effect').addEventListener('click', () => {
+  S.glitchShowEffect = !S.glitchShowEffect;
+  $('glitch-effect-ind').innerHTML = S.glitchShowEffect ? '&#10003;' : '&nbsp;';
+  scheduleRender();
+});
+
+$('toggle-glitch-wrap').addEventListener('click', () => {
+  S.glitchWrap = !S.glitchWrap;
+  $('glitch-wrap-ind').innerHTML = S.glitchWrap ? '&#10003;' : '&nbsp;';
+  scheduleRender();
+});
+
+$('toggle-glitch-show-grid').addEventListener('click', () => {
+  S.glitchShowGrid = !S.glitchShowGrid;
+  $('glitch-show-grid-ind').innerHTML = S.glitchShowGrid ? '&#10003;' : '&nbsp;';
+  scheduleRender();
+});
+
+$('toggle-glitch-show-labels').addEventListener('click', () => {
+  S.glitchShowLabels = !S.glitchShowLabels;
+  $('glitch-show-labels-ind').innerHTML = S.glitchShowLabels ? '&#10003;' : '&nbsp;';
   scheduleRender();
 });
 
@@ -2769,6 +2865,11 @@ async function doRender() {
     renderCircuit(myID);
     return;
   }
+
+  if (S.mode === 'glitch') {
+    renderGlitch(myID);
+    return;
+  }
 }
 
 async function renderGiocoEffect(myID) {
@@ -3606,11 +3707,135 @@ async function renderCircuit(myID) {
   spinner.classList.remove('visible');
 }
 
+async function renderGlitch(myID) {
+  const cw = S.canvasW;
+  const ch = S.canvasH;
+
+  canvas.width = cw;
+  canvas.height = ch;
+
+  // Draw the full-color source image at full resolution as the base layer.
+  drawSourceToCanvas(canvas, ctx, cw, ch);
+
+  if (!S.glitchShowEffect) {
+    spinner.classList.remove('visible');
+    return;
+  }
+
+  // Deterministic seeded random so the same seed always gives the same glitch.
+  function rand(seed) {
+    const x = Math.sin(seed * 127.1 + S.glitchSeed * 311.7 + 1) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  // Snapshot the base layer so we can read pixels per-band while writing
+  // the shifted result back onto the same canvas.
+  const base = document.createElement('canvas');
+  base.width = cw;
+  base.height = ch;
+  const bctx = base.getContext('2d', { willReadFrequently: true });
+  bctx.drawImage(canvas, 0, 0);
+
+  const bandBase = Math.max(2, Math.round(S.glitchBandSize));
+  const bandRandomPx = (S.glitchBandRandom / 100) * bandBase;
+  const maxShift = (S.glitchShift / 100) * cw * 0.5;
+
+  let y = 0;
+  let bandIndex = 0;
+
+  while (y < ch) {
+    const variance = (rand(bandIndex * 13.37) - 0.5) * 2 * bandRandomPx;
+    const bandH = Math.max(1, Math.min(ch - y, Math.round(bandBase + variance)));
+
+    let shiftX = 0;
+    if (S.glitchShiftMode === 'random') {
+      shiftX = (rand(bandIndex * 7.91) - 0.5) * 2 * maxShift;
+    } else if (S.glitchShiftMode === 'sine') {
+      shiftX = Math.sin(bandIndex * 0.6 + S.glitchSeed) * maxShift;
+    } else if (S.glitchShiftMode === 'luminance') {
+      // Sample average luminance of this band at low res to drive the shift.
+      const sampleH = Math.max(1, Math.min(bandH, 4));
+      const sample = bctx.getImageData(0, y, Math.max(1, Math.floor(cw / 8)), sampleH);
+      const sd = sample.data;
+      let sum = 0, count = 0;
+      for (let i = 0; i < sd.length; i += 4) {
+        sum += sd[i] * 0.299 + sd[i + 1] * 0.587 + sd[i + 2] * 0.114;
+        count++;
+      }
+      const avgLum = count ? sum / count : 128;
+      shiftX = ((avgLum / 255) - 0.5) * 2 * maxShift;
+    }
+
+    shiftX = Math.round(shiftX);
+
+    if (shiftX !== 0) {
+      ctx.clearRect(0, y, cw, bandH);
+      if (S.glitchWrap) {
+        // Wrap: draw the band three times (left, center, right) so content
+        // sliding off one edge reappears from the other.
+        ctx.drawImage(base, 0, y, cw, bandH, shiftX, y, cw, bandH);
+        ctx.drawImage(base, 0, y, cw, bandH, shiftX - cw, y, cw, bandH);
+        ctx.drawImage(base, 0, y, cw, bandH, shiftX + cw, y, cw, bandH);
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, y, cw, bandH);
+        ctx.drawImage(base, 0, y, cw, bandH, shiftX, y, cw, bandH);
+      }
+    }
+
+    y += bandH;
+    bandIndex++;
+
+    if (bandIndex % 30 === 0) {
+      await yieldFrame();
+      if (myID !== currentRenderID) return;
+    }
+  }
+
+  // ---- Grid overlay: cells with width x height labels ----
+  if (S.glitchShowGrid || S.glitchShowLabels) {
+    const cols = Math.max(1, Math.round(S.glitchGridCols));
+    const rows = Math.max(1, Math.round(S.glitchGridRows));
+    const cellW = cw / cols;
+    const cellH = ch / rows;
+
+    const gridColor = S.glitchGridColor === 'light' ? 'rgba(255,255,255,0.85)'
+                     : S.glitchGridColor === 'accent' ? '#ff5a1f'
+                     : 'rgba(20,20,20,0.85)';
+
+    ctx.save();
+    ctx.strokeStyle = gridColor;
+    ctx.fillStyle = gridColor;
+    ctx.lineWidth = S.glitchLineWidth;
+    ctx.font = S.glitchFontSize + 'px ' + getComputedStyle(document.body).fontFamily;
+    ctx.textBaseline = 'top';
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = c * cellW;
+        const yy = r * cellH;
+
+        if (S.glitchShowGrid) {
+          ctx.strokeRect(x, yy, cellW, cellH);
+        }
+
+        if (S.glitchShowLabels) {
+          const label = Math.round(cellW) + '×' + Math.round(cellH);
+          ctx.fillText(label, x + 4, yy + 4);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  spinner.classList.remove('visible');
+}
+
 function doExport() {
   if (!sourceImg) return;
 
   if (S.format === 'svg') {
-    if (['dots','solid','giocoeffect','circuit'].includes(S.mode)) {
+    if (['dots','solid','giocoeffect','circuit','glitch'].includes(S.mode)) {
       alert(S.mode.toUpperCase() + ' exports as PNG/JPG only.');
       return;
     }
@@ -3625,6 +3850,16 @@ function doExport() {
   const ext = S.format === 'jpg' ? 'jpg' : 'png';
   const mime = S.format === 'jpg' ? 'image/jpeg' : 'image/png';
   const quality = S.format === 'jpg' ? (S.jpgQuality || 92) / 100 : undefined;
+
+  // Glitch is a full-color image effect, not a black/white shape mask — skip
+  // the shape/background recoloring logic below and export the canvas as-is.
+  if (S.mode === 'glitch') {
+    const a = document.createElement('a');
+    a.download = 'glitch.' + ext;
+    a.href = canvas.toDataURL(mime, quality);
+    a.click();
+    return;
+  }
 
   // Detect if current mode has dark background
   const darkBg = (S.mode === 'halftone' && S.color === 'invert') ||
@@ -3744,6 +3979,7 @@ window.enterTool = function(mode) {
   if (mode === 'solid') activateTab('solid');
   if (mode === 'giocoeffect') activateTab('giocoeffect');
   if (mode === 'circuit') activateTab('circuit');
+  if (mode === 'glitch') activateTab('glitch');
 };
 
 window.goHome = function() {
@@ -3782,6 +4018,10 @@ const PRESET_KEYS = {
               'circuitBus','circuitBusWidth','circuitBreak','circuitColor',
               'circuitFrag','circuitFragCell','circuitDispX','circuitDispY',
               'circuitFragChaos','circuitCharset',
+              'blur','contrast','brightness','gamma','invert'],
+  glitch:    ['glitchShowEffect','glitchBandSize','glitchBandRandom','glitchShift',
+              'glitchShiftMode','glitchSeed','glitchWrap','glitchGridCols','glitchGridRows',
+              'glitchShowGrid','glitchShowLabels','glitchLineWidth','glitchFontSize','glitchGridColor',
               'blur','contrast','brightness','gamma','invert'],
 };
 
@@ -3880,6 +4120,8 @@ function applyLoadedPreset(preset) {
   syncSwitcher('sw-circuit-bus', S.circuitBus);
   syncSwitcher('sw-circuit-frag', S.circuitFrag);
   syncSwitcher('sw-circuit-charset', S.circuitCharset);
+  syncSwitcher('sw-glitch-shift-mode', S.glitchShiftMode);
+  syncSwitcher('sw-glitch-grid-color', S.glitchGridColor);
 
   // Sync toggles
   function syncToggle(indId, val) {
@@ -3896,6 +4138,10 @@ function applyLoadedPreset(preset) {
   syncToggle('solid-fill-holes-ind', S.solidFillHoles);
   syncToggle('gfx-effect-ind', S.gfxShowEffect);
   syncToggle('circuit-effect-ind', S.circuitShowEffect);
+  syncToggle('glitch-effect-ind', S.glitchShowEffect);
+  syncToggle('glitch-wrap-ind', S.glitchWrap);
+  syncToggle('glitch-show-grid-ind', S.glitchShowGrid);
+  syncToggle('glitch-show-labels-ind', S.glitchShowLabels);
 
   // Sync dependent visibility
   if ($('luminance-size-wrap')) $('luminance-size-wrap').style.display = S.luminanceSize ? 'block' : 'none';
