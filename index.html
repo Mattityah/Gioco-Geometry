@@ -1190,7 +1190,7 @@ input[type="range"]::-webkit-slider-thumb {
 
         <div id="glitch-detect-params" style="display:none">
           <div class="tool-note">Detect Shapes parte el lienzo siguiendo los bordes de la imagen (como Adaptive) pero descarta las celdas que caen sobre el fondo — solo quedan cajas sobre la forma real.</div>
-          <div class="row"><div class="row-top"><label>Depth</label><input type="number" id="num-glitch-detect-depth" value="5" min="1" max="8" step="1"></div><input type="range" id="glitch-detect-depth" min="1" max="8" step="1" value="5"></div>
+          <div class="row"><div class="row-top"><label>Depth</label><input type="number" id="num-glitch-detect-depth" value="8" min="1" max="12" step="1"></div><input type="range" id="glitch-detect-depth" min="1" max="12" step="1" value="8"></div>
           <div class="row"><div class="row-top"><label>Min Cell Size</label><input type="number" id="num-glitch-detect-min-size" value="24" min="6" max="200" step="1"></div><input type="range" id="glitch-detect-min-size" min="6" max="200" step="1" value="24"></div>
           <div class="row"><div class="row-top"><label>Bg Tolerance</label><input type="number" id="num-glitch-detect-tolerance" value="40" min="5" max="150" step="1"></div><input type="range" id="glitch-detect-tolerance" min="5" max="150" step="1" value="40"></div>
           <div class="row"><div class="row-top"><label>Merge Gap</label><input type="number" id="num-glitch-detect-merge" value="2" min="0" max="15" step="1"></div><input type="range" id="glitch-detect-merge" min="0" max="15" step="1" value="2"></div>
@@ -1376,7 +1376,7 @@ const S = {
   glitchGridCols: 6,
   glitchGridRows: 6,
   glitchGridMode: 'uniform',
-  glitchDetectDepth: 5,
+  glitchDetectDepth: 8,
   glitchDetectMinSize: 24,
   glitchDetectTolerance: 40,
   glitchDetectMerge: 2,
@@ -4034,12 +4034,30 @@ async function detectShapeBoxes(cw, ch, myID) {
   }
 
   const leaves = [];
+  const minCoverage = S.glitchDetectCoverage / 100;
+  // Anything below this is treated as pure background and dropped
+  // immediately, without waiting for depth/size to run out.
+  const pruneThreshold = Math.min(0.02, minCoverage / 4);
 
   function recurse(x, y, w, h, depth) {
-    if (depth <= 0 || w <= minMapSize * 2 || h <= minMapSize * 2) {
-      leaves.push({ x, y, w, h });
+    const cov = maskCoverage(x, y, w, h);
+
+    // Pure background (or near enough) — drop the whole region now,
+    // regardless of remaining depth. This is what keeps boxes from
+    // ballooning across empty canvas.
+    if (cov <= pruneThreshold) return;
+
+    const atMinSize = w <= minMapSize * 2 || h <= minMapSize * 2;
+    const atMaxDepth = depth <= 0;
+
+    // Mostly-full or out of room to subdivide further: settle as a leaf.
+    if (atMinSize || atMaxDepth) {
+      if (cov >= minCoverage) leaves.push({ x, y, w, h });
       return;
     }
+
+    // Otherwise this region is a mix of shape + background — keep cutting
+    // along the strongest edge so the box shrinks toward the contour.
     const vertical = w >= h;
     let bestPos = -1, bestScore = -1;
 
@@ -4048,7 +4066,10 @@ async function detectShapeBoxes(cw, ch, myID) {
         const score = edgeSumCol(x, y, h, cx);
         if (score > bestScore) { bestScore = score; bestPos = cx; }
       }
-      if (bestPos < 0) { leaves.push({ x, y, w, h }); return; }
+      if (bestPos < 0) {
+        if (cov >= minCoverage) leaves.push({ x, y, w, h });
+        return;
+      }
       recurse(x, y, bestPos - x, h, depth - 1);
       recurse(bestPos, y, x + w - bestPos, h, depth - 1);
     } else {
@@ -4056,7 +4077,10 @@ async function detectShapeBoxes(cw, ch, myID) {
         const score = edgeSumRow(x, y, w, cy);
         if (score > bestScore) { bestScore = score; bestPos = cy; }
       }
-      if (bestPos < 0) { leaves.push({ x, y, w, h }); return; }
+      if (bestPos < 0) {
+        if (cov >= minCoverage) leaves.push({ x, y, w, h });
+        return;
+      }
       recurse(x, y, w, bestPos - y, depth - 1);
       recurse(x, bestPos, w, y + h - bestPos, depth - 1);
     }
@@ -4064,10 +4088,7 @@ async function detectShapeBoxes(cw, ch, myID) {
 
   recurse(0, 0, mapW, mapH, maxDepth);
 
-  const minCoverage = S.glitchDetectCoverage / 100;
-
   return leaves
-    .filter(r => maskCoverage(r.x, r.y, r.w, r.h) >= minCoverage)
     .map(r => ({
       x: r.x * sx,
       y: r.y * sy,
