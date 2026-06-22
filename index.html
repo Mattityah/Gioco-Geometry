@@ -845,7 +845,9 @@ input[type="range"]::-webkit-slider-thumb {
         <div class="toggle-row" id="toggle-luminance-size"><div class="tog" id="luminance-size-ind">&nbsp;</div> Size follows luminance</div>
         <div id="luminance-size-wrap" style="display:none">
           <div class="row"><div class="row-top"><label>Min Size</label><input type="number" id="num-min-shape-size" value="1" min="0.5" max="30" step="0.5"></div><input type="range" id="min-shape-size" min="0.5" max="30" step="0.5" value="1"></div>
-          <div class="row"><div class="row-top"><label>Max Size</label><input type="number" id="num-max-shape-size" value="9" min="1" max="40" step="0.5"></div><input type="range" id="max-shape-size" min="1" max="40" step="0.5" value="9"></div>
+          <div class="row"><div class="row-top"><label>Max Size</label><input type="number" id="num-max-shape-size" value="9" min="1" max="60" step="0.5"></div><input type="range" id="max-shape-size" min="1" max="60" step="0.5" value="9"></div>
+          <div class="row"><div class="row-top"><label>Curve</label><input type="number" id="num-size-curve" value="1.6" min="0.3" max="5" step="0.1"></div><input type="range" id="size-curve" min="0.3" max="5" step="0.1" value="1.6"></div>
+          <div class="tool-note">Curve &gt; 1 empuja solo las sombras más oscuras al tamaño máximo (conserva detalle en medios tonos). Subí Max Size por encima del Step Size para que los puntos se fundan en negro sólido en las zonas más oscuras.</div>
         </div>
 
         <div class="section-title">Size Texture</div>
@@ -1293,6 +1295,7 @@ const S = {
   luminanceSize: false,
   minShapeSize: 1,
   maxShapeSize: 9,
+  sizeCurve: 1.6,
   texture: 'none',
   texIntensity: 0.6,
   texScale: 3,
@@ -1414,7 +1417,7 @@ const CONTROL_MAP = [
   ['img-scale','imgScale'], ['img-x','imgX'], ['img-y','imgY'], ['img-rotation','imgRotation'],
   ['threshold','threshold'], ['step-size','stepSize'], ['grid-angle','gridAngle'],
   ['shape-size','shapeSize'], ['corner-radius','cornerRadius'], ['noise','noise'],
-  ['min-shape-size','minShapeSize'], ['max-shape-size','maxShapeSize'],
+  ['min-shape-size','minShapeSize'], ['max-shape-size','maxShapeSize'], ['size-curve','sizeCurve'],
   ['tex-intensity','texIntensity'], ['tex-scale','texScale'],
   ['dither-threshold','ditherThreshold'], ['dither-pixel-size','ditherPixelSize'], ['random-amount','randomAmount'],
   ['dots-threshold','dotsThreshold'], ['dots-grid-size','dotsGridSize'], ['dots-min-size','dotsMinSize'],
@@ -2224,7 +2227,7 @@ async function renderHalftone(myID) {
 
       const lum = gray[idx];
       const baseR = S.luminanceSize
-        ? Math.max(S.minShapeSize, Math.min(S.maxShapeSize, S.maxShapeSize - (lum / 255) * (S.maxShapeSize - S.minShapeSize)))
+        ? S.minShapeSize + Math.pow(1 - lum / 255, S.sizeCurve) * (S.maxShapeSize - S.minShapeSize)
         : S.shapeSize;
       const texF = getTextureFactor(drawX / cw, drawY / ch, lum);
       const rr = baseR * texF;
@@ -3209,7 +3212,7 @@ function svgForHalftone() {
 
       const lum = gray[idx];
       const baseR = S.luminanceSize
-        ? Math.max(S.minShapeSize, Math.min(S.maxShapeSize, S.maxShapeSize - (lum / 255) * (S.maxShapeSize - S.minShapeSize)))
+        ? S.minShapeSize + Math.pow(1 - lum / 255, S.sizeCurve) * (S.maxShapeSize - S.minShapeSize)
         : S.shapeSize;
       const texF = getTextureFactor(x / cw, y / ch, lum);
       const rr = baseR * texF;
@@ -4263,7 +4266,7 @@ window.doExport = doExport;
 const PRESET_KEYS = {
   halftone: ['showHalftoneEffect','threshold','stepSize','gridAngle','grid','halftoneDither',
              'shape','mix','color','customMix','shapeSize','cornerRadius','noise',
-             'luminanceSize','minShapeSize','maxShapeSize','texture','texIntensity','texScale',
+             'luminanceSize','minShapeSize','maxShapeSize','sizeCurve','texture','texIntensity','texScale',
              'blur','contrast','brightness','gamma','invert'],
   dithering: ['showDitherEffect','ditherAlgorithm','ditherThreshold','ditherPixelSize',
               'ditherPixelShape','ditherColor','randomAmount',
