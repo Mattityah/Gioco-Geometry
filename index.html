@@ -486,8 +486,8 @@ input[type="range"]::-webkit-slider-thumb {
 #home-back {
   height: 32px;
   flex-shrink: 0;
-  background: var(--text);
-  color: var(--bg);
+  background: #ccff00;
+  color: #1a1a1a;
   font-size: 10px;
   letter-spacing: 0.1em;
   display: flex;
@@ -865,6 +865,15 @@ input[type="range"]::-webkit-slider-thumb {
           <div class="row"><div class="row-top"><label>Intensity</label><input type="number" id="num-tex-intensity" value="0.6" min="0" max="2" step="0.05"></div><input type="range" id="tex-intensity" min="0" max="2" step="0.05" value="0.6"></div>
           <div class="row"><div class="row-top"><label>Scale</label><input type="number" id="num-tex-scale" value="3" min="0.5" max="20" step="0.5"></div><input type="range" id="tex-scale" min="0.5" max="20" step="0.5" value="3"></div>
         </div>
+
+        <div class="section-title">Solid Core</div>
+        <div class="tool-note">Cubre las sombras más oscuras con negro sólido y limpio (igual que SOLID), en vez de depender de que los puntos se fundan entre sí. La trama de Halftone queda para los medios tonos, el negro de las sombras profundas queda nítido.</div>
+        <div class="toggle-row" id="toggle-ht-solid-core"><div class="tog" id="ht-solid-core-ind">&nbsp;</div> Activar Solid Core</div>
+        <div id="ht-solid-core-wrap" style="display:none">
+          <div class="row"><div class="row-top"><label>Core Threshold</label><input type="number" id="num-ht-core-threshold" value="70" min="0" max="255" step="1"></div><input type="range" id="ht-core-threshold" min="0" max="255" step="1" value="70"></div>
+          <div class="row"><div class="row-top"><label>Core Smooth</label><input type="number" id="num-ht-core-smooth" value="2" min="0" max="8" step="1"></div><input type="range" id="ht-core-smooth" min="0" max="8" step="1" value="2"></div>
+          <div class="row"><div class="row-top"><label>Core Despeckle</label><input type="number" id="num-ht-core-despeckle" value="2" min="0" max="8" step="1"></div><input type="range" id="ht-core-despeckle" min="0" max="8" step="1" value="2"></div>
+        </div>
       </div>
 
       <div class="tab-content" id="tab-dithering">
@@ -929,6 +938,15 @@ input[type="range"]::-webkit-slider-thumb {
         <div class="row"><div class="row-top"><label>Noise</label><input type="number" id="num-dots-noise" value="0.4" min="0" max="10" step="0.1"></div><input type="range" id="dots-noise" min="0" max="10" step="0.1" value="0.4"></div>
 
         <div class="toggle-row" id="toggle-dots-background"><div class="tog" id="dots-background-ind">&#10003;</div> Background micro dots</div>
+
+        <div class="section-title">Solid Core</div>
+        <div class="tool-note">Cubre las sombras más oscuras con negro sólido y limpio (igual que SOLID), en vez de dejar que la trama de puntos se vea granulada ahí. La trama de Dots queda solo para los medios tonos.</div>
+        <div class="toggle-row" id="toggle-dots-solid-core"><div class="tog" id="dots-solid-core-ind">&#10003;</div> Activar Solid Core</div>
+        <div id="dots-solid-core-wrap">
+          <div class="row"><div class="row-top"><label>Core Threshold</label><input type="number" id="num-dots-core-threshold" value="70" min="0" max="255" step="1"></div><input type="range" id="dots-core-threshold" min="0" max="255" step="1" value="70"></div>
+          <div class="row"><div class="row-top"><label>Core Smooth</label><input type="number" id="num-dots-core-smooth" value="2" min="0" max="8" step="1"></div><input type="range" id="dots-core-smooth" min="0" max="8" step="1" value="2"></div>
+          <div class="row"><div class="row-top"><label>Core Despeckle</label><input type="number" id="num-dots-core-despeckle" value="2" min="0" max="8" step="1"></div><input type="range" id="dots-core-despeckle" min="0" max="8" step="1" value="2"></div>
+        </div>
       </div>
 
       <div class="tab-content" id="tab-solid">
@@ -1299,6 +1317,10 @@ const S = {
   texture: 'none',
   texIntensity: 0.6,
   texScale: 3,
+  htSolidCore: false,
+  htCoreThreshold: 70,
+  htCoreSmooth: 2,
+  htCoreDespeckle: 2,
 
   showDitherEffect: true,
   ditherAlgorithm: 'floyd',
@@ -1316,6 +1338,10 @@ const S = {
   dotsNoise: 0.4,
   dotsMode: 'screen',
   dotsBackground: true,
+  dotsSolidCore: true,
+  dotsCoreThreshold: 70,
+  dotsCoreSmooth: 2,
+  dotsCoreDespeckle: 2,
 
   solidShowEffect: true,
   solidThreshold: 180,
@@ -1419,9 +1445,11 @@ const CONTROL_MAP = [
   ['shape-size','shapeSize'], ['corner-radius','cornerRadius'], ['noise','noise'],
   ['min-shape-size','minShapeSize'], ['max-shape-size','maxShapeSize'], ['size-curve','sizeCurve'],
   ['tex-intensity','texIntensity'], ['tex-scale','texScale'],
+  ['ht-core-threshold','htCoreThreshold'], ['ht-core-smooth','htCoreSmooth'], ['ht-core-despeckle','htCoreDespeckle'],
   ['dither-threshold','ditherThreshold'], ['dither-pixel-size','ditherPixelSize'], ['random-amount','randomAmount'],
   ['dots-threshold','dotsThreshold'], ['dots-grid-size','dotsGridSize'], ['dots-min-size','dotsMinSize'],
   ['dots-max-size','dotsMaxSize'], ['dots-noise','dotsNoise'],
+  ['dots-core-threshold','dotsCoreThreshold'], ['dots-core-smooth','dotsCoreSmooth'], ['dots-core-despeckle','dotsCoreDespeckle'],
   ['solid-threshold','solidThreshold'], ['solid-stroke-weight','solidStrokeWeight'], ['solid-smooth','solidSmooth'],
   ['solid-despeckle','solidDespeckle'], ['solid-expand','solidExpand'], ['solid-tolerance','solidTolerance'],
   ['gfx-blur','gfxBlur'], ['gfx-levels','gfxLevels'], ['gfx-stroke','gfxStroke'],
@@ -1622,6 +1650,13 @@ $('toggle-halftone-effect').addEventListener('click', () => {
   scheduleRender();
 });
 
+$('toggle-ht-solid-core').addEventListener('click', () => {
+  S.htSolidCore = !S.htSolidCore;
+  $('ht-solid-core-ind').innerHTML = S.htSolidCore ? '&#10003;' : '&nbsp;';
+  $('ht-solid-core-wrap').style.display = S.htSolidCore ? 'block' : 'none';
+  scheduleRender();
+});
+
 $('toggle-dither-effect').addEventListener('click', () => {
   S.showDitherEffect = !S.showDitherEffect;
   $('dither-effect-ind').innerHTML = S.showDitherEffect ? '&#10003;' : '&nbsp;';
@@ -1667,6 +1702,13 @@ $('toggle-dots-effect').addEventListener('click', () => {
 $('toggle-dots-background').addEventListener('click', () => {
   S.dotsBackground = !S.dotsBackground;
   $('dots-background-ind').innerHTML = S.dotsBackground ? '&#10003;' : '&nbsp;';
+  scheduleRender();
+});
+
+$('toggle-dots-solid-core').addEventListener('click', () => {
+  S.dotsSolidCore = !S.dotsSolidCore;
+  $('dots-solid-core-ind').innerHTML = S.dotsSolidCore ? '&#10003;' : '&nbsp;';
+  $('dots-solid-core-wrap').style.display = S.dotsSolidCore ? 'block' : 'none';
   scheduleRender();
 });
 
@@ -2254,6 +2296,43 @@ async function renderHalftone(myID) {
   }
 
   if (!isMulti) ctx.fill();
+
+  // ---- SOLID CORE: clean full-resolution black fill for the deepest
+  // shadows, borrowed from SOLID's masking approach. Halftone shapes are
+  // sampled on a grid (stepSize), so even with Size-follows-luminance +
+  // Curve pushed hard, the very darkest zones still read as "big dots that
+  // almost touch" rather than true ink — there's always a faint grid seam.
+  // This pass thresholds the *full-res* image (no grid downsampling) for
+  // anything darker than htCoreThreshold, cleans the edges the same way
+  // SOLID's fill mode does (majority smoothing + despeckle), and paints it
+  // solid black on top of the halftone shapes — so deep shadows look like
+  // clean ink and the dot/shape texture is reserved for midtones, where it
+  // actually reads as texture instead of noise.
+  if (S.htSolidCore && S.color !== 'invert') {
+    const corePrep = prepareGray(cw, ch);
+    const coreGray = corePrep.gray;
+    let coreMask = new Uint8Array(cw * ch);
+    for (let i = 0; i < coreGray.length; i++) {
+      coreMask[i] = coreGray[i] < S.htCoreThreshold ? 1 : 0;
+    }
+
+    const coreSmooth = Math.max(0, Math.round(S.htCoreSmooth));
+    for (let i = 0; i < coreSmooth; i++) coreMask = majority(coreMask, cw, ch);
+
+    const coreDesp = Math.max(0, Math.round(S.htCoreDespeckle));
+    if (coreDesp > 0) coreMask = removeSpeckles(coreMask, cw, ch, coreDesp);
+
+    const coreImg = ctx.getImageData(0, 0, cw, ch);
+    const cd = coreImg.data;
+    const coreColor = S.color === 'multi' ? [26, 26, 26] : [26, 26, 26];
+    for (let i = 0; i < coreMask.length; i++) {
+      if (!coreMask[i]) continue;
+      const p = i * 4;
+      cd[p] = coreColor[0]; cd[p + 1] = coreColor[1]; cd[p + 2] = coreColor[2]; cd[p + 3] = 255;
+    }
+    ctx.putImageData(coreImg, 0, 0);
+  }
+
   spinner.classList.remove('visible');
 }
 
@@ -2436,6 +2515,41 @@ async function renderDots(myID) {
   }
 
   ctx.globalAlpha = 1;
+
+  // ---- SOLID CORE: clean full-resolution black fill for the deepest
+  // shadows, borrowed from SOLID's masking approach. The dot grid above
+  // is sampled at a coarse grid (dotsGridSize) so the darkest zones never
+  // fully merge into solid black — they just end up with big, separated
+  // dots that read as "grainy" instead of "ink". This pass fixes that by
+  // thresholding the *full-res* image (no grid downsampling) for anything
+  // darker than dotsCoreThreshold, smoothing/despeckling those edges like
+  // SOLID's fill mode does, and painting it solid black on top of the dot
+  // render — so deep shadows look like clean ink, and the dot texture is
+  // reserved for midtones where it actually reads as texture.
+  if (S.dotsSolidCore) {
+    const corePrep = prepareGray(cw, ch);
+    const coreGray = corePrep.gray;
+    let coreMask = new Uint8Array(cw * ch);
+    for (let i = 0; i < coreGray.length; i++) {
+      coreMask[i] = coreGray[i] < S.dotsCoreThreshold ? 1 : 0;
+    }
+
+    const coreSmooth = Math.max(0, Math.round(S.dotsCoreSmooth));
+    for (let i = 0; i < coreSmooth; i++) coreMask = majority(coreMask, cw, ch);
+
+    const coreDesp = Math.max(0, Math.round(S.dotsCoreDespeckle));
+    if (coreDesp > 0) coreMask = removeSpeckles(coreMask, cw, ch, coreDesp);
+
+    const coreImg = ctx.getImageData(0, 0, cw, ch);
+    const cd = coreImg.data;
+    for (let i = 0; i < coreMask.length; i++) {
+      if (!coreMask[i]) continue;
+      const p = i * 4;
+      cd[p] = 26; cd[p + 1] = 26; cd[p + 2] = 26; cd[p + 3] = 255;
+    }
+    ctx.putImageData(coreImg, 0, 0);
+  }
+
   spinner.classList.remove('visible');
 }
 
@@ -4267,12 +4381,14 @@ const PRESET_KEYS = {
   halftone: ['showHalftoneEffect','threshold','stepSize','gridAngle','grid','halftoneDither',
              'shape','mix','color','customMix','shapeSize','cornerRadius','noise',
              'luminanceSize','minShapeSize','maxShapeSize','sizeCurve','texture','texIntensity','texScale',
+             'htSolidCore','htCoreThreshold','htCoreSmooth','htCoreDespeckle',
              'blur','contrast','brightness','gamma','invert'],
   dithering: ['showDitherEffect','ditherAlgorithm','ditherThreshold','ditherPixelSize',
               'ditherPixelShape','ditherColor','randomAmount',
               'blur','contrast','brightness','gamma','invert'],
   dots:      ['dotsShowEffect','dotsThreshold','dotsGridSize','dotsMinSize','dotsMaxSize',
               'dotsNoise','dotsMode','dotsBackground',
+              'dotsSolidCore','dotsCoreThreshold','dotsCoreSmooth','dotsCoreDespeckle',
               'blur','contrast','brightness','gamma','invert'],
   solid:     ['solidShowEffect','solidThreshold','solidStrokeWeight','solidSmooth',
               'solidDespeckle','solidExpand','solidMode','solidTolerance','solidFillHoles',
@@ -4401,11 +4517,13 @@ function applyLoadedPreset(preset) {
     if (el) el.innerHTML = val ? '&#10003;' : '&nbsp;';
   }
   syncToggle('halftone-effect-ind', S.showHalftoneEffect);
+  syncToggle('ht-solid-core-ind', S.htSolidCore);
   syncToggle('invert-ind', S.invert);
   syncToggle('luminance-size-ind', S.luminanceSize);
   syncToggle('dither-effect-ind', S.showDitherEffect);
   syncToggle('dots-effect-ind', S.dotsShowEffect);
   syncToggle('dots-background-ind', S.dotsBackground);
+  syncToggle('dots-solid-core-ind', S.dotsSolidCore);
   syncToggle('solid-effect-ind', S.solidShowEffect);
   syncToggle('solid-fill-holes-ind', S.solidFillHoles);
   syncToggle('gfx-effect-ind', S.gfxShowEffect);
@@ -4417,6 +4535,8 @@ function applyLoadedPreset(preset) {
 
   // Sync dependent visibility
   if ($('luminance-size-wrap')) $('luminance-size-wrap').style.display = S.luminanceSize ? 'block' : 'none';
+  if ($('ht-solid-core-wrap')) $('ht-solid-core-wrap').style.display = S.htSolidCore ? 'block' : 'none';
+  if ($('dots-solid-core-wrap')) $('dots-solid-core-wrap').style.display = S.dotsSolidCore ? 'block' : 'none';
   if ($('palette-wrap')) $('palette-wrap').style.display = S.color === 'multi' ? 'block' : 'none';
   if ($('mix-row')) $('mix-row').style.display = (S.shape === 'mix' || S.shape === 'custom') ? 'flex' : 'none';
   if ($('custom-mix-row')) $('custom-mix-row').style.display = S.shape === 'custom' ? 'block' : 'none';
