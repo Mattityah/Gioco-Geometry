@@ -679,6 +679,10 @@ input[type="range"]::-webkit-slider-thumb {
       <span class="home-btn-label">GLITCH</span>
       <span class="home-btn-sub">stretch · bands · grid labels</span>
     </button>
+    <button class="home-btn" onclick="enterTool('noise')">
+      <span class="home-btn-label">NOISE</span>
+      <span class="home-btn-sub">grain · duotone · figma-style</span>
+    </button>
   </div>
 
   <div id="home-footer">
@@ -715,6 +719,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="mode-btn" data-mode="giocoeffect">GiocoFX</button>
         <button class="mode-btn" data-mode="circuit">Circuit</button>
         <button class="mode-btn" data-mode="glitch">Glitch</button>
+        <button class="mode-btn" data-mode="noise">Noise</button>
       </div>
 
       <div class="tabs">
@@ -726,6 +731,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="tab mode-giocoeffect" data-tab="giocoeffect" style="display:none">GiocoFX</button>
         <button class="tab mode-circuit" data-tab="circuit" style="display:none">Circuit</button>
         <button class="tab mode-glitch" data-tab="glitch" style="display:none">Glitch</button>
+        <button class="tab mode-noise" data-tab="noise" style="display:none">Noise</button>
         <button class="tab" data-tab="tone">Tone</button>
         <button class="tab" data-tab="export">Export</button>
       </div>
@@ -768,6 +774,47 @@ input[type="range"]::-webkit-slider-thumb {
         <div class="row"><div class="row-top"><label>Contrast</label><input type="number" id="num-contrast" value="1" min="0.5" max="3" step="0.1"></div><input type="range" id="contrast" min="0.5" max="3" step="0.1" value="1"></div>
         <div class="row"><div class="row-top"><label>Brightness</label><input type="number" id="num-brightness" value="1" min="0.2" max="2" step="0.1"></div><input type="range" id="brightness" min="0.2" max="2" step="0.1" value="1"></div>
         <div class="row"><div class="row-top"><label>Gamma</label><input type="number" id="num-gamma" value="1" min="0.1" max="3" step="0.1"></div><input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1"></div>
+
+        <div class="section-title">Grain / Noise (Global)</div>
+        <div class="tool-note">Grano tipo Figma que se aplica encima del resultado final de CUALQUIER herramienta — Halftone, Solid, Glitch, etc. — sin importar cuál esté activa.</div>
+        <div class="toggle-row" id="toggle-grain-enabled"><div class="tog" id="grain-enabled-ind">&nbsp;</div> Activar Grain Global</div>
+
+        <div id="grain-params-wrap" style="display:none">
+          <div class="sw-row">
+            <span class="sw-label">Tipo</span>
+            <div class="sw-btns" id="sw-grain-type">
+              <button class="sw-btn active" data-val="mono">Mono</button>
+              <button class="sw-btn" data-val="duotone">Duotone</button>
+            </div>
+          </div>
+          <div id="grain-duotone-wrap" style="display:none">
+            <div class="row" style="display:flex;gap:10px;align-items:flex-end">
+              <div style="flex:1">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Color A (sombra)</div>
+                <input type="color" id="grain-color-a" value="#000000" style="width:100%;height:32px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg)">
+              </div>
+              <div style="flex:1">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Color B (luz)</div>
+                <input type="color" id="grain-color-b" value="#ffffff" style="width:100%;height:32px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg)">
+              </div>
+            </div>
+          </div>
+
+          <div class="row"><div class="row-top"><label>Size</label><input type="number" id="num-grain-size" value="1" min="1" max="20" step="1"></div><input type="range" id="grain-size" min="1" max="20" step="1" value="1"></div>
+          <div class="row"><div class="row-top"><label>Density</label><input type="number" id="num-grain-density" value="50" min="0" max="100" step="1"></div><input type="range" id="grain-density" min="0" max="100" step="1" value="50"></div>
+          <div class="row"><div class="row-top"><label>Opacity</label><input type="number" id="num-grain-opacity" value="50" min="0" max="100" step="1"></div><input type="range" id="grain-opacity" min="0" max="100" step="1" value="50"></div>
+
+          <div class="row">
+            <div class="row-top"><label>Blend Mode</label></div>
+            <select id="grain-blend-select" style="width:100%;padding:7px 8px;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:3px;font-family:var(--font);font-size:12px">
+              <option value="multiply" selected>Multiply</option>
+              <option value="normal">Normal</option>
+              <option value="screen">Screen</option>
+              <option value="overlay">Overlay</option>
+              <option value="soft-light">Soft Light</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="tab-content" id="tab-halftone">
@@ -1235,6 +1282,63 @@ input[type="range"]::-webkit-slider-thumb {
         </div>
       </div>
 
+      <div class="tab-content" id="tab-noise">
+        <div class="tool-note">Noise genera un grano tipo Figma. Funciona sin imagen (fondo de color sólido) o con tu imagen como base. Es una herramienta independiente — no depende de pasar por ninguna otra.</div>
+
+        <div class="toggle-row" id="toggle-noise-effect"><div class="tog" id="noise-effect-ind">&#10003;</div> Show Effect</div>
+
+        <div class="section-title">Fondo</div>
+        <div class="sw-row">
+          <span class="sw-label">Background</span>
+          <div class="sw-btns" id="sw-noise-background">
+            <button class="sw-btn active" data-val="color">Color</button>
+            <button class="sw-btn" data-val="image">Imagen</button>
+          </div>
+        </div>
+        <div id="noise-bgcolor-wrap">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Color de fondo</div>
+          <input type="color" id="noise-bg-color" value="#ffffff" style="width:100%;height:32px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg);margin-bottom:10px">
+        </div>
+        <div class="tool-note" id="noise-image-note" style="display:none">Usa la imagen subida como fondo. Si no subiste ninguna, se usa blanco.</div>
+
+        <div class="section-title">Grano</div>
+        <div class="sw-row">
+          <span class="sw-label">Tipo</span>
+          <div class="sw-btns" id="sw-noise-type">
+            <button class="sw-btn active" data-val="mono">Mono</button>
+            <button class="sw-btn" data-val="duotone">Duotone</button>
+          </div>
+        </div>
+        <div id="noise-duotone-wrap" style="display:none">
+          <div class="row" style="display:flex;gap:10px;align-items:flex-end">
+            <div style="flex:1">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Color A (sombra)</div>
+              <input type="color" id="noise-color-a" value="#000000" style="width:100%;height:32px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg)">
+            </div>
+            <div style="flex:1">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Color B (luz)</div>
+              <input type="color" id="noise-color-b" value="#ffffff" style="width:100%;height:32px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg)">
+            </div>
+          </div>
+        </div>
+
+        <div class="row"><div class="row-top"><label>Size</label><input type="number" id="num-noise-size" value="1" min="1" max="20" step="1"></div><input type="range" id="noise-size" min="1" max="20" step="1" value="1"></div>
+        <div class="row"><div class="row-top"><label>Density</label><input type="number" id="num-noise-density" value="50" min="0" max="100" step="1"></div><input type="range" id="noise-density" min="0" max="100" step="1" value="50"></div>
+        <div class="row"><div class="row-top"><label>Opacity</label><input type="number" id="num-noise-opacity" value="100" min="0" max="100" step="1"></div><input type="range" id="noise-opacity" min="0" max="100" step="1" value="100"></div>
+
+        <div class="section-title">Mezcla</div>
+        <div class="row">
+          <div class="row-top"><label>Blend Mode</label></div>
+          <select id="noise-blend-select" style="width:100%;padding:7px 8px;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:3px;font-family:var(--font);font-size:12px">
+            <option value="normal">Normal</option>
+            <option value="multiply">Multiply</option>
+            <option value="screen">Screen</option>
+            <option value="overlay">Overlay</option>
+            <option value="soft-light">Soft Light</option>
+          </select>
+        </div>
+      </div>
+
       <div class="tab-content" id="tab-export">
         <div class="sw-row">
           <span class="sw-label">Format</span>
@@ -1416,6 +1520,29 @@ const S = {
   glitchFontSize: 11,
   glitchGridColor: 'dark',
 
+  // Standalone Noise tool — works without a source image.
+  noiseShowEffect: true,
+  noiseType: 'mono',
+  noiseSize: 1,
+  noiseDensity: 50,
+  noiseOpacity: 100,
+  noiseBlend: 'normal',
+  noiseColorA: '#000000',
+  noiseColorB: '#ffffff',
+  noiseBackground: 'color',
+  noiseBgColor: '#ffffff',
+
+  // Global Grain overlay — applies on top of ANY tool's render, regardless
+  // of which mode is active.
+  grainEnabled: false,
+  grainType: 'mono',
+  grainSize: 1,
+  grainDensity: 50,
+  grainOpacity: 50,
+  grainBlend: 'multiply',
+  grainColorA: '#000000',
+  grainColorB: '#ffffff',
+
   format: 'png',
   jpgQuality: 92,
   exportTransparent: false,
@@ -1471,6 +1598,8 @@ const CONTROL_MAP = [
   ['glitch-detect-tolerance','glitchDetectTolerance'], ['glitch-detect-merge','glitchDetectMerge'],
   ['glitch-detect-coverage','glitchDetectCoverage'],
   ['glitch-line-width','glitchLineWidth'], ['glitch-font-size','glitchFontSize'],
+  ['noise-size','noiseSize'], ['noise-density','noiseDensity'], ['noise-opacity','noiseOpacity'],
+  ['grain-size','grainSize'], ['grain-density','grainDensity'], ['grain-opacity','grainOpacity'],
   ['jpg-quality','jpgQuality']
 ];
 
@@ -1571,6 +1700,16 @@ makeSwitcher('sw-glitch-grid-mode', 'glitchGridMode', val => {
   $('glitch-uniform-params').style.display = val === 'uniform' ? 'block' : 'none';
   $('glitch-detect-params').style.display = val === 'detect' ? 'block' : 'none';
 });
+makeSwitcher('sw-noise-type', 'noiseType', val => {
+  $('noise-duotone-wrap').style.display = val === 'duotone' ? 'block' : 'none';
+});
+makeSwitcher('sw-noise-background', 'noiseBackground', val => {
+  $('noise-bgcolor-wrap').style.display = val === 'color' ? 'block' : 'none';
+  $('noise-image-note').style.display = val === 'image' ? 'block' : 'none';
+});
+makeSwitcher('sw-grain-type', 'grainType', val => {
+  $('grain-duotone-wrap').style.display = val === 'duotone' ? 'block' : 'none';
+});
 makeSwitcher('sw-format', 'format', val => {
   $('jpg-quality-wrap').style.display = val === 'jpg' ? 'block' : 'none';
 });
@@ -1609,11 +1748,17 @@ function activateTab(tabName) {
 function setMode(mode) {
   S.mode = mode;
 
+  if (mode === 'noise' && !sourceImg) {
+    $('hint').style.display = 'none';
+  } else if (!sourceImg) {
+    $('hint').style.display = '';
+  }
+
   document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
 
-  ['halftone','dithering','dots','solid','giocoeffect','circuit','glitch'].forEach(m => {
+  ['halftone','dithering','dots','solid','giocoeffect','circuit','glitch','noise'].forEach(m => {
     document.querySelectorAll('.mode-' + m).forEach(el => {
       el.style.display = mode === m ? '' : 'none';
     });
@@ -1621,7 +1766,7 @@ function setMode(mode) {
 
   const active = document.querySelector('.tab.active[data-tab]');
   const current = active ? active.dataset.tab : 'upload';
-  const modeTabs = ['halftone','dithering','dots','solid','giocoeffect','circuit','glitch'];
+  const modeTabs = ['halftone','dithering','dots','solid','giocoeffect','circuit','glitch','noise'];
 
   if (modeTabs.includes(mode) && modeTabs.filter(t => t !== mode).includes(current)) {
     activateTab('upload');
@@ -1760,6 +1905,56 @@ $('toggle-glitch-show-labels').addEventListener('click', () => {
   scheduleRender();
 });
 
+// ---- NOISE TOOL toggles + color pickers + blend select ----
+$('toggle-noise-effect').addEventListener('click', () => {
+  S.noiseShowEffect = !S.noiseShowEffect;
+  $('noise-effect-ind').innerHTML = S.noiseShowEffect ? '&#10003;' : '&nbsp;';
+  scheduleRender();
+});
+
+$('noise-bg-color').addEventListener('input', e => {
+  S.noiseBgColor = e.target.value;
+  scheduleRender();
+});
+
+$('noise-color-a').addEventListener('input', e => {
+  S.noiseColorA = e.target.value;
+  scheduleRender();
+});
+
+$('noise-color-b').addEventListener('input', e => {
+  S.noiseColorB = e.target.value;
+  scheduleRender();
+});
+
+$('noise-blend-select').addEventListener('change', e => {
+  S.noiseBlend = e.target.value;
+  scheduleRender();
+});
+
+// ---- GLOBAL GRAIN toggles + color pickers + blend select ----
+$('toggle-grain-enabled').addEventListener('click', () => {
+  S.grainEnabled = !S.grainEnabled;
+  $('grain-enabled-ind').innerHTML = S.grainEnabled ? '&#10003;' : '&nbsp;';
+  $('grain-params-wrap').style.display = S.grainEnabled ? 'block' : 'none';
+  scheduleRender();
+});
+
+$('grain-color-a').addEventListener('input', e => {
+  S.grainColorA = e.target.value;
+  scheduleRender();
+});
+
+$('grain-color-b').addEventListener('input', e => {
+  S.grainColorB = e.target.value;
+  scheduleRender();
+});
+
+$('grain-blend-select').addEventListener('change', e => {
+  S.grainBlend = e.target.value;
+  scheduleRender();
+});
+
 // Build circuit palette (reuses same PALETTE colors)
 function buildCircuitPalette() {
   const c = $('circuit-palette');
@@ -1798,7 +1993,8 @@ $('fileInput').addEventListener('change', e => {
 });
 
 document.querySelector('.canvas-wrap').addEventListener('click', e => {
-  if (!sourceImg) { $('fileInput').click(); return; }
+  if (!sourceImg && S.mode !== 'noise') { $('fileInput').click(); return; }
+  if (!sourceImg && S.mode === 'noise') return;
 
   // Color picker: when in solid mode, color-pick enabled, and image is loaded, click canvas to pick color
   if (S.mode === 'solid' && S.solidColorPickEnabled && sourceImg) {
@@ -2887,6 +3083,127 @@ function removeSpeckles(mask, w, h, minNeighbors) {
   return out;
 }
 
+// ---- GRAIN / NOISE (shared by the standalone Noise tool and the global
+// Grain overlay). Mirrors Figma's noise fill: a per-cell random value,
+// optionally interpolated between two colors (duotone), scaled to the
+// canvas with nearest-neighbor so "Size" controls grain chunkiness like
+// Figma's own size slider, then composited with a real canvas blend mode
+// instead of manual pixel math — multiply/screen/overlay all come for free
+// from globalCompositeOperation. ----
+
+function hexToRgb(hex) {
+  return {
+    r: parseInt(hex.slice(1, 3), 16) || 0,
+    g: parseInt(hex.slice(3, 5), 16) || 0,
+    b: parseInt(hex.slice(5, 7), 16) || 0
+  };
+}
+
+function blendModeToComposite(mode) {
+  // Canvas has no "normal" composite operation — that's just the default
+  // source-over. Every other Figma-style blend name maps 1:1 to a real
+  // globalCompositeOperation value.
+  return mode === 'normal' ? 'source-over' : mode;
+}
+
+function buildGrainCanvas(cw, ch, size, density, type, colorAHex, colorBHex) {
+  const s = Math.max(1, Math.round(size));
+  const gw = Math.max(1, Math.ceil(cw / s));
+  const gh = Math.max(1, Math.ceil(ch / s));
+
+  const small = document.createElement('canvas');
+  small.width = gw;
+  small.height = gh;
+  const sctx = small.getContext('2d');
+  const img = sctx.createImageData(gw, gh);
+  const d = img.data;
+
+  // Density widens/narrows the random distribution around the midpoint:
+  // 50 = full 0..1 range (default, matches the raw random()); 0 collapses
+  // everything to a flat midtone (no visible grain); 100 pushes harder
+  // toward the extremes for a more contrasty, "louder" grain.
+  const densFactor = density / 50;
+  const colorA = hexToRgb(colorAHex);
+  const colorB = hexToRgb(colorBHex);
+  const isDuotone = type === 'duotone';
+
+  for (let i = 0; i < gw * gh; i++) {
+    let t = Math.random();
+    t = 0.5 + (t - 0.5) * densFactor;
+    t = Math.max(0, Math.min(1, t));
+    const p = i * 4;
+
+    if (isDuotone) {
+      d[p]     = colorA.r + (colorB.r - colorA.r) * t;
+      d[p + 1] = colorA.g + (colorB.g - colorA.g) * t;
+      d[p + 2] = colorA.b + (colorB.b - colorA.b) * t;
+    } else {
+      const v = Math.round(t * 255);
+      d[p] = v; d[p + 1] = v; d[p + 2] = v;
+    }
+    d[p + 3] = 255;
+  }
+
+  sctx.putImageData(img, 0, 0);
+
+  if (s === 1) return small;
+
+  // Scale up with nearest-neighbor (no smoothing) so each random cell
+  // becomes a crisp block of "size" pixels — that blockiness at larger
+  // sizes is what reads as coarse grain instead of a blurry gradient.
+  const full = document.createElement('canvas');
+  full.width = cw;
+  full.height = ch;
+  const fctx = full.getContext('2d');
+  fctx.imageSmoothingEnabled = false;
+  fctx.drawImage(small, 0, 0, cw, ch);
+  return full;
+}
+
+function applyGrainOverlay(targetCtx, cw, ch) {
+  if (!S.grainEnabled) return;
+  const grain = buildGrainCanvas(cw, ch, S.grainSize, S.grainDensity, S.grainType, S.grainColorA, S.grainColorB);
+  targetCtx.save();
+  targetCtx.globalAlpha = Math.max(0, Math.min(1, S.grainOpacity / 100));
+  targetCtx.globalCompositeOperation = blendModeToComposite(S.grainBlend);
+  targetCtx.drawImage(grain, 0, 0, cw, ch);
+  targetCtx.restore();
+}
+
+async function renderNoise(myID) {
+  const cw = S.canvasW;
+  const ch = S.canvasH;
+  canvas.width = cw;
+  canvas.height = ch;
+
+  // Background layer: a flat color, or the uploaded image if chosen and
+  // present. This is what makes Noise work standalone — it never needs an
+  // image, unlike every other tool in the app.
+  if (S.noiseBackground === 'image' && sourceImg) {
+    drawSourceToCanvas(canvas, ctx, cw, ch);
+  } else {
+    ctx.fillStyle = S.noiseBgColor;
+    ctx.fillRect(0, 0, cw, ch);
+  }
+
+  if (!S.noiseShowEffect) {
+    spinner.classList.remove('visible');
+    return;
+  }
+
+  await yieldFrame();
+  if (myID !== currentRenderID) return;
+
+  const grain = buildGrainCanvas(cw, ch, S.noiseSize, S.noiseDensity, S.noiseType, S.noiseColorA, S.noiseColorB);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, S.noiseOpacity / 100));
+  ctx.globalCompositeOperation = blendModeToComposite(S.noiseBlend);
+  ctx.drawImage(grain, 0, 0, cw, ch);
+  ctx.restore();
+
+  spinner.classList.remove('visible');
+}
+
 async function renderSolid(myID) {
   const cw = S.canvasW;
   const ch = S.canvasH;
@@ -2977,7 +3294,7 @@ function useSolidResultInHalftone() {
 }
 
 async function doRender() {
-  if (!sourceImg) return;
+  if (!sourceImg && S.mode !== 'noise') return;
 
   const myID = ++currentRenderID;
   spinner.classList.add('visible');
@@ -2986,37 +3303,51 @@ async function doRender() {
   if (myID !== currentRenderID) return;
 
   if (S.mode === 'halftone') {
-    renderHalftone(myID);
+    await renderHalftone(myID);
+    if (myID === currentRenderID) applyGrainOverlay(ctx, S.canvasW, S.canvasH);
     return;
   }
 
   if (S.mode === 'dithering') {
-    renderDithering(myID);
+    await renderDithering(myID);
+    if (myID === currentRenderID) applyGrainOverlay(ctx, S.canvasW, S.canvasH);
     return;
   }
 
   if (S.mode === 'dots') {
-    renderDots(myID);
+    await renderDots(myID);
+    if (myID === currentRenderID) applyGrainOverlay(ctx, S.canvasW, S.canvasH);
     return;
   }
 
   if (S.mode === 'solid') {
-    renderSolid(myID);
+    await renderSolid(myID);
+    if (myID === currentRenderID) applyGrainOverlay(ctx, S.canvasW, S.canvasH);
     return;
   }
 
   if (S.mode === 'giocoeffect') {
-    renderGiocoEffect(myID);
+    await renderGiocoEffect(myID);
+    if (myID === currentRenderID) applyGrainOverlay(ctx, S.canvasW, S.canvasH);
     return;
   }
 
   if (S.mode === 'circuit') {
-    renderCircuit(myID);
+    await renderCircuit(myID);
+    if (myID === currentRenderID) applyGrainOverlay(ctx, S.canvasW, S.canvasH);
     return;
   }
 
   if (S.mode === 'glitch') {
-    renderGlitch(myID);
+    await renderGlitch(myID);
+    if (myID === currentRenderID) applyGrainOverlay(ctx, S.canvasW, S.canvasH);
+    return;
+  }
+
+  if (S.mode === 'noise') {
+    // Noise is the standalone generator — it IS the grain effect, so the
+    // global Grain overlay doesn't get re-applied on top of it.
+    await renderNoise(myID);
     return;
   }
 }
@@ -4215,10 +4546,10 @@ async function detectShapeBoxes(cw, ch, myID) {
 }
 
 function doExport() {
-  if (!sourceImg) return;
+  if (!sourceImg && S.mode !== 'noise') return;
 
   if (S.format === 'svg') {
-    if (['dots','solid','giocoeffect','circuit','glitch'].includes(S.mode)) {
+    if (['dots','solid','giocoeffect','circuit','glitch','noise'].includes(S.mode)) {
       alert(S.mode.toUpperCase() + ' exports as PNG/JPG only.');
       return;
     }
@@ -4234,11 +4565,12 @@ function doExport() {
   const mime = S.format === 'jpg' ? 'image/jpeg' : 'image/png';
   const quality = S.format === 'jpg' ? (S.jpgQuality || 92) / 100 : undefined;
 
-  // Glitch is a full-color image effect, not a black/white shape mask — skip
-  // the shape/background recoloring logic below and export the canvas as-is.
-  if (S.mode === 'glitch') {
+  // Glitch and Noise are full-color image effects, not black/white shape
+  // masks — skip the shape/background recoloring logic below and export
+  // the canvas as-is.
+  if (S.mode === 'glitch' || S.mode === 'noise') {
     const a = document.createElement('a');
-    a.download = 'glitch.' + ext;
+    a.download = S.mode + '.' + ext;
     a.href = canvas.toDataURL(mime, quality);
     a.click();
     return;
@@ -4363,6 +4695,7 @@ window.enterTool = function(mode) {
   if (mode === 'giocoeffect') activateTab('giocoeffect');
   if (mode === 'circuit') activateTab('circuit');
   if (mode === 'glitch') activateTab('glitch');
+  if (mode === 'noise') activateTab('noise');
 };
 
 window.goHome = function() {
@@ -4377,39 +4710,47 @@ window.doExport = doExport;
 // ---- PRESET SYSTEM ----
 
 // Keys that belong to each mode
+// Shared across every mode — the global Grain overlay is part of Tone,
+// just like blur/contrast/brightness/gamma/invert.
+const GRAIN_PRESET_KEYS = ['grainEnabled','grainType','grainSize','grainDensity','grainOpacity',
+                           'grainBlend','grainColorA','grainColorB'];
+
 const PRESET_KEYS = {
   halftone: ['showHalftoneEffect','threshold','stepSize','gridAngle','grid','halftoneDither',
              'shape','mix','color','customMix','shapeSize','cornerRadius','noise',
              'luminanceSize','minShapeSize','maxShapeSize','sizeCurve','texture','texIntensity','texScale',
              'htSolidCore','htCoreThreshold','htCoreSmooth','htCoreDespeckle',
-             'blur','contrast','brightness','gamma','invert'],
+             'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
   dithering: ['showDitherEffect','ditherAlgorithm','ditherThreshold','ditherPixelSize',
               'ditherPixelShape','ditherColor','randomAmount',
-              'blur','contrast','brightness','gamma','invert'],
+              'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
   dots:      ['dotsShowEffect','dotsThreshold','dotsGridSize','dotsMinSize','dotsMaxSize',
               'dotsNoise','dotsMode','dotsBackground',
               'dotsSolidCore','dotsCoreThreshold','dotsCoreSmooth','dotsCoreDespeckle',
-              'blur','contrast','brightness','gamma','invert'],
+              'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
   solid:     ['solidShowEffect','solidThreshold','solidStrokeWeight','solidSmooth',
               'solidDespeckle','solidExpand','solidMode','solidTolerance','solidFillHoles',
-              'blur','contrast','brightness','gamma','invert'],
+              'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
   giocoeffect: ['gfxShowEffect','gfxMode','gfxBlur','gfxLevels','gfxStroke','gfxSmooth',
                 'gfxDespeckle','gfxExpand','gfxColor',
                 'gfxBlobSize','gfxBlobThreshold','gfxBlobSmooth','gfxBlobDespeckle','gfxBlobExpand',
                 'beadsShape','beadsSize','beadsGap','beadsColor','beadsTones',
-                'blur','contrast','brightness','gamma','invert'],
+                'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
   circuit:   ['circuitShowEffect','circuitCell','circuitDensity','circuitWidth','circuitChaos',
               'circuitNode','circuitNodeShape','circuitSymbols','circuitSymfreq',
               'circuitBus','circuitBusWidth','circuitBreak','circuitColor',
               'circuitFrag','circuitFragCell','circuitDispX','circuitDispY',
               'circuitFragChaos','circuitCharset',
-              'blur','contrast','brightness','gamma','invert'],
+              'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
   glitch:    ['glitchShowEffect','glitchBandSize','glitchBandRandom','glitchShift',
               'glitchShiftMode','glitchSeed','glitchWrap','glitchGridMode','glitchGridCols','glitchGridRows',
               'glitchDetectDepth','glitchDetectMinSize','glitchDetectTolerance',
               'glitchDetectMerge','glitchDetectCoverage',
               'glitchShowGrid','glitchShowLabels','glitchLineWidth','glitchFontSize','glitchGridColor',
-              'blur','contrast','brightness','gamma','invert'],
+              'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
+  noise:     ['noiseShowEffect','noiseType','noiseSize','noiseDensity','noiseOpacity','noiseBlend',
+              'noiseColorA','noiseColorB','noiseBackground','noiseBgColor',
+              'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
 };
 
 function showPresetStatus(msg, isError) {
@@ -4510,6 +4851,9 @@ function applyLoadedPreset(preset) {
   syncSwitcher('sw-glitch-shift-mode', S.glitchShiftMode);
   syncSwitcher('sw-glitch-grid-color', S.glitchGridColor);
   syncSwitcher('sw-glitch-grid-mode', S.glitchGridMode);
+  syncSwitcher('sw-noise-type', S.noiseType);
+  syncSwitcher('sw-noise-background', S.noiseBackground);
+  syncSwitcher('sw-grain-type', S.grainType);
 
   // Sync toggles
   function syncToggle(indId, val) {
@@ -4532,6 +4876,8 @@ function applyLoadedPreset(preset) {
   syncToggle('glitch-wrap-ind', S.glitchWrap);
   syncToggle('glitch-show-grid-ind', S.glitchShowGrid);
   syncToggle('glitch-show-labels-ind', S.glitchShowLabels);
+  syncToggle('noise-effect-ind', S.noiseShowEffect);
+  syncToggle('grain-enabled-ind', S.grainEnabled);
 
   // Sync dependent visibility
   if ($('luminance-size-wrap')) $('luminance-size-wrap').style.display = S.luminanceSize ? 'block' : 'none';
@@ -4550,6 +4896,18 @@ function applyLoadedPreset(preset) {
   if ($('dither-pixel-params')) $('dither-pixel-params').style.display = S.ditherAlgorithm === 'threshold' ? 'none' : 'block';
   if ($('glitch-uniform-params')) $('glitch-uniform-params').style.display = S.glitchGridMode === 'uniform' ? 'block' : 'none';
   if ($('glitch-detect-params')) $('glitch-detect-params').style.display = S.glitchGridMode === 'detect' ? 'block' : 'none';
+  if ($('noise-duotone-wrap')) $('noise-duotone-wrap').style.display = S.noiseType === 'duotone' ? 'block' : 'none';
+  if ($('noise-bgcolor-wrap')) $('noise-bgcolor-wrap').style.display = S.noiseBackground === 'color' ? 'block' : 'none';
+  if ($('noise-image-note')) $('noise-image-note').style.display = S.noiseBackground === 'image' ? 'block' : 'none';
+  if ($('grain-duotone-wrap')) $('grain-duotone-wrap').style.display = S.grainType === 'duotone' ? 'block' : 'none';
+  if ($('grain-params-wrap')) $('grain-params-wrap').style.display = S.grainEnabled ? 'block' : 'none';
+  if ($('noise-blend-select')) $('noise-blend-select').value = S.noiseBlend;
+  if ($('grain-blend-select')) $('grain-blend-select').value = S.grainBlend;
+  if ($('noise-color-a')) $('noise-color-a').value = S.noiseColorA;
+  if ($('noise-color-b')) $('noise-color-b').value = S.noiseColorB;
+  if ($('noise-bg-color')) $('noise-bg-color').value = S.noiseBgColor;
+  if ($('grain-color-a')) $('grain-color-a').value = S.grainColorA;
+  if ($('grain-color-b')) $('grain-color-b').value = S.grainColorB;
 
   // Restore palette swatches if saved
   if (preset._activeColors) {
