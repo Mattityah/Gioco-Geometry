@@ -1313,15 +1313,15 @@ input[type="range"]::-webkit-slider-thumb {
         <div id="noise-texture-wrap">
           <div class="row" style="display:flex;gap:10px">
             <div style="flex:1">
-              <div class="row-top"><label>Size X</label><input type="number" id="num-noise-texture-size-x" value="1" min="1" max="40" step="1"></div>
-              <input type="range" id="noise-texture-size-x" min="1" max="40" step="1" value="1">
+              <div class="row-top"><label>Size X</label><input type="number" id="num-noise-texture-size-x" value="1" min="0.1" max="20" step="0.1"></div>
+              <input type="range" id="noise-texture-size-x" min="0.1" max="20" step="0.1" value="1">
             </div>
             <div style="flex:1">
-              <div class="row-top"><label>Size Y</label><input type="number" id="num-noise-texture-size-y" value="1" min="1" max="40" step="1"></div>
-              <input type="range" id="noise-texture-size-y" min="1" max="40" step="1" value="1">
+              <div class="row-top"><label>Size Y</label><input type="number" id="num-noise-texture-size-y" value="1" min="0.1" max="20" step="0.1"></div>
+              <input type="range" id="noise-texture-size-y" min="0.1" max="20" step="0.1" value="1">
             </div>
           </div>
-          <div class="tool-note">Size X/Y en 1 ya es lo más fino posible (a nivel píxel). Para que el polvo se vea más presente sin agrandar el punteado, subí <b>Density</b> más abajo.</div>
+          <div class="tool-note">1 = un píxel nativo del canvas, el límite físico de un bloque. Bajar de 1 (hasta 0.1) renderiza el polvo a mayor resolución interna y lo achica con antialiasing — grano realmente más fino que un píxel, no solo un número más chico. Subir de 1 da bloques más grandes/chunky (poco útil pasado ~10-15).</div>
           <div class="row"><div class="row-top"><label>Radius</label><input type="number" id="num-noise-texture-radius" value="90" min="0" max="250" step="1"></div><input type="range" id="noise-texture-radius" min="0" max="250" step="1" value="90"></div>
           <div class="row"><div class="row-top"><label>Density</label><input type="number" id="num-noise-texture-density" value="50" min="1" max="100" step="1"></div><input type="range" id="noise-texture-density" min="1" max="100" step="1" value="50"></div>
           <div class="tool-note">50 = neutral (la disolución sigue el degradé del blur tal cual). Subirlo empuja MÁS píxeles de la zona de borde hacia negro — más denso, más "lleno" — sin cambiar el ancho de la banda (eso lo sigue controlando Radius). Bajarlo aclara la zona de borde, menos denso.</div>
@@ -3281,7 +3281,7 @@ function buildThinFeatureMask(mask01, w, h, minDetail) {
   return thin;
 }
 
-function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail, density) {
+function applyTextureOverlayCore(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail, density) {
   if (radius <= 0) return; // matches Figma: zero Radius = no feathered band = nothing to dither
 
   const imgData = targetCtx.getImageData(0, 0, cw, ch);
@@ -3390,6 +3390,55 @@ function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail,
   }
 
   targetCtx.putImageData(imgData, 0, 0);
+}
+
+// A canvas pixel can't be subdivided — "Size 1" is the smallest a block can
+// physically be when working at the canvas's native resolution. To go
+// genuinely finer than that (real sub-pixel dust, not just a smaller number
+// that rounds back to the same thing), this renders the whole dissolve at
+// a higher internal resolution and downsamples with antialiasing — the
+// downscale is what actually produces softer-than-1px speckle, since each
+// final pixel ends up an average of several high-res dust/no-dust pixels
+// instead of a single hard 0-or-255 value. Radius and minDetail scale up
+// together with the resolution so the dissolve still looks proportionally
+// the same relative to the artwork, just finer-grained. Capped at 4x to
+// keep this from getting too slow on large canvases (4x = 16x the pixels).
+function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail, density) {
+  if (radius <= 0) return; // same early-out as Core — skip the upscale/downscale entirely
+
+  const minSize = Math.min(sizeX, sizeY);
+  const factor = minSize < 1 ? Math.min(4, Math.max(1, Math.round(1 / minSize))) : 1;
+
+  if (factor === 1) {
+    applyTextureOverlayCore(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail, density);
+    return;
+  }
+
+  const workCw = cw * factor;
+  const workCh = ch * factor;
+  const work = document.createElement('canvas');
+  work.width = workCw;
+  work.height = workCh;
+  const workCtx = work.getContext('2d', { willReadFrequently: true });
+
+  // Upscale the current canvas content with smoothing OFF — we want crisp
+  // edges to dissolve against at the higher resolution, not an already-
+  // blurred copy that would soften the mask before we even start.
+  workCtx.imageSmoothingEnabled = false;
+  workCtx.drawImage(targetCtx.canvas, 0, 0, workCw, workCh);
+
+  applyTextureOverlayCore(
+    workCtx, workCw, workCh,
+    Math.max(1, sizeX * factor), Math.max(1, sizeY * factor),
+    radius * factor, (minDetail || 0) * factor, density
+  );
+
+  // Downscale back with smoothing ON — this is the step that actually
+  // turns hard high-res speckle into soft sub-pixel-equivalent dust.
+  targetCtx.imageSmoothingEnabled = true;
+  targetCtx.clearRect(0, 0, cw, ch);
+  targetCtx.drawImage(work, 0, 0, cw, ch);
+  targetCtx.imageSmoothingEnabled = true;
 }
 
 async function renderNoise(myID) {
