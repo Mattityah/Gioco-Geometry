@@ -1361,6 +1361,8 @@ input[type="range"]::-webkit-slider-thumb {
             </div>
           </div>
           <div class="row"><div class="row-top"><label>Radius</label><input type="number" id="num-noise-texture-radius" value="90" min="0" max="250" step="1"></div><input type="range" id="noise-texture-radius" min="0" max="250" step="1" value="90"></div>
+          <div class="row"><div class="row-top"><label>Proteger detalles finos</label><input type="number" id="num-noise-texture-min-detail" value="6" min="0" max="30" step="1"></div><input type="range" id="noise-texture-min-detail" min="0" max="30" step="1" value="6"></div>
+          <div class="tool-note">Cualquier trazo más angosto que este ancho (en px) queda completamente intacto, sin disolución — aunque esté pegado a una masa gruesa (ej. los "dedos" finos de un dibujo ornamental). Sin esto, cualquier Radius ≥ 2 disuelve por completo cualquier línea más fina que el doble del Radius, sea Figma o cualquier otra implementación — es geometría, no un bug. Poné 0 para desactivar esta protección.</div>
         </div>
       </div>
 
@@ -1560,6 +1562,7 @@ const S = {
   noiseTextureSizeX: 1,
   noiseTextureSizeY: 1,
   noiseTextureRadius: 90,
+  noiseTextureMinDetail: 6,
   noiseProtectWhite: false,
   noiseProtectThreshold: 250,
 
@@ -1631,7 +1634,7 @@ const CONTROL_MAP = [
   ['glitch-line-width','glitchLineWidth'], ['glitch-font-size','glitchFontSize'],
   ['noise-size','noiseSize'], ['noise-density','noiseDensity'], ['noise-opacity','noiseOpacity'],
   ['noise-texture-size-x','noiseTextureSizeX'], ['noise-texture-size-y','noiseTextureSizeY'],
-  ['noise-texture-radius','noiseTextureRadius'], ['noise-protect-threshold','noiseProtectThreshold'],
+  ['noise-texture-radius','noiseTextureRadius'], ['noise-texture-min-detail','noiseTextureMinDetail'], ['noise-protect-threshold','noiseProtectThreshold'],
   ['grain-size','grainSize'], ['grain-density','grainDensity'], ['grain-opacity','grainOpacity'],
   ['jpg-quality','jpgQuality']
 ];
@@ -3317,7 +3320,33 @@ function fastBoxBlur(values, w, h, radius) {
   return out;
 }
 
-function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius) {
+// Identifies pixels that belong to a foreground feature thinner than
+// minDetail px, even when that thin feature is fused to a thicker shape
+// (e.g. a fine "finger" sprouting from a thick blob in an ornamental
+// drawing) — connected-component analysis alone can't catch this case,
+// since the thin part and the thick part are literally the same component
+// and the component as a whole clearly "has a thick core" once you check
+// any pixel in the blob. Morphological OPENING (erode then dilate by the
+// same amount) sidesteps that: erosion wipes out anything narrower than
+// 2×halfWidth everywhere, including thin protrusions still attached to a
+// thick body, and dilating back only restores what survived — so whatever
+// existed in the original mask but vanished after opening is exactly the
+// "too thin to have a safe core" part, regardless of what it's attached to.
+function buildThinFeatureMask(mask01, w, h, minDetail) {
+  const halfWidth = Math.round(minDetail / 2);
+  if (halfWidth <= 0) return null;
+
+  const eroded = morph(mask01, w, h, halfWidth, 'erode');
+  const opened = morph(eroded, w, h, halfWidth, 'dilate');
+
+  const thin = new Uint8Array(w * h);
+  for (let i = 0; i < mask01.length; i++) {
+    thin[i] = mask01[i] === 1 && opened[i] === 0 ? 1 : 0;
+  }
+  return thin;
+}
+
+function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail) {
   if (radius <= 0) return; // matches Figma: zero Radius = no feathered band = nothing to dither
 
   const imgData = targetCtx.getImageData(0, 0, cw, ch);
@@ -3330,6 +3359,7 @@ function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius) {
   // stays empty unless dust spreads into it, opaque-light pixels get
   // repainted with the averaged background color like before.
   const mask = new Float32Array(n);
+  const mask01 = new Uint8Array(n); // same data as binary 0/1, for morph()
   const isEmpty = new Uint8Array(n); // 1 = this pixel started fully transparent
 
   let fgR = 0, fgG = 0, fgB = 0, fgCount = 0;
@@ -3344,6 +3374,7 @@ function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius) {
     const lum = d[p] * 0.299 + d[p + 1] * 0.587 + d[p + 2] * 0.114;
     if (lum < 128) {
       mask[i] = 255;
+      mask01[i] = 1;
       fgR += d[p]; fgG += d[p + 1]; fgB += d[p + 2]; fgCount++;
     } else {
       bgR += d[p]; bgG += d[p + 1]; bgB += d[p + 2]; bgCount++;
@@ -3354,6 +3385,7 @@ function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius) {
   const bg = bgCount ? [bgR / bgCount, bgG / bgCount, bgB / bgCount] : [255, 255, 255];
 
   const blurredMask = fastBoxBlur(mask, cw, ch, radius);
+  const thinMask = buildThinFeatureMask(mask01, cw, ch, minDetail || 0);
 
   const sx = Math.max(1, Math.round(sizeX));
   const sy = Math.max(1, Math.round(sizeY));
@@ -3379,6 +3411,11 @@ function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius) {
       for (let py = by; py < yEnd; py++) {
         for (let px = bx; px < xEnd; px++) {
           const idx = py * cw + px;
+
+          // Part of a fine detail thinner than minDetail — leave it exactly
+          // as rendered, regardless of what this block's dither decided.
+          if (thinMask && thinMask[idx]) continue;
+
           const p = idx * 4;
 
           if (isFg) {
@@ -3460,7 +3497,7 @@ async function renderNoise(myID) {
   if (S.noiseTextureEnabled) {
     await yieldFrame();
     if (myID !== currentRenderID) return;
-    applyTextureOverlay(ctx, cw, ch, S.noiseTextureSizeX, S.noiseTextureSizeY, S.noiseTextureRadius);
+    applyTextureOverlay(ctx, cw, ch, S.noiseTextureSizeX, S.noiseTextureSizeY, S.noiseTextureRadius, S.noiseTextureMinDetail);
   }
 
   if (protectMask) {
@@ -5026,7 +5063,7 @@ const PRESET_KEYS = {
               'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
   noise:     ['noiseShowEffect','noiseType','noiseSize','noiseDensity','noiseOpacity','noiseBlend',
               'noiseColorA','noiseColorB','noiseBackground','noiseBgColor',
-              'noiseTextureEnabled','noiseTextureSizeX','noiseTextureSizeY','noiseTextureRadius',
+              'noiseTextureEnabled','noiseTextureSizeX','noiseTextureSizeY','noiseTextureRadius','noiseTextureMinDetail',
               'noiseProtectWhite','noiseProtectThreshold',
               'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
 };
