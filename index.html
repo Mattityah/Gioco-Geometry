@@ -680,8 +680,8 @@ input[type="range"]::-webkit-slider-thumb {
       <span class="home-btn-sub">stretch · bands · grid labels</span>
     </button>
     <button class="home-btn" onclick="enterTool('noise')">
-      <span class="home-btn-label">NOISE</span>
-      <span class="home-btn-sub">grain · duotone · figma-style</span>
+      <span class="home-btn-label">TEXTURE</span>
+      <span class="home-btn-sub">dissolve · edge dust · figma-style</span>
     </button>
   </div>
 
@@ -719,7 +719,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="mode-btn" data-mode="giocoeffect">GiocoFX</button>
         <button class="mode-btn" data-mode="circuit">Circuit</button>
         <button class="mode-btn" data-mode="glitch">Glitch</button>
-        <button class="mode-btn" data-mode="noise">Noise</button>
+        <button class="mode-btn" data-mode="noise">Texture</button>
       </div>
 
       <div class="tabs">
@@ -731,7 +731,7 @@ input[type="range"]::-webkit-slider-thumb {
         <button class="tab mode-giocoeffect" data-tab="giocoeffect" style="display:none">GiocoFX</button>
         <button class="tab mode-circuit" data-tab="circuit" style="display:none">Circuit</button>
         <button class="tab mode-glitch" data-tab="glitch" style="display:none">Glitch</button>
-        <button class="tab mode-noise" data-tab="noise" style="display:none">Noise</button>
+        <button class="tab mode-noise" data-tab="noise" style="display:none">Texture</button>
         <button class="tab" data-tab="tone">Tone</button>
         <button class="tab" data-tab="export">Export</button>
       </div>
@@ -1283,9 +1283,7 @@ input[type="range"]::-webkit-slider-thumb {
       </div>
 
       <div class="tab-content" id="tab-noise">
-        <div class="tool-note">Noise genera un grano tipo Figma. Funciona sin imagen (fondo de color sólido) o con tu imagen como base. Es una herramienta independiente — no depende de pasar por ninguna otra.</div>
-
-        <div class="toggle-row" id="toggle-noise-effect"><div class="tog" id="noise-effect-ind">&nbsp;</div> Show Effect (Noise)</div>
+        <div class="tool-note">Texture genera el efecto de disolución tipo Figma. Funciona sin imagen (fondo de color sólido) o con tu imagen como base. Es una herramienta independiente — no depende de pasar por ninguna otra.</div>
 
         <div class="section-title">Fondo</div>
         <div class="sw-row">
@@ -1299,57 +1297,20 @@ input[type="range"]::-webkit-slider-thumb {
           <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Color de fondo</div>
           <input type="color" id="noise-bg-color" value="#ffffff" style="width:100%;height:32px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg);margin-bottom:10px">
         </div>
-        <div class="tool-note" id="noise-image-note" style="display:none">Usa la imagen subida como fondo. Si no subiste ninguna, se usa blanco. Si tu imagen tiene transparencia real (PNG) o no cubre todo el canvas, esa zona vacía se mantiene transparente — el polvo de Texture se dispersa desde el contenido real hacia ese vacío, no al revés. Para conservar la transparencia exportá en <b>PNG</b> (JPG no soporta canal alpha).</div>
+        <div class="tool-note" id="noise-image-note" style="display:none">Usa la imagen subida como fondo. Si no subiste ninguna, se usa blanco. Si tu imagen tiene transparencia real (PNG) o no cubre todo el canvas, esa zona vacía se mantiene transparente — el polvo se dispersa desde el contenido real hacia ese vacío, no al revés. Para conservar la transparencia exportá en <b>PNG</b> (JPG no soporta canal alpha).</div>
 
         <div class="section-title">Protección</div>
-        <div class="tool-note">Funciona con cualquier JPG o PNG, sin necesitar transparencia real. Protege el blanco (o cualquier zona clara por encima del umbral) para que NI el Noise NI el Texture lo toquen — sin importar el Blend Mode elegido. Es una garantía absoluta: el píxel queda exactamente igual a como lo subiste.</div>
+        <div class="tool-note">Funciona con cualquier JPG o PNG, sin necesitar transparencia real. Protege el blanco (o cualquier zona clara por encima del umbral) para que Texture no lo toque. Es una garantía absoluta: el píxel queda exactamente igual a como lo subiste.</div>
         <div class="toggle-row" id="toggle-noise-protect"><div class="tog" id="noise-protect-ind">&nbsp;</div> Proteger blanco / fondo claro</div>
         <div id="noise-protect-wrap" style="display:none">
           <div class="row"><div class="row-top"><label>Umbral</label><input type="number" id="num-noise-protect-threshold" value="250" min="128" max="255" step="1"></div><input type="range" id="noise-protect-threshold" min="128" max="255" step="1" value="250"></div>
           <div class="tool-note">Cualquier píxel con luminancia igual o mayor al umbral queda protegido. 250 = solo blanco casi puro. Bajalo si tu fondo no es perfectamente blanco (ej. JPG con ruido de compresión).</div>
         </div>
 
-        <div class="section-title">Grano</div>
-        <div class="sw-row">
-          <span class="sw-label">Tipo</span>
-          <div class="sw-btns" id="sw-noise-type">
-            <button class="sw-btn active" data-val="mono">Mono</button>
-            <button class="sw-btn" data-val="duotone">Duotone</button>
-          </div>
-        </div>
-        <div id="noise-duotone-wrap" style="display:none">
-          <div class="row" style="display:flex;gap:10px;align-items:flex-end">
-            <div style="flex:1">
-              <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Color A (sombra)</div>
-              <input type="color" id="noise-color-a" value="#000000" style="width:100%;height:32px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg)">
-            </div>
-            <div style="flex:1">
-              <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Color B (luz)</div>
-              <input type="color" id="noise-color-b" value="#ffffff" style="width:100%;height:32px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg)">
-            </div>
-          </div>
-        </div>
-
-        <div class="row"><div class="row-top"><label>Size</label><input type="number" id="num-noise-size" value="1" min="1" max="20" step="1"></div><input type="range" id="noise-size" min="1" max="20" step="1" value="1"></div>
-        <div class="row"><div class="row-top"><label>Density</label><input type="number" id="num-noise-density" value="50" min="0" max="100" step="1"></div><input type="range" id="noise-density" min="0" max="100" step="1" value="50"></div>
-        <div class="row"><div class="row-top"><label>Opacity</label><input type="number" id="num-noise-opacity" value="100" min="0" max="100" step="1"></div><input type="range" id="noise-opacity" min="0" max="100" step="1" value="100"></div>
-
-        <div class="section-title">Mezcla</div>
-        <div class="row">
-          <div class="row-top"><label>Blend Mode</label></div>
-          <select id="noise-blend-select" style="width:100%;padding:7px 8px;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:3px;font-family:var(--font);font-size:12px">
-            <option value="normal">Normal</option>
-            <option value="multiply">Multiply</option>
-            <option value="screen">Screen</option>
-            <option value="overlay">Overlay</option>
-            <option value="soft-light">Soft Light</option>
-          </select>
-        </div>
-
         <div class="section-title">Texture</div>
-        <div class="tool-note">El "Texture" real de Figma: difumina el borde del shape (Radius) y lo "dithereá" con umbral random a una granularidad (Size X/Y) — el polvo se dispersa solo en el borde, el interior queda intacto. Distinto al Noise de arriba. Se puede usar solo, o apilado encima del Noise.</div>
-        <div class="toggle-row" id="toggle-noise-texture"><div class="tog" id="noise-texture-ind">&nbsp;</div> Activar Texture</div>
-        <div id="noise-texture-wrap" style="display:none">
+        <div class="tool-note">El "Texture" real de Figma: difumina el borde del shape (Radius) y lo "dithereá" con umbral random a una granularidad (Size X/Y) — el polvo se dispersa solo en el borde, el interior queda intacto.</div>
+        <div class="toggle-row" id="toggle-noise-texture"><div class="tog" id="noise-texture-ind">&#10003;</div> Activar Texture</div>
+        <div id="noise-texture-wrap">
           <div class="row" style="display:flex;gap:10px">
             <div style="flex:1">
               <div class="row-top"><label>Size X</label><input type="number" id="num-noise-texture-size-x" value="1" min="1" max="40" step="1"></div>
@@ -1360,7 +1321,10 @@ input[type="range"]::-webkit-slider-thumb {
               <input type="range" id="noise-texture-size-y" min="1" max="40" step="1" value="1">
             </div>
           </div>
+          <div class="tool-note">Size X/Y en 1 ya es lo más fino posible (a nivel píxel). Para que el polvo se vea más presente sin agrandar el punteado, subí <b>Density</b> más abajo.</div>
           <div class="row"><div class="row-top"><label>Radius</label><input type="number" id="num-noise-texture-radius" value="90" min="0" max="250" step="1"></div><input type="range" id="noise-texture-radius" min="0" max="250" step="1" value="90"></div>
+          <div class="row"><div class="row-top"><label>Density</label><input type="number" id="num-noise-texture-density" value="50" min="1" max="100" step="1"></div><input type="range" id="noise-texture-density" min="1" max="100" step="1" value="50"></div>
+          <div class="tool-note">50 = neutral (la disolución sigue el degradé del blur tal cual). Subirlo empuja MÁS píxeles de la zona de borde hacia negro — más denso, más "lleno" — sin cambiar el ancho de la banda (eso lo sigue controlando Radius). Bajarlo aclara la zona de borde, menos denso.</div>
           <div class="row"><div class="row-top"><label>Proteger detalles finos</label><input type="number" id="num-noise-texture-min-detail" value="6" min="0" max="30" step="1"></div><input type="range" id="noise-texture-min-detail" min="0" max="30" step="1" value="6"></div>
           <div class="tool-note">Cualquier trazo más angosto que este ancho (en px) queda completamente intacto, sin disolución — aunque esté pegado a una masa gruesa (ej. los "dedos" finos de un dibujo ornamental). Sin esto, cualquier Radius ≥ 2 disuelve por completo cualquier línea más fina que el doble del Radius, sea Figma o cualquier otra implementación — es geometría, no un bug. Poné 0 para desactivar esta protección.</div>
         </div>
@@ -1547,21 +1511,16 @@ const S = {
   glitchFontSize: 11,
   glitchGridColor: 'dark',
 
-  // Standalone Noise tool — works without a source image.
-  noiseShowEffect: false,
-  noiseType: 'mono',
-  noiseSize: 1,
-  noiseDensity: 50,
-  noiseOpacity: 100,
-  noiseBlend: 'normal',
-  noiseColorA: '#000000',
-  noiseColorB: '#ffffff',
+  // Standalone "Noise" tool — en la práctica solo hace Texture (el grano
+  // Mono/Duotone que tenía adentro se sacó, queda como Grain global en Tone).
+  // Funciona sin imagen.
   noiseBackground: 'color',
   noiseBgColor: '#ffffff',
-  noiseTextureEnabled: false,
+  noiseTextureEnabled: true,
   noiseTextureSizeX: 1,
   noiseTextureSizeY: 1,
   noiseTextureRadius: 90,
+  noiseTextureDensity: 50,
   noiseTextureMinDetail: 6,
   noiseProtectWhite: false,
   noiseProtectThreshold: 250,
@@ -1632,9 +1591,9 @@ const CONTROL_MAP = [
   ['glitch-detect-tolerance','glitchDetectTolerance'], ['glitch-detect-merge','glitchDetectMerge'],
   ['glitch-detect-coverage','glitchDetectCoverage'],
   ['glitch-line-width','glitchLineWidth'], ['glitch-font-size','glitchFontSize'],
-  ['noise-size','noiseSize'], ['noise-density','noiseDensity'], ['noise-opacity','noiseOpacity'],
   ['noise-texture-size-x','noiseTextureSizeX'], ['noise-texture-size-y','noiseTextureSizeY'],
-  ['noise-texture-radius','noiseTextureRadius'], ['noise-texture-min-detail','noiseTextureMinDetail'], ['noise-protect-threshold','noiseProtectThreshold'],
+  ['noise-texture-radius','noiseTextureRadius'], ['noise-texture-density','noiseTextureDensity'],
+  ['noise-texture-min-detail','noiseTextureMinDetail'], ['noise-protect-threshold','noiseProtectThreshold'],
   ['grain-size','grainSize'], ['grain-density','grainDensity'], ['grain-opacity','grainOpacity'],
   ['jpg-quality','jpgQuality']
 ];
@@ -1735,9 +1694,6 @@ makeSwitcher('sw-glitch-grid-color', 'glitchGridColor');
 makeSwitcher('sw-glitch-grid-mode', 'glitchGridMode', val => {
   $('glitch-uniform-params').style.display = val === 'uniform' ? 'block' : 'none';
   $('glitch-detect-params').style.display = val === 'detect' ? 'block' : 'none';
-});
-makeSwitcher('sw-noise-type', 'noiseType', val => {
-  $('noise-duotone-wrap').style.display = val === 'duotone' ? 'block' : 'none';
 });
 makeSwitcher('sw-noise-background', 'noiseBackground', val => {
   $('noise-bgcolor-wrap').style.display = val === 'color' ? 'block' : 'none';
@@ -1941,13 +1897,7 @@ $('toggle-glitch-show-labels').addEventListener('click', () => {
   scheduleRender();
 });
 
-// ---- NOISE TOOL toggles + color pickers + blend select ----
-$('toggle-noise-effect').addEventListener('click', () => {
-  S.noiseShowEffect = !S.noiseShowEffect;
-  $('noise-effect-ind').innerHTML = S.noiseShowEffect ? '&#10003;' : '&nbsp;';
-  scheduleRender();
-});
-
+// ---- NOISE TOOL (Texture) toggles + color pickers ----
 $('toggle-noise-texture').addEventListener('click', () => {
   S.noiseTextureEnabled = !S.noiseTextureEnabled;
   $('noise-texture-ind').innerHTML = S.noiseTextureEnabled ? '&#10003;' : '&nbsp;';
@@ -1964,21 +1914,6 @@ $('toggle-noise-protect').addEventListener('click', () => {
 
 $('noise-bg-color').addEventListener('input', e => {
   S.noiseBgColor = e.target.value;
-  scheduleRender();
-});
-
-$('noise-color-a').addEventListener('input', e => {
-  S.noiseColorA = e.target.value;
-  scheduleRender();
-});
-
-$('noise-color-b').addEventListener('input', e => {
-  S.noiseColorB = e.target.value;
-  scheduleRender();
-});
-
-$('noise-blend-select').addEventListener('change', e => {
-  S.noiseBlend = e.target.value;
   scheduleRender();
 });
 
@@ -3346,7 +3281,7 @@ function buildThinFeatureMask(mask01, w, h, minDetail) {
   return thin;
 }
 
-function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail) {
+function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail, density) {
   if (radius <= 0) return; // matches Figma: zero Radius = no feathered band = nothing to dither
 
   const imgData = targetCtx.getImageData(0, 0, cw, ch);
@@ -3387,6 +3322,19 @@ function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail)
   const blurredMask = fastBoxBlur(mask, cw, ch, radius);
   const thinMask = buildThinFeatureMask(mask01, cw, ch, minDetail || 0);
 
+  // Density (default 50 = neutral) reshapes the blurred gradient with a
+  // power curve BEFORE the random threshold, instead of touching the
+  // gradient's width (that's still Radius's job). At 50 the curve is
+  // identity (m stays exactly as blurred — today's behavior). Above 50 the
+  // exponent drops below 1, which pulls mid-range values upward, so more
+  // of the transition band resolves to foreground on each coin flip —
+  // denser, "fuller" dust without enlarging the speckle (Size still
+  // controls that) or widening where the band sits (Radius still controls
+  // that). Below 50 it does the opposite, thinning the dust out.
+  const dens = Math.max(1, Math.min(100, density || 50));
+  const densityFactor = dens / 50; // 0.02 .. 2
+  const applyDensity = Math.abs(densityFactor - 1) > 0.001;
+
   const sx = Math.max(1, Math.round(sizeX));
   const sy = Math.max(1, Math.round(sizeY));
   const EPS = 2; // values this close to 0 or 255 are treated as "solid", not edge
@@ -3398,12 +3346,17 @@ function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius, minDetail)
     for (let bx = 0; bx < cw; bx += sx) {
       const cx = Math.min(cw - 1, bx + (sx >> 1));
       const i0 = cy * cw + cx;
-      const m = blurredMask[i0];
+      let m = blurredMask[i0];
 
       // Solid interior or solid exterior (whether that exterior is opaque
       // white or truly empty canvas) — leave these pixels exactly as
       // rendered, no recoloring at all.
       if (m <= EPS || m >= 255 - EPS) continue;
+
+      if (applyDensity) {
+        const mn = m / 255;
+        m = Math.pow(mn, 1 / densityFactor) * 255;
+      }
 
       const isFg = Math.random() * 255 < m;
       const xEnd = Math.min(cw, bx + sx);
@@ -3458,7 +3411,7 @@ async function renderNoise(myID) {
   }
 
   // Protection snapshot, taken right after the clean background is drawn
-  // and before either effect touches anything. This is a hard guarantee
+  // and before Texture touches anything. This is a hard guarantee
   // independent of blend math: Overlay mathematically leaves pure #FFFFFF
   // untouched, but a real photo/JPG almost never has perfectly pure white
   // everywhere (compression noise nudges it to 253,254,251, etc.), so
@@ -3466,8 +3419,8 @@ async function renderNoise(myID) {
   // Texture doesn't go through a blend mode at all — it repaints pixels
   // directly, so no blend choice can stop it from dusting near white. This
   // snapshot-and-restore approach protects exactly the pixels the person
-  // asks for, regardless of which effect or blend touched them, and works
-  // on a plain opaque JPG with no transparency at all.
+  // asks for, regardless of which effect touched them, and works on a
+  // plain opaque JPG with no transparency at all.
   let protectSnapshot = null;
   let protectMask = null;
   if (S.noiseProtectWhite) {
@@ -3482,22 +3435,10 @@ async function renderNoise(myID) {
     }
   }
 
-  if (S.noiseShowEffect) {
-    await yieldFrame();
-    if (myID !== currentRenderID) return;
-
-    const grain = buildGrainCanvas(cw, ch, S.noiseSize, S.noiseDensity, S.noiseType, S.noiseColorA, S.noiseColorB, S.noiseBlend);
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(1, S.noiseOpacity / 100));
-    ctx.globalCompositeOperation = blendModeToComposite(S.noiseBlend);
-    ctx.drawImage(grain, 0, 0, cw, ch);
-    ctx.restore();
-  }
-
   if (S.noiseTextureEnabled) {
     await yieldFrame();
     if (myID !== currentRenderID) return;
-    applyTextureOverlay(ctx, cw, ch, S.noiseTextureSizeX, S.noiseTextureSizeY, S.noiseTextureRadius, S.noiseTextureMinDetail);
+    applyTextureOverlay(ctx, cw, ch, S.noiseTextureSizeX, S.noiseTextureSizeY, S.noiseTextureRadius, S.noiseTextureMinDetail, S.noiseTextureDensity);
   }
 
   if (protectMask) {
@@ -5061,9 +5002,9 @@ const PRESET_KEYS = {
               'glitchDetectMerge','glitchDetectCoverage',
               'glitchShowGrid','glitchShowLabels','glitchLineWidth','glitchFontSize','glitchGridColor',
               'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
-  noise:     ['noiseShowEffect','noiseType','noiseSize','noiseDensity','noiseOpacity','noiseBlend',
-              'noiseColorA','noiseColorB','noiseBackground','noiseBgColor',
-              'noiseTextureEnabled','noiseTextureSizeX','noiseTextureSizeY','noiseTextureRadius','noiseTextureMinDetail',
+  noise:     ['noiseBackground','noiseBgColor',
+              'noiseTextureEnabled','noiseTextureSizeX','noiseTextureSizeY','noiseTextureRadius',
+              'noiseTextureDensity','noiseTextureMinDetail',
               'noiseProtectWhite','noiseProtectThreshold',
               'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
 };
@@ -5166,7 +5107,6 @@ function applyLoadedPreset(preset) {
   syncSwitcher('sw-glitch-shift-mode', S.glitchShiftMode);
   syncSwitcher('sw-glitch-grid-color', S.glitchGridColor);
   syncSwitcher('sw-glitch-grid-mode', S.glitchGridMode);
-  syncSwitcher('sw-noise-type', S.noiseType);
   syncSwitcher('sw-noise-background', S.noiseBackground);
   syncSwitcher('sw-grain-type', S.grainType);
 
@@ -5191,7 +5131,6 @@ function applyLoadedPreset(preset) {
   syncToggle('glitch-wrap-ind', S.glitchWrap);
   syncToggle('glitch-show-grid-ind', S.glitchShowGrid);
   syncToggle('glitch-show-labels-ind', S.glitchShowLabels);
-  syncToggle('noise-effect-ind', S.noiseShowEffect);
   syncToggle('noise-texture-ind', S.noiseTextureEnabled);
   syncToggle('noise-protect-ind', S.noiseProtectWhite);
   syncToggle('grain-enabled-ind', S.grainEnabled);
@@ -5213,17 +5152,13 @@ function applyLoadedPreset(preset) {
   if ($('dither-pixel-params')) $('dither-pixel-params').style.display = S.ditherAlgorithm === 'threshold' ? 'none' : 'block';
   if ($('glitch-uniform-params')) $('glitch-uniform-params').style.display = S.glitchGridMode === 'uniform' ? 'block' : 'none';
   if ($('glitch-detect-params')) $('glitch-detect-params').style.display = S.glitchGridMode === 'detect' ? 'block' : 'none';
-  if ($('noise-duotone-wrap')) $('noise-duotone-wrap').style.display = S.noiseType === 'duotone' ? 'block' : 'none';
   if ($('noise-bgcolor-wrap')) $('noise-bgcolor-wrap').style.display = S.noiseBackground === 'color' ? 'block' : 'none';
   if ($('noise-image-note')) $('noise-image-note').style.display = S.noiseBackground === 'image' ? 'block' : 'none';
   if ($('grain-duotone-wrap')) $('grain-duotone-wrap').style.display = S.grainType === 'duotone' ? 'block' : 'none';
   if ($('grain-params-wrap')) $('grain-params-wrap').style.display = S.grainEnabled ? 'block' : 'none';
   if ($('noise-texture-wrap')) $('noise-texture-wrap').style.display = S.noiseTextureEnabled ? 'block' : 'none';
   if ($('noise-protect-wrap')) $('noise-protect-wrap').style.display = S.noiseProtectWhite ? 'block' : 'none';
-  if ($('noise-blend-select')) $('noise-blend-select').value = S.noiseBlend;
   if ($('grain-blend-select')) $('grain-blend-select').value = S.grainBlend;
-  if ($('noise-color-a')) $('noise-color-a').value = S.noiseColorA;
-  if ($('noise-color-b')) $('noise-color-b').value = S.noiseColorB;
   if ($('noise-bg-color')) $('noise-bg-color').value = S.noiseBgColor;
   if ($('grain-color-a')) $('grain-color-a').value = S.grainColorA;
   if ($('grain-color-b')) $('grain-color-b').value = S.grainColorB;
