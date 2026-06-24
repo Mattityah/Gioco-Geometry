@@ -1299,7 +1299,7 @@ input[type="range"]::-webkit-slider-thumb {
           <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Color de fondo</div>
           <input type="color" id="noise-bg-color" value="#ffffff" style="width:100%;height:32px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg);margin-bottom:10px">
         </div>
-        <div class="tool-note" id="noise-image-note" style="display:none">Usa la imagen subida como fondo. Si no subiste ninguna, se usa blanco.</div>
+        <div class="tool-note" id="noise-image-note" style="display:none">Usa la imagen subida como fondo. Si no subiste ninguna, se usa blanco. Si tu imagen tiene transparencia real (PNG) o no cubre todo el canvas, esa zona vacía se mantiene transparente — el polvo de Texture se dispersa desde el contenido real hacia ese vacío, no al revés. Para conservar la transparencia exportá en <b>PNG</b> (JPG no soporta canal alpha).</div>
 
         <div class="section-title">Grano</div>
         <div class="sw-row">
@@ -2162,6 +2162,38 @@ function drawSourceToCanvas(targetCanvas, targetCtx, cw, ch) {
   targetCtx.save();
   targetCtx.fillStyle = '#ffffff';
   targetCtx.fillRect(0, 0, cw, ch);
+
+  targetCtx.filter = 'blur(' + S.blur + 'px) contrast(' + S.contrast + ') brightness(' + S.brightness + ')';
+
+  const sc = Math.min(cw / sourceImg.width, ch / sourceImg.height) * (S.imgScale / 100);
+  const sw = sourceImg.width * sc;
+  const sh = sourceImg.height * sc;
+
+  targetCtx.translate(cw / 2 + S.imgX, ch / 2 + S.imgY);
+  targetCtx.rotate(S.imgRotation * Math.PI / 180);
+  targetCtx.drawImage(sourceImg, -sw / 2, -sh / 2, sw, sh);
+
+  targetCtx.restore();
+  targetCtx.filter = 'none';
+}
+
+// Same positioning/scale/rotation logic as drawSourceToCanvas, but without
+// the white pre-fill. Every other tool in the app needs an opaque
+// background to threshold against, so drawSourceToCanvas always flattens
+// to white first — but that means any real transparency in an uploaded
+// PNG (or any canvas margin the image doesn't cover) gets baked into solid
+// white before Texture/Noise ever see it, so there's no way to tell "blank
+// canvas" apart from "white that's actually part of the artwork". This
+// variant keeps the canvas genuinely transparent wherever the source image
+// is transparent or doesn't reach, so Texture's edge-dissolve only spreads
+// from real content into real empty space — and exporting as PNG (not JPG,
+// which has no alpha) carries that transparency straight through.
+function drawSourceToCanvasPreserveAlpha(targetCanvas, targetCtx, cw, ch) {
+  targetCanvas.width = cw;
+  targetCanvas.height = ch;
+
+  targetCtx.save();
+  targetCtx.clearRect(0, 0, cw, ch);
 
   targetCtx.filter = 'blur(' + S.blur + 'px) contrast(' + S.contrast + ') brightness(' + S.brightness + ')';
 
@@ -3274,13 +3306,24 @@ function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius) {
   const imgData = targetCtx.getImageData(0, 0, cw, ch);
   const d = imgData.data;
   const n = cw * ch;
-  const mask = new Float32Array(n); // 255 = foreground (dark), 0 = background (light)
+  // 255 = real foreground (opaque + dark), 0 = everything else — opaque
+  // light pixels (white paper that's part of the artwork) AND truly empty
+  // canvas (alpha === 0) both count as "background" for the blur/dither
+  // math, but they're NOT painted the same way afterward: empty canvas
+  // stays empty unless dust spreads into it, opaque-light pixels get
+  // repainted with the averaged background color like before.
+  const mask = new Float32Array(n);
+  const isEmpty = new Uint8Array(n); // 1 = this pixel started fully transparent
 
   let fgR = 0, fgG = 0, fgB = 0, fgCount = 0;
   let bgR = 0, bgG = 0, bgB = 0, bgCount = 0;
 
   for (let i = 0; i < n; i++) {
     const p = i * 4;
+    if (d[p + 3] < 10) {
+      isEmpty[i] = 1;
+      continue; // mask[i] stays 0 — empty canvas reads as "background"
+    }
     const lum = d[p] * 0.299 + d[p + 1] * 0.587 + d[p + 2] * 0.114;
     if (lum < 128) {
       mask[i] = 255;
@@ -3305,20 +3348,35 @@ function applyTextureOverlay(targetCtx, cw, ch, sizeX, sizeY, radius) {
 
     for (let bx = 0; bx < cw; bx += sx) {
       const cx = Math.min(cw - 1, bx + (sx >> 1));
-      const m = blurredMask[cy * cw + cx];
+      const i0 = cy * cw + cx;
+      const m = blurredMask[i0];
 
-      // Solid interior or solid exterior — leave these pixels exactly as
+      // Solid interior or solid exterior (whether that exterior is opaque
+      // white or truly empty canvas) — leave these pixels exactly as
       // rendered, no recoloring at all.
       if (m <= EPS || m >= 255 - EPS) continue;
 
       const isFg = Math.random() * 255 < m;
-      const c = isFg ? fg : bg;
       const xEnd = Math.min(cw, bx + sx);
 
       for (let py = by; py < yEnd; py++) {
         for (let px = bx; px < xEnd; px++) {
-          const p = (py * cw + px) * 4;
-          d[p] = c[0]; d[p + 1] = c[1]; d[p + 2] = c[2]; d[p + 3] = 255;
+          const idx = py * cw + px;
+          const p = idx * 4;
+
+          if (isFg) {
+            // Dust spreading outward — even into space that started fully
+            // transparent, exactly like Figma's reference: new opaque
+            // speckles appear scattered around the original silhouette.
+            d[p] = fg[0]; d[p + 1] = fg[1]; d[p + 2] = fg[2]; d[p + 3] = 255;
+          } else if (isEmpty[idx]) {
+            // This block resolved to "background" and the pixel started
+            // empty — keep it empty instead of painting opaque white over
+            // real transparency.
+            d[p + 3] = 0;
+          } else {
+            d[p] = bg[0]; d[p + 1] = bg[1]; d[p + 2] = bg[2]; d[p + 3] = 255;
+          }
         }
       }
     }
@@ -3335,9 +3393,11 @@ async function renderNoise(myID) {
 
   // Background layer: a flat color, or the uploaded image if chosen and
   // present. This is what makes Noise work standalone — it never needs an
-  // image, unlike every other tool in the app.
+  // image, unlike every other tool in the app. Uses the alpha-preserving
+  // draw so real transparency (or canvas margin the image doesn't cover)
+  // stays transparent instead of getting flattened to white.
   if (S.noiseBackground === 'image' && sourceImg) {
-    drawSourceToCanvas(canvas, ctx, cw, ch);
+    drawSourceToCanvasPreserveAlpha(canvas, ctx, cw, ch);
   } else {
     ctx.fillStyle = S.noiseBgColor;
     ctx.fillRect(0, 0, cw, ch);
