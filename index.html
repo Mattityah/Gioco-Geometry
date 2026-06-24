@@ -1301,6 +1301,14 @@ input[type="range"]::-webkit-slider-thumb {
         </div>
         <div class="tool-note" id="noise-image-note" style="display:none">Usa la imagen subida como fondo. Si no subiste ninguna, se usa blanco. Si tu imagen tiene transparencia real (PNG) o no cubre todo el canvas, esa zona vacía se mantiene transparente — el polvo de Texture se dispersa desde el contenido real hacia ese vacío, no al revés. Para conservar la transparencia exportá en <b>PNG</b> (JPG no soporta canal alpha).</div>
 
+        <div class="section-title">Protección</div>
+        <div class="tool-note">Funciona con cualquier JPG o PNG, sin necesitar transparencia real. Protege el blanco (o cualquier zona clara por encima del umbral) para que NI el Noise NI el Texture lo toquen — sin importar el Blend Mode elegido. Es una garantía absoluta: el píxel queda exactamente igual a como lo subiste.</div>
+        <div class="toggle-row" id="toggle-noise-protect"><div class="tog" id="noise-protect-ind">&nbsp;</div> Proteger blanco / fondo claro</div>
+        <div id="noise-protect-wrap" style="display:none">
+          <div class="row"><div class="row-top"><label>Umbral</label><input type="number" id="num-noise-protect-threshold" value="250" min="128" max="255" step="1"></div><input type="range" id="noise-protect-threshold" min="128" max="255" step="1" value="250"></div>
+          <div class="tool-note">Cualquier píxel con luminancia igual o mayor al umbral queda protegido. 250 = solo blanco casi puro. Bajalo si tu fondo no es perfectamente blanco (ej. JPG con ruido de compresión).</div>
+        </div>
+
         <div class="section-title">Grano</div>
         <div class="sw-row">
           <span class="sw-label">Tipo</span>
@@ -1552,6 +1560,8 @@ const S = {
   noiseTextureSizeX: 1,
   noiseTextureSizeY: 1,
   noiseTextureRadius: 90,
+  noiseProtectWhite: false,
+  noiseProtectThreshold: 250,
 
   // Global Grain overlay — applies on top of ANY tool's render, regardless
   // of which mode is active.
@@ -1621,7 +1631,7 @@ const CONTROL_MAP = [
   ['glitch-line-width','glitchLineWidth'], ['glitch-font-size','glitchFontSize'],
   ['noise-size','noiseSize'], ['noise-density','noiseDensity'], ['noise-opacity','noiseOpacity'],
   ['noise-texture-size-x','noiseTextureSizeX'], ['noise-texture-size-y','noiseTextureSizeY'],
-  ['noise-texture-radius','noiseTextureRadius'],
+  ['noise-texture-radius','noiseTextureRadius'], ['noise-protect-threshold','noiseProtectThreshold'],
   ['grain-size','grainSize'], ['grain-density','grainDensity'], ['grain-opacity','grainOpacity'],
   ['jpg-quality','jpgQuality']
 ];
@@ -1939,6 +1949,13 @@ $('toggle-noise-texture').addEventListener('click', () => {
   S.noiseTextureEnabled = !S.noiseTextureEnabled;
   $('noise-texture-ind').innerHTML = S.noiseTextureEnabled ? '&#10003;' : '&nbsp;';
   $('noise-texture-wrap').style.display = S.noiseTextureEnabled ? 'block' : 'none';
+  scheduleRender();
+});
+
+$('toggle-noise-protect').addEventListener('click', () => {
+  S.noiseProtectWhite = !S.noiseProtectWhite;
+  $('noise-protect-ind').innerHTML = S.noiseProtectWhite ? '&#10003;' : '&nbsp;';
+  $('noise-protect-wrap').style.display = S.noiseProtectWhite ? 'block' : 'none';
   scheduleRender();
 });
 
@@ -3403,6 +3420,31 @@ async function renderNoise(myID) {
     ctx.fillRect(0, 0, cw, ch);
   }
 
+  // Protection snapshot, taken right after the clean background is drawn
+  // and before either effect touches anything. This is a hard guarantee
+  // independent of blend math: Overlay mathematically leaves pure #FFFFFF
+  // untouched, but a real photo/JPG almost never has perfectly pure white
+  // everywhere (compression noise nudges it to 253,254,251, etc.), so
+  // "choose the right blend mode" isn't actually reliable protection. And
+  // Texture doesn't go through a blend mode at all — it repaints pixels
+  // directly, so no blend choice can stop it from dusting near white. This
+  // snapshot-and-restore approach protects exactly the pixels the person
+  // asks for, regardless of which effect or blend touched them, and works
+  // on a plain opaque JPG with no transparency at all.
+  let protectSnapshot = null;
+  let protectMask = null;
+  if (S.noiseProtectWhite) {
+    const snap = ctx.getImageData(0, 0, cw, ch);
+    protectSnapshot = snap.data;
+    const n = cw * ch;
+    protectMask = new Uint8Array(n);
+    for (let i = 0; i < n; i++) {
+      const p = i * 4;
+      const lum = protectSnapshot[p] * 0.299 + protectSnapshot[p + 1] * 0.587 + protectSnapshot[p + 2] * 0.114;
+      if (protectSnapshot[p + 3] < 10 || lum >= S.noiseProtectThreshold) protectMask[i] = 1;
+    }
+  }
+
   if (S.noiseShowEffect) {
     await yieldFrame();
     if (myID !== currentRenderID) return;
@@ -3419,6 +3461,20 @@ async function renderNoise(myID) {
     await yieldFrame();
     if (myID !== currentRenderID) return;
     applyTextureOverlay(ctx, cw, ch, S.noiseTextureSizeX, S.noiseTextureSizeY, S.noiseTextureRadius);
+  }
+
+  if (protectMask) {
+    const finalImg = ctx.getImageData(0, 0, cw, ch);
+    const fd = finalImg.data;
+    for (let i = 0; i < protectMask.length; i++) {
+      if (!protectMask[i]) continue;
+      const p = i * 4;
+      fd[p] = protectSnapshot[p];
+      fd[p + 1] = protectSnapshot[p + 1];
+      fd[p + 2] = protectSnapshot[p + 2];
+      fd[p + 3] = protectSnapshot[p + 3];
+    }
+    ctx.putImageData(finalImg, 0, 0);
   }
 
   spinner.classList.remove('visible');
@@ -4971,6 +5027,7 @@ const PRESET_KEYS = {
   noise:     ['noiseShowEffect','noiseType','noiseSize','noiseDensity','noiseOpacity','noiseBlend',
               'noiseColorA','noiseColorB','noiseBackground','noiseBgColor',
               'noiseTextureEnabled','noiseTextureSizeX','noiseTextureSizeY','noiseTextureRadius',
+              'noiseProtectWhite','noiseProtectThreshold',
               'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
 };
 
@@ -5099,6 +5156,7 @@ function applyLoadedPreset(preset) {
   syncToggle('glitch-show-labels-ind', S.glitchShowLabels);
   syncToggle('noise-effect-ind', S.noiseShowEffect);
   syncToggle('noise-texture-ind', S.noiseTextureEnabled);
+  syncToggle('noise-protect-ind', S.noiseProtectWhite);
   syncToggle('grain-enabled-ind', S.grainEnabled);
 
   // Sync dependent visibility
@@ -5124,6 +5182,7 @@ function applyLoadedPreset(preset) {
   if ($('grain-duotone-wrap')) $('grain-duotone-wrap').style.display = S.grainType === 'duotone' ? 'block' : 'none';
   if ($('grain-params-wrap')) $('grain-params-wrap').style.display = S.grainEnabled ? 'block' : 'none';
   if ($('noise-texture-wrap')) $('noise-texture-wrap').style.display = S.noiseTextureEnabled ? 'block' : 'none';
+  if ($('noise-protect-wrap')) $('noise-protect-wrap').style.display = S.noiseProtectWhite ? 'block' : 'none';
   if ($('noise-blend-select')) $('noise-blend-select').value = S.noiseBlend;
   if ($('grain-blend-select')) $('grain-blend-select').value = S.grainBlend;
   if ($('noise-color-a')) $('noise-color-a').value = S.noiseColorA;
