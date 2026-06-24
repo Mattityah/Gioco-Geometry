@@ -1285,7 +1285,7 @@ input[type="range"]::-webkit-slider-thumb {
       <div class="tab-content" id="tab-noise">
         <div class="tool-note">Noise genera un grano tipo Figma. Funciona sin imagen (fondo de color sólido) o con tu imagen como base. Es una herramienta independiente — no depende de pasar por ninguna otra.</div>
 
-        <div class="toggle-row" id="toggle-noise-effect"><div class="tog" id="noise-effect-ind">&#10003;</div> Show Effect</div>
+        <div class="toggle-row" id="toggle-noise-effect"><div class="tog" id="noise-effect-ind">&nbsp;</div> Show Effect (Noise)</div>
 
         <div class="section-title">Fondo</div>
         <div class="sw-row">
@@ -1538,7 +1538,7 @@ const S = {
   glitchGridColor: 'dark',
 
   // Standalone Noise tool — works without a source image.
-  noiseShowEffect: true,
+  noiseShowEffect: false,
   noiseType: 'mono',
   noiseSize: 1,
   noiseDensity: 50,
@@ -3136,7 +3136,7 @@ function blendModeToComposite(mode) {
   return mode === 'normal' ? 'source-over' : mode;
 }
 
-function buildGrainCanvas(cw, ch, size, density, type, colorAHex, colorBHex) {
+function buildGrainCanvas(cw, ch, size, density, type, colorAHex, colorBHex, blendMode) {
   const s = Math.max(1, Math.round(size));
   const gw = Math.max(1, Math.ceil(cw / s));
   const gh = Math.max(1, Math.ceil(ch / s));
@@ -3148,27 +3148,41 @@ function buildGrainCanvas(cw, ch, size, density, type, colorAHex, colorBHex) {
   const img = sctx.createImageData(gw, gh);
   const d = img.data;
 
-  // Density widens/narrows the random distribution around the midpoint:
-  // 50 = full 0..1 range (default, matches the raw random()); 0 collapses
-  // everything to a flat midtone (no visible grain); 100 pushes harder
-  // toward the extremes for a more contrasty, "louder" grain.
-  const densFactor = density / 50;
+  // Density now controls how far the noise SPREADS from the blend mode's
+  // own neutral point, not from a fixed mid-gray. This matters because
+  // every blend mode has a different "no-op" value: for Multiply that's
+  // white (255) — multiplying by white leaves the base untouched — for
+  // Screen it's black (0), and only Normal/Overlay/Soft-Light treat 128 as
+  // neutral. Centering mono noise at a flat 128 regardless of blend mode
+  // means Multiply always darkens flat areas by ~50% on average even at
+  // low Density, since 128 is nowhere near Multiply's neutral — it reads
+  // as a uniform gray wash over the whole image instead of subtle grain.
+  // Duotone keeps its own midpoint-based mix, since there the two colors
+  // ARE the explicit choice — there's no single "correct" neutral to infer.
+  let neutral = 128;
+  if (type !== 'duotone') {
+    if (blendMode === 'multiply') neutral = 255;
+    else if (blendMode === 'screen') neutral = 0;
+  }
+
+  const densFactor = density / 50; // 0 = no spread (flat neutral), 50 = full swing, 100 = harder push
   const colorA = hexToRgb(colorAHex);
   const colorB = hexToRgb(colorBHex);
   const isDuotone = type === 'duotone';
 
   for (let i = 0; i < gw * gh; i++) {
-    let t = Math.random();
-    t = 0.5 + (t - 0.5) * densFactor;
-    t = Math.max(0, Math.min(1, t));
     const p = i * 4;
 
     if (isDuotone) {
+      let t = Math.random();
+      t = 0.5 + (t - 0.5) * densFactor;
+      t = Math.max(0, Math.min(1, t));
       d[p]     = colorA.r + (colorB.r - colorA.r) * t;
       d[p + 1] = colorA.g + (colorB.g - colorA.g) * t;
       d[p + 2] = colorA.b + (colorB.b - colorA.b) * t;
     } else {
-      const v = Math.round(t * 255);
+      const dev = (Math.random() - 0.5) * 2; // -1..1
+      const v = Math.max(0, Math.min(255, Math.round(neutral + dev * densFactor * 127)));
       d[p] = v; d[p + 1] = v; d[p + 2] = v;
     }
     d[p + 3] = 255;
@@ -3192,7 +3206,7 @@ function buildGrainCanvas(cw, ch, size, density, type, colorAHex, colorBHex) {
 
 function applyGrainOverlay(targetCtx, cw, ch) {
   if (!S.grainEnabled) return;
-  const grain = buildGrainCanvas(cw, ch, S.grainSize, S.grainDensity, S.grainType, S.grainColorA, S.grainColorB);
+  const grain = buildGrainCanvas(cw, ch, S.grainSize, S.grainDensity, S.grainType, S.grainColorA, S.grainColorB, S.grainBlend);
   targetCtx.save();
   targetCtx.globalAlpha = Math.max(0, Math.min(1, S.grainOpacity / 100));
   targetCtx.globalCompositeOperation = blendModeToComposite(S.grainBlend);
@@ -3333,7 +3347,7 @@ async function renderNoise(myID) {
     await yieldFrame();
     if (myID !== currentRenderID) return;
 
-    const grain = buildGrainCanvas(cw, ch, S.noiseSize, S.noiseDensity, S.noiseType, S.noiseColorA, S.noiseColorB);
+    const grain = buildGrainCanvas(cw, ch, S.noiseSize, S.noiseDensity, S.noiseType, S.noiseColorA, S.noiseColorB, S.noiseBlend);
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, S.noiseOpacity / 100));
     ctx.globalCompositeOperation = blendModeToComposite(S.noiseBlend);
