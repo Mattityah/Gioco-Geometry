@@ -775,6 +775,14 @@ input[type="range"]::-webkit-slider-thumb {
         <div class="row"><div class="row-top"><label>Brightness</label><input type="number" id="num-brightness" value="1" min="0.2" max="2" step="0.1"></div><input type="range" id="brightness" min="0.2" max="2" step="0.1" value="1"></div>
         <div class="row"><div class="row-top"><label>Gamma</label><input type="number" id="num-gamma" value="1" min="0.1" max="3" step="0.1"></div><input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1"></div>
 
+        <div class="section-title">Gradient Map (Halftone / Dithering)</div>
+        <div class="tool-note">Recolorea el resultado según su luminancia real (rampa de N colores), no al azar como Grain. Solo aplica a Halftone y Dithering por ahora.</div>
+        <div class="toggle-row" id="toggle-gradientmap-enabled"><div class="tog" id="gradientmap-enabled-ind">&nbsp;</div> Activar Gradient Map</div>
+        <div id="gradientmap-params-wrap" style="display:none">
+          <div id="gradientmap-stops-wrap" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+          <button class="sw-btn" id="btn-gradientmap-add-stop" style="font-size:11px;padding:6px 10px;border:1px solid var(--border);border-radius:3px;width:100%">+ Agregar color</button>
+        </div>
+
         <div class="section-title">Grain / Noise (Global)</div>
         <div class="tool-note">Grano tipo Figma que se aplica encima del resultado final de CUALQUIER herramienta — Halftone, Solid, Glitch, etc. — sin importar cuál esté activa.</div>
         <div class="toggle-row" id="toggle-grain-enabled"><div class="tog" id="grain-enabled-ind">&nbsp;</div> Activar Grain Global</div>
@@ -1536,6 +1544,9 @@ const S = {
   grainColorA: '#000000',
   grainColorB: '#ffffff',
 
+  gradientMapEnabled: false,
+  gradientStops: ['#1a1a1a', '#ffffff'],
+
   format: 'png',
   jpgQuality: 92,
   exportTransparent: false,
@@ -1918,6 +1929,73 @@ $('noise-bg-color').addEventListener('input', e => {
 });
 
 // ---- GLOBAL GRAIN toggles + color pickers + blend select ----
+function renderGradientMapStops() {
+  const wrap = $('gradientmap-stops-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  S.gradientStops.forEach((color, idx) => {
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.gap = '8px';
+    row.style.alignItems = 'center';
+
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = color;
+    input.style.flex = '1';
+    input.style.height = '32px';
+    input.style.border = '1px solid var(--border)';
+    input.style.borderRadius = '3px';
+    input.style.cursor = 'pointer';
+    input.style.background = 'var(--bg)';
+    input.addEventListener('input', e => {
+      S.gradientStops[idx] = e.target.value;
+      scheduleRender();
+    });
+
+    const label = document.createElement('div');
+    label.style.fontSize = '10px';
+    label.style.color = 'var(--muted)';
+    label.style.minWidth = '14px';
+    label.textContent = idx + 1;
+
+    row.appendChild(label);
+    row.appendChild(input);
+
+    if (S.gradientStops.length > 2) {
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '\u00d7';
+      removeBtn.className = 'sw-btn';
+      removeBtn.style.padding = '4px 10px';
+      removeBtn.style.border = '1px solid var(--border)';
+      removeBtn.style.borderRadius = '3px';
+      removeBtn.addEventListener('click', () => {
+        S.gradientStops.splice(idx, 1);
+        renderGradientMapStops();
+        scheduleRender();
+      });
+      row.appendChild(removeBtn);
+    }
+
+    wrap.appendChild(row);
+  });
+}
+renderGradientMapStops();
+
+$('toggle-gradientmap-enabled').addEventListener('click', () => {
+  S.gradientMapEnabled = !S.gradientMapEnabled;
+  $('gradientmap-enabled-ind').innerHTML = S.gradientMapEnabled ? '&#10003;' : '&nbsp;';
+  $('gradientmap-params-wrap').style.display = S.gradientMapEnabled ? 'block' : 'none';
+  scheduleRender();
+});
+
+$('btn-gradientmap-add-stop').addEventListener('click', () => {
+  if (S.gradientStops.length >= 6) return;
+  S.gradientStops.push('#888888');
+  renderGradientMapStops();
+  scheduleRender();
+});
+
 $('toggle-grain-enabled').addEventListener('click', () => {
   S.grainEnabled = !S.grainEnabled;
   $('grain-enabled-ind').innerHTML = S.grainEnabled ? '&#10003;' : '&nbsp;';
@@ -3191,6 +3269,28 @@ function buildGrainCanvas(cw, ch, size, density, type, colorAHex, colorBHex, ble
   return full;
 }
 
+function applyGradientMapOverlay(targetCtx, cw, ch) {
+  if (!S.gradientMapEnabled) return;
+  const stops = S.gradientStops;
+  if (!stops || stops.length < 2) return;
+  const rgbStops = stops.map(hexToRgb);
+  const n = rgbStops.length;
+  const imgData = targetCtx.getImageData(0, 0, cw, ch);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+    const pos = Math.max(0, Math.min(n - 1, (lum / 255) * (n - 1)));
+    const i0 = Math.floor(pos);
+    const i1 = Math.min(n - 1, i0 + 1);
+    const t = pos - i0;
+    const c0 = rgbStops[i0], c1 = rgbStops[i1];
+    d[i]     = c0.r + (c1.r - c0.r) * t;
+    d[i + 1] = c0.g + (c1.g - c0.g) * t;
+    d[i + 2] = c0.b + (c1.b - c0.b) * t;
+  }
+  targetCtx.putImageData(imgData, 0, 0);
+}
+
 function applyGrainOverlay(targetCtx, cw, ch) {
   if (!S.grainEnabled) return;
   const grain = buildGrainCanvas(cw, ch, S.grainSize, S.grainDensity, S.grainType, S.grainColorA, S.grainColorB, S.grainBlend);
@@ -3607,13 +3707,19 @@ async function doRender() {
 
   if (S.mode === 'halftone') {
     await renderHalftone(myID);
-    if (myID === currentRenderID) applyGrainOverlay(ctx, S.canvasW, S.canvasH);
+    if (myID === currentRenderID) {
+      applyGradientMapOverlay(ctx, S.canvasW, S.canvasH);
+      applyGrainOverlay(ctx, S.canvasW, S.canvasH);
+    }
     return;
   }
 
   if (S.mode === 'dithering') {
     await renderDithering(myID);
-    if (myID === currentRenderID) applyGrainOverlay(ctx, S.canvasW, S.canvasH);
+    if (myID === currentRenderID) {
+      applyGradientMapOverlay(ctx, S.canvasW, S.canvasH);
+      applyGrainOverlay(ctx, S.canvasW, S.canvasH);
+    }
     return;
   }
 
@@ -5018,15 +5124,17 @@ window.doExport = doExport;
 const GRAIN_PRESET_KEYS = ['grainEnabled','grainType','grainSize','grainDensity','grainOpacity',
                            'grainBlend','grainColorA','grainColorB'];
 
+const GRADIENT_PRESET_KEYS = ['gradientMapEnabled','gradientStops'];
+
 const PRESET_KEYS = {
   halftone: ['showHalftoneEffect','threshold','stepSize','gridAngle','grid','halftoneDither',
              'shape','mix','color','customMix','shapeSize','cornerRadius','noise',
              'luminanceSize','minShapeSize','maxShapeSize','sizeCurve','texture','texIntensity','texScale',
              'htSolidCore','htCoreThreshold','htCoreSmooth','htCoreDespeckle',
-             'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
+             'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS, ...GRADIENT_PRESET_KEYS],
   dithering: ['showDitherEffect','ditherAlgorithm','ditherThreshold','ditherPixelSize',
               'ditherPixelShape','ditherColor','randomAmount',
-              'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS],
+              'blur','contrast','brightness','gamma','invert', ...GRAIN_PRESET_KEYS, ...GRADIENT_PRESET_KEYS],
   dots:      ['dotsShowEffect','dotsThreshold','dotsGridSize','dotsMinSize','dotsMaxSize',
               'dotsNoise','dotsMode','dotsBackground',
               'dotsSolidCore','dotsCoreThreshold','dotsCoreSmooth','dotsCoreDespeckle',
@@ -5183,6 +5291,9 @@ function applyLoadedPreset(preset) {
   syncToggle('noise-texture-ind', S.noiseTextureEnabled);
   syncToggle('noise-protect-ind', S.noiseProtectWhite);
   syncToggle('grain-enabled-ind', S.grainEnabled);
+  syncToggle('gradientmap-enabled-ind', S.gradientMapEnabled);
+  if (!S.gradientStops || S.gradientStops.length < 2) S.gradientStops = ['#1a1a1a', '#ffffff'];
+  renderGradientMapStops();
 
   // Sync dependent visibility
   if ($('luminance-size-wrap')) $('luminance-size-wrap').style.display = S.luminanceSize ? 'block' : 'none';
@@ -5205,6 +5316,7 @@ function applyLoadedPreset(preset) {
   if ($('noise-image-note')) $('noise-image-note').style.display = S.noiseBackground === 'image' ? 'block' : 'none';
   if ($('grain-duotone-wrap')) $('grain-duotone-wrap').style.display = S.grainType === 'duotone' ? 'block' : 'none';
   if ($('grain-params-wrap')) $('grain-params-wrap').style.display = S.grainEnabled ? 'block' : 'none';
+  if ($('gradientmap-params-wrap')) $('gradientmap-params-wrap').style.display = S.gradientMapEnabled ? 'block' : 'none';
   if ($('noise-texture-wrap')) $('noise-texture-wrap').style.display = S.noiseTextureEnabled ? 'block' : 'none';
   if ($('noise-protect-wrap')) $('noise-protect-wrap').style.display = S.noiseProtectWhite ? 'block' : 'none';
   if ($('grain-blend-select')) $('grain-blend-select').value = S.grainBlend;
