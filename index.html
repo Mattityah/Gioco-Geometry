@@ -3273,18 +3273,25 @@ function applyGradientMapOverlay(targetCtx, cw, ch) {
   if (!S.gradientMapEnabled) return;
   const stops = S.gradientStops;
   if (!stops || stops.length < 2) return;
+  if (!sourceImg) return;
   const rgbStops = stops.map(hexToRgb);
   const n = rgbStops.length;
   const imgData = targetCtx.getImageData(0, 0, cw, ch);
   const d = imgData.data;
+
+  // Dithering/Halftone paint ink with one FLAT dark color (e.g. #1a1a1a) —
+  // there's no continuous tone in the rendered output itself, just density
+  // of dots. Reading luminance from the rendered pixel would collapse
+  // every inked pixel to nearly the same value (always the darkest stop).
+  // Re-sampling the ORIGINAL source image's grayscale at full resolution
+  // gives the real continuous tone at each position instead, so the ramp
+  // actually spans across the artwork's tones — the rendered pixel is only
+  // used below to tell ink apart from untouched background.
+  const srcLum = prepareGray(cw, ch).gray;
+
   for (let i = 0; i < d.length; i += 4) {
-    // Halftone/Dithering fill the canvas pure white BEFORE drawing the
-    // actual dots/pixels — that flat white is background, not part of the
-    // artwork's tonal range. Without this check, the last stop (color B)
-    // ends up painting that entire untouched background solid, instead of
-    // only recoloring the dots/trama that were actually drawn.
     if (d[i] >= 254 && d[i + 1] >= 254 && d[i + 2] >= 254) continue;
-    const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+    const lum = srcLum[i / 4];
     const pos = Math.max(0, Math.min(n - 1, (lum / 255) * (n - 1)));
     const i0 = Math.floor(pos);
     const i1 = Math.min(n - 1, i0 + 1);
