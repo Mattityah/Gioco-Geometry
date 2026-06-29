@@ -3278,6 +3278,12 @@ function applyGradientMapOverlay(targetCtx, cw, ch) {
   const imgData = targetCtx.getImageData(0, 0, cw, ch);
   const d = imgData.data;
   for (let i = 0; i < d.length; i += 4) {
+    // Halftone/Dithering fill the canvas pure white BEFORE drawing the
+    // actual dots/pixels — that flat white is background, not part of the
+    // artwork's tonal range. Without this check, the last stop (color B)
+    // ends up painting that entire untouched background solid, instead of
+    // only recoloring the dots/trama that were actually drawn.
+    if (d[i] >= 254 && d[i + 1] >= 254 && d[i + 2] >= 254) continue;
     const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
     const pos = Math.max(0, Math.min(n - 1, (lum / 255) * (n - 1)));
     const i0 = Math.floor(pos);
